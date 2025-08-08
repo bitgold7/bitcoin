@@ -62,7 +62,12 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
 
     // Updating time can change work required on testnet:
     if (consensusParams.fPowAllowMinDifficultyBlocks) {
-        pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, consensusParams);
+        const int height{pindexPrev->nHeight + 1};
+        if (height <= 1) {
+            pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, consensusParams);
+        } else {
+            pblock->nBits = pindexPrev->nBits;
+        }
     }
 
     return nNewTime - nOldTime;
@@ -185,7 +190,11 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     // Fill in header
     pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
     UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
-    pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());
+    if (nHeight <= 1) {
+        pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());
+    } else {
+        pblock->nBits = pindexPrev->nBits;
+    }
     pblock->nNonce         = 0;
 
     if (m_options.test_block_validity) {
@@ -649,7 +658,11 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     block.nTime = std::max<int64_t>(
         GetMinimumTime(pindexPrev, consensus.DifficultyAdjustmentInterval()),
         TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()));
-    block.nBits = GetNextWorkRequired(pindexPrev, &block, consensus);
+    if (height <= 1) {
+        block.nBits = GetNextWorkRequired(pindexPrev, &block, consensus);
+    } else {
+        block.nBits = pindexPrev->nBits;
+    }
     block.nNonce = 0;
     block.hashMerkleRoot = BlockMerkleRoot(block);
 

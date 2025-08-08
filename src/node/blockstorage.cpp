@@ -135,7 +135,8 @@ bool BlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, s
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
 
-                if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, consensusParams)) {
+                if (pindexNew->nHeight <= 1 &&
+                    !CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, consensusParams)) {
                     LogError("%s: CheckProofOfWork failed: %s\n", __func__, pindexNew->ToString());
                     return false;
                 }
@@ -1018,8 +1019,16 @@ bool BlockManager::ReadBlock(CBlock& block, const FlatFilePos& pos, const std::o
 
     const auto block_hash{block.GetHash()};
 
-    // Check the header
-    if (!CheckProofOfWork(block_hash, block.nBits, GetConsensus())) {
+    // Lookup previous block to determine height for PoW gating and PoS validation
+    const CBlockIndex* prev_index{nullptr};
+    {
+        LOCK(cs_main);
+        prev_index = LookupBlockIndex(block.hashPrevBlock);
+    }
+    const int height = prev_index ? prev_index->nHeight + 1 : 0;
+
+    // Check the header only for the genesis block and its immediate successor
+    if (height <= 1 && !CheckProofOfWork(block_hash, block.nBits, GetConsensus())) {
         LogError("Errors in block header at %s while reading block", pos.ToString());
         return false;
     }
@@ -1031,11 +1040,6 @@ bool BlockManager::ReadBlock(CBlock& block, const FlatFilePos& pos, const std::o
     }
 
     // Proof-of-stake validation
-    const CBlockIndex* prev_index{nullptr};
-    {
-        LOCK(cs_main);
-        prev_index = LookupBlockIndex(block.hashPrevBlock);
-    }
     if (prev_index && !CheckProofOfStake(block, prev_index, GetConsensus())) {
         LogError("Errors in block proof-of-stake at %s while reading block", pos.ToString());
         return false;
