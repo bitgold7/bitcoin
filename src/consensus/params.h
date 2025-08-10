@@ -103,8 +103,7 @@ struct Params {
      * Note that segwit v0 script rules are enforced on all blocks except the
      * BIP 16 exception blocks. */
     int SegwitHeight;
-    /** Don't warn about unknown BIP 9 activations below this height.
-     * This prevents us from warning about the CSV and segwit activations. */
+    /** Don't warn about unknown BIP 9 activations below this height. */
     int MinBIP9WarningHeight;
     std::array<BIP9Deployment,MAX_VERSION_BITS_DEPLOYMENTS> vDeployments;
     /** Proof of work parameters */
@@ -127,6 +126,11 @@ struct Params {
     uint256 nMinimumChainWork;
     /** By default assume that the signatures in ancestors of this block are valid */
     uint256 defaultAssumeValid;
+
+    /** Proof of stake parameters */
+    int nLastPoWBlock;
+    int64_t nPosTargetSpacing;
+    int64_t nPosTargetTimespan;
 
     /**
      * If true, witness commitments contain a payload equal to a Bitcoin Script solution

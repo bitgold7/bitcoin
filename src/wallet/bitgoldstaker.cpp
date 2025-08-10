@@ -1,19 +1,23 @@
+#include <wallet/bitgoldstaker.h>
+
+#include <algorithm>
 #include <chrono>
+#include <vector>
+
 #include <consensus/amount.h>
 #include <consensus/consensus.h>
 #include <consensus/merkle.h>
 #include <interfaces/chain.h>
+#include <logging.h>
 #include <node/context.h>
+#include <node/miner.h>
 #include <pos/stake.h>
 #include <util/time.h>
 #include <validation.h>
-#include <wallet/bitgoldstaker.h>
-#include <wallet/wallet.h>
 #include <wallet/spend.h>
+#include <wallet/wallet.h>
+#include <common/args.h>
 
-#include <algorithm>
-#include <logging.h>
-#include <vector>
 
 namespace wallet {
 
@@ -46,11 +50,12 @@ void BitGoldStaker::ThreadStaker()
 {
     interfaces::Chain& chain = m_wallet.chain();
     node::NodeContext* node_context = chain.context();
-    if (!node_context || !node_context->chainman) {
-        LogPrintf("BitGoldStaker: chainman unavailable\n");
+    if (!node_context || !node_context->chainman || !node_context->mempool) {
+        LogPrintf("BitGoldStaker: context unavailable\n");
         return;
     }
     ChainstateManager& chainman = *node_context->chainman;
+    CTxMemPool& mempool = *node_context->mempool;
     const Consensus::Params& consensus = chainman.GetParams().GetConsensus();
     const CAmount MIN_STAKE_AMOUNT{1 * COIN};
     const int MIN_STAKE_DEPTH{COINBASE_MATURITY};
@@ -107,9 +112,20 @@ void BitGoldStaker::ThreadStaker()
                         uint256 hash_proof;
                         if (!CheckStakeKernelHash(pindexPrev, nBits, pindexFrom->GetBlockHash(), pindexFrom->nTime,
                                                   stake_out.txout.nValue, stake_out.outpoint, nTimeTx, hash_proof, false)) {
-                            LogPrintf("BitGoldStaker: kernel check failed\n");
                             continue;
                         }
+
+                        node::BlockAssembler::Options assembler_options;
+                        ApplyArgsManOptions(gArgs, assembler_options);
+                        node::BlockAssembler assembler(chainman.ActiveChainstate(), &mempool, assembler_options);
+                        
+                        auto blocktemplate = assembler.CreateNewBlock();
+                        if (!blocktemplate) {
+                            LogPrintf("BitGoldStaker: failed to create new block template\n");
+                            continue;
+                        }
+
+                        CBlock& block = blocktemplate->block;
 
                         CMutableTransaction coinstake;
                         coinstake.nLockTime = pindexPrev->nHeight + 1;
@@ -127,34 +143,15 @@ void BitGoldStaker::ThreadStaker()
                             }
                         }
 
-                        CMutableTransaction coinbase;
-                        coinbase.vin.resize(1);
-                        coinbase.vin[0].prevout.SetNull();
-                        coinbase.vin[0].nSequence = CTxIn::MAX_SEQUENCE_NONFINAL;
-                        coinbase.vin[0].scriptSig = CScript() << (pindexPrev->nHeight + 1) << OP_0;
-                        coinbase.vout.resize(1);
-                        coinbase.vout[0].nValue = 0;
-                        coinbase.nLockTime = pindexPrev->nHeight + 1;
+                        block.vtx.insert(block.vtx.begin() + 1, MakeTransactionRef(std::move(coinstake)));
+                        
+                        CMutableTransaction coinbase(*block.vtx[0]);
+                        coinbase.vout[0].SetNull();
+                        block.vtx[0] = MakeTransactionRef(std::move(coinbase));
 
-                        CBlock block;
-                        block.vtx.emplace_back(MakeTransactionRef(std::move(coinbase)));
-                        block.vtx.emplace_back(MakeTransactionRef(std::move(coinstake)));
-                        block.hashPrevBlock = pindexPrev->GetBlockHash();
-                        block.nVersion = chainman.m_versionbitscache.ComputeBlockVersion(pindexPrev, consensus);
                         block.nTime = nTimeTx;
-                        block.nBits = pindexPrev->nBits;
                         block.nNonce = 0;
                         block.hashMerkleRoot = BlockMerkleRoot(block);
-
-                        {
-                            LOCK(cs_main);
-                            if (!ContextualCheckProofOfStake(block, pindexPrev,
-                                                              chainman.ActiveChainstate().CoinsTip(),
-                                                              chainman.ActiveChain(), consensus)) {
-                                LogPrintf("BitGoldStaker: produced block failed CheckProofOfStake\n");
-                                continue;
-                            }
-                        }
 
                         bool new_block{false};
                         if (!chainman.ProcessNewBlock(std::make_shared<const CBlock>(block),

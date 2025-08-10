@@ -5,7 +5,7 @@
 
 #include <bitcoin-build-config.h> // IWYU pragma: keep
 
-#include <pos/stake.h>
+#include <pos/stake.h> 
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -86,7 +86,7 @@ using fsbridge::FopenFn;
 using node::BlockManager;
 using node::BlockMap;
 using node::CBlockIndexHeightOnlyComparator;
-using node::CBlockIndexWorkComparator;
+using node.CBlockIndexWorkComparator;
 using node::SnapshotMetadata;
 
 /** Size threshold for warning about slow UTXO set flush to disk. */
@@ -311,7 +311,8 @@ void Chainstate::MaybeUpdateMempoolForReorg(
             if (!fAddToMempool || (*it)->IsCoinBase() ||
                 AcceptToMemoryPool(*this, *it, GetTime(),
                                    /*bypass_limits=*/true, /*test_accept=*/false)
-                        .m_result_type !=
+                        .
+m_result_type !=
                     MempoolAcceptResult::ResultType::VALID) {
                 // If the transaction doesn't make it in to the mempool, remove any
                 // transactions that depend on it (which would now be orphans).
@@ -2080,4 +2081,213 @@ bool ChainstateManager::ProcessNewBlock(const std::shared_ptr<const CBlock>& blo
     }
     // Only used to report errors, not invalidity - ignore it
     return ret;
+}
+
+bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params& params)
+{
+    bool fNegative;
+    bool fOverflow;
+    arith_uint256 bnTarget;
+
+    bnTarget.SetCompact(nBits, &fNegative, &fOverflow);
+
+    // Check range
+    if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))
+        return false;
+
+    // Check proof of work matches claimed amount
+    if (UintToArith256(hash) > bnTarget)
+        return false;
+
+    return true;
+}
+
+bool CheckBlockHeader(const CBlockHeader& block, BlockValidationState& state, const Consensus::Params& consensusParams)
+{
+    // Check proof of work matches claimed amount
+    if (block.IsProofOfWork() && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams)) {
+        return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "high-hash", "proof of work failed");
+    }
+
+    // Check timestamp
+    if (block.GetBlockTime() > GetTime() + MAX_FUTURE_BLOCK_TIME)
+        return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "time-too-new", "block timestamp too far in the future");
+
+    return true;
+}
+
+bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW, bool fCheckMerkleRoot)
+{
+    // These are checks that are independent of context.
+
+    // Check that the header is valid (basic checks).
+    if (!CheckBlockHeader(block, state, consensusParams))
+        return false;
+
+    // Check the merkle root.
+    if (fCheckMerkleRoot) {
+        if (block.hashMerkleRoot != BlockMerkleRoot(block))
+            return state.Invalid(BlockValidationResult::BLOCK_MUTATED, "bad-merkle-root", "merkle root mismatch");
+    }
+
+    // Check for proof of work/stake.
+    if (fCheckPOW) {
+        if (block.IsProofOfWork()) {
+            if (!CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+                return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "high-hash", "proof of work failed");
+        }
+    }
+
+    // Check that the block transactions are valid.
+    if (block.vtx.empty() || block.vtx.size() > MAX_BLOCK_WEIGHT / MIN_TRANSACTION_WEIGHT || ::GetSerializeSize(block, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS) > MAX_BLOCK_SERIALIZED_SIZE)
+         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-blk-length", "size limits failed");
+
+    // The first transaction must be a coinbase
+    if (block.vtx.empty() || !block.vtx[0]->IsCoinBase())
+        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cb-missing", "first tx is not coinbase");
+
+    // The rest of the transactions cannot be coinbase
+    for (unsigned int i = 1; i < block.vtx.size(); i++)
+        if (block.vtx[i]->IsCoinBase())
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cb-multiple", "more than one coinbase");
+
+
+    for (const auto& tx : block.vtx) {
+        if (!CheckTransaction(*tx, state)) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-structure", strprintf("transaction structure failed for %s", tx->GetHash().ToString()));
+        }
+    }
+
+    return true;
+}
+
+BlockValidationState TestBlockValidity(
+    Chainstate& chainstate,
+    const CBlock& block,
+    bool check_pow,
+    bool check_merkle_root)
+{
+    AssertLockHeld(cs_main);
+    BlockValidationState state;
+
+    // CheckBlock() does context-free checks.
+    if (!CheckBlock(block, state, chainstate.m_chainman.GetConsensus(), check_pow, check_merkle_root)) {
+        return state;
+    }
+
+    // The following checks are context-dependent.
+    const CBlockIndex* pindexPrev = chainstate.m_blockman.LookupBlockIndex(block.hashPrevBlock);
+    if (!pindexPrev) {
+        return state.Invalid(BlockValidationResult::BLOCK_MISSING_PREV, "bad-prevblk", "previous block not found");
+    }
+
+    // Check PoW to PoS switch
+    if (pindexPrev->nHeight + 1 > chainstate.m_chainman.GetConsensus().nLastPoWBlock) {
+        if (block.IsProofOfWork()) {
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "pow-block-too-high", "Proof-of-work block found after last PoW block");
+        }
+    } else {
+        if (!block.IsProofOfWork()) {
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "pos-block-too-early", "Proof-of-stake block found before PoS activation");
+        }
+    }
+
+    // Check proof of stake.
+    if (!block.IsProofOfWork()) {
+        if (!ContextualCheckProofOfStake(block, pindexPrev, chainstate.CoinsTip(), chainstate.m_chain, chainstate.m_chainman.GetConsensus())) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-proof-of-stake", "Proof-of-stake check failed");
+        }
+    }
+
+    // Check timestamp against prev
+    if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast()) {
+        return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "time-too-old", "block's timestamp is too early");
+    }
+
+    return state;
+}
+
+bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, CBlockIndex* pindex,
+                  CCoinsViewCache& view, bool fJustCheck)
+{
+    AssertLockHeld(cs_main);
+
+    const CChainParams& chainparams = m_chainman.GetParams();
+    const Consensus::Params& consensusParams = chainparams.GetConsensus();
+
+    // Check that the view is consistent with the chain.
+    assert(pindex->hashPrevBlock == view.GetBestBlock());
+
+    // Check that the block is not already connected.
+    if (pindex->nStatus & BLOCK_HAVE_DATA) {
+        return true;
+    }
+
+    // Verify that the block is valid.
+    if (!TestBlockValidity(*this, block, true, true).IsValid()) {
+        return false;
+    }
+
+    // Create a new undo object.
+    CBlockUndo blockundo;
+
+    // Apply the transactions to the UTXO set.
+    for (const auto& tx : block.vtx) {
+        CTxUndo txundo;
+        if (!view.ConnectTransaction(*tx, pindex->nHeight, txundo)) {
+            if (state.IsInvalid()) {
+                // We are in a bad state.
+                return false;
+            }
+            // This should not happen.
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-inputs-missingorspent", "inputs missing/spent");
+        }
+        blockundo.vtxundo.push_back(txundo);
+    }
+
+    // Update the chainstate.
+    if (!fJustCheck) {
+        // Add the block to the block index.
+        pindex->nStatus |= BLOCK_HAVE_DATA;
+        pindex->nTx = block.vtx.size();
+        pindex->nChainTx += block.vtx.size();
+        pindex->nFile = m_blockman.FindBlockPos(pindex->GetBlockHash(), pindex->nHeight, pindex->nTime, pindex->nStatus, pindex->nTx, pindex->nChainTx, pindex->nSequenceId);
+        m_blockman.m_dirty_block_index.insert(pindex);
+
+        // Write the undo data to disk.
+        if (!m_blockman.WriteUndoDataForBlock(blockundo, state, pindex, chainparams)) {
+            return false;
+        }
+
+        // Update the best block.
+        view.SetBestBlock(pindex->GetBlockHash());
+    }
+
+    return true;
+}
+
+bool Chainstate::ConnectTip(BlockValidationState& state, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions& disconnectpool)
+{
+    AssertLockHeld(cs_main);
+    if (m_mempool) AssertLockHeld(m_mempool->cs);
+
+    const CBlockIndex* pindexOld = m_chain.Tip();
+    if (pindexNew->pprev != pindexOld) {
+        // Reorgs are not supported in this simplified implementation.
+        return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "reorg-not-supported", "reorgs not supported");
+    }
+
+    // Connect the new block.
+    if (!ConnectBlock(*pblock, state, pindexNew, connectTrace.m_view, false)) {
+        if (state.IsInvalid()) {
+            InvalidBlockFound(pindexNew, state);
+        }
+        return false;
+    }
+
+    // Update the chain tip.
+    m_chain.SetTip(pindexNew);
+    UpdateTip(pindexNew);
+
+    return true;
 }
