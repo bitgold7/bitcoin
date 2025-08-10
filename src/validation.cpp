@@ -436,7 +436,7 @@ class MemPoolAccept
 public:
     explicit MemPoolAccept(CTxMemPool& mempool, Chainstate& active_chainstate) : m_pool(mempool),
                                                                                  m_view(&m_dummy),
-                                                                                 m_viewmempool(&active_chainstate.CoinsTip(), m_pool),
+                                                                                 m_viewmempool(&active_chainstate.CoinsTip(), mempool),
                                                                                  m_active_chainstate(active_chainstate)
     {
     }
@@ -1356,7 +1356,6 @@ bool MemPoolAccept::SubmitPackage(const ATMPArgs& args, std::vector<Workspace>& 
             results.emplace(ws.m_ptx->GetWitnessHash(), MempoolAcceptResult::Failure(ws.m_state));
             // Since PolicyScriptChecks() passed, this should never fail.
             Assume(false);
-            all_submitted = false;
             package_state.Invalid(PackageValidationResult::PCKG_MEMPOOL_ERROR,
                                   strprintf("BUG! PolicyScriptChecks succeeded but ConsensusScriptChecks failed: %s",
                                             ws.m_ptx->GetHash().ToString()));
@@ -2013,4 +2012,72 @@ void Chainstate::InitCoinsDB(
             .obfuscate = true,
         },
         CoinsViewOptions{});
+}
+
+Chainstate& ChainstateManager::ActiveChainstate() const
+{
+    assert(m_active_chainstate);
+    return *m_active_chainstate;
+}
+
+bool ChainstateManager::IsInitialBlockDownload() const
+{
+    // Once this function has returned false, it must remain false.
+    if (m_cached_finished_ibd.load(std::memory_order_relaxed))
+        return false;
+
+    if (m_active_chainstate == nullptr) {
+        return true;
+    }
+
+    if (m_active_chainstate->m_chain.Tip() == nullptr) {
+        return true;
+    }
+    if (m_active_chainstate->m_chain.Tip()->nChainWork < MinimumChainWork()) {
+        return true;
+    }
+    if (m_active_chainstate->m_chain.Tip()->GetBlockTime() < (GetTime() - m_options.max_tip_age)) {
+        return true;
+    }
+
+    m_cached_finished_ibd.store(true, std::memory_order_relaxed);
+    return false;
+}
+
+bool Chainstate::FlushStateToDisk(BlockValidationState& state, FlushStateMode mode, int nManualPruneHeight)
+{
+    AssertLockHeld(cs_main);
+    if (!CanFlushToDisk()) {
+        if (mode == FlushStateMode::ALWAYS) {
+            LogPrintf("FlushStateToDisk: Can't flush state to disk, but requested to do so always.\n");
+        }
+        return true;
+    }
+
+    bool ret = true;
+    try {
+        if (mode == FlushStateMode::ALWAYS ||
+            (mode == FlushStateMode::IF_NEEDED && CoinsTip().GetCacheSize() > m_coinstip_cache_size_bytes) ||
+            (mode == FlushStateMode::PERIODIC && CoinsTip().GetCacheSize() > m_coinstip_cache_size_bytes / 2)) {
+            ret = CoinsTip().Flush();
+        }
+    } catch (const std::runtime_error& e) {
+        return FatalError(m_chainman.GetNotifications(), state, bilingual_str(e.what()));
+    }
+    return ret;
+}
+
+bool ChainstateManager::ProcessNewBlock(const std::shared_ptr<const CBlock>& block, bool force_processing, bool min_pow_checked, bool* new_block)
+{
+    AssertLockNotHeld(cs_main);
+
+    BlockValidationState state;
+    // Store to disk
+    CBlockIndex* pindex = nullptr;
+    bool ret = AcceptBlock(block, state, &pindex, force_processing, nullptr, new_block, min_pow_checked);
+    if (pindex && new_block && *new_block) {
+        GetNotifications().BlockConnected(*block, pindex);
+    }
+    // Only used to report errors, not invalidity - ignore it
+    return ret;
 }
