@@ -78,8 +78,11 @@ void BitGoldStaker::ThreadStaker()
             if (candidates.empty()) {
                 LogPrintf("BitGoldStaker: no eligible UTXOs\n");
             } else {
-                LOCK(::cs_main);
-                CBlockIndex* pindexPrev = chainman.ActiveChain().Tip();
+                CBlockIndex* pindexPrev{nullptr};
+                {
+                    LOCK(::cs_main);
+                    pindexPrev = chainman.ActiveChain().Tip();
+                }
                 if (!pindexPrev) {
                     LogPrintf("BitGoldStaker: no tip block\n");
                 } else {
@@ -146,14 +149,11 @@ void BitGoldStaker::ThreadStaker()
                         block.nNonce = 0;
                         block.hashMerkleRoot = BlockMerkleRoot(block);
 
-                        {
-                            LOCK(cs_main);
-                            if (!ContextualCheckProofOfStake(block, pindexPrev,
-                                                              chainman.ActiveChainstate().CoinsTip(),
-                                                              chainman.ActiveChain(), consensus)) {
-                                LogPrintf("BitGoldStaker: produced block failed CheckProofOfStake\n");
-                                continue;
-                            }
+                        if (!ContextualCheckProofOfStake(block, pindexPrev,
+                                                          chainman.ActiveChainstate().CoinsTip(),
+                                                          chainman.ActiveChain(), consensus)) {
+                            LogPrintf("BitGoldStaker: produced block failed CheckProofOfStake\n");
+                            continue;
                         }
 
                         bool new_block{false};
