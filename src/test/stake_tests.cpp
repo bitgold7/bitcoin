@@ -1,6 +1,8 @@
 #include <pos/stake.h>
 #include <chain.h>
+#include <chainparams.h>
 #include <consensus/amount.h>
+#include <coins.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <script/script.h>
@@ -71,6 +73,59 @@ BOOST_AUTO_TEST_CASE(invalid_kernel_target)
 
     BOOST_CHECK(!CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
                                       amount, prevout, nTimeTx, hash_proof, false));
+}
+
+BOOST_AUTO_TEST_CASE(coinstake_requires_two_outputs)
+{
+    // Setup a simple chain with a genesis and previous block
+    uint256 prev_hash{1};
+    uint256 genesis_hash{2};
+
+    CBlockIndex genesis;
+    genesis.nHeight = 0;
+    genesis.nTime = 0;
+    genesis.phashBlock = &genesis_hash;
+
+    CBlockIndex prev_index;
+    prev_index.pprev = &genesis;
+    prev_index.nHeight = 1;
+    prev_index.nTime = 100;
+    prev_index.phashBlock = &prev_hash;
+
+    CChain chain;
+    chain.SetTip(&prev_index);
+
+    // Prepare staking UTXO
+    CCoinsView view_dummy;
+    CCoinsViewCache view(&view_dummy);
+    COutPoint prevout{Txid::FromUint256(uint256{3}), 0};
+    Coin coin{CTxOut{100 * COIN, CScript{}}, /*nHeight=*/0, /*fCoinBase=*/false};
+    view.AddCoin(prevout, std::move(coin), false);
+
+    // Build block with invalid coinstake (missing second output)
+    CMutableTransaction coinbase;
+    coinbase.vin.emplace_back();
+    coinbase.vout.emplace_back();
+
+    CMutableTransaction coinstake;
+    coinstake.vin.emplace_back(prevout);
+    coinstake.vout.resize(1);
+    coinstake.vout[0].SetNull();
+
+    CBlock block;
+    block.nTime = MIN_STAKE_AGE;
+    block.nBits = 0x207fffff;
+    block.vtx = {MakeTransactionRef(coinbase), MakeTransactionRef(coinstake)};
+
+    BOOST_CHECK(!ContextualCheckProofOfStake(block, &prev_index, view, chain, Params().GetConsensus()));
+
+    // Add a second output and verify validation succeeds
+    coinstake.vout.resize(2);
+    coinstake.vout[0].SetNull();
+    coinstake.vout[1].nValue = 100 * COIN;
+    block.vtx[1] = MakeTransactionRef(coinstake);
+
+    BOOST_CHECK(ContextualCheckProofOfStake(block, &prev_index, view, chain, Params().GetConsensus()));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
