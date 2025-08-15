@@ -109,6 +109,9 @@ bool ContextualCheckProofOfStake(const CBlock& block, const CBlockIndex* pindexP
                  "ContextualCheckProofOfStake: invalid coinstake structure");
         return false;
     }
+    if (tx->vout.size() < 2) {
+        return false;
+    }
 
     uint256 hashProof;
     for (size_t i = 0; i < tx->vin.size(); ++i) {
