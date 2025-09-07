@@ -2019,15 +2019,47 @@ PackageMempoolAcceptResult ProcessNewPackage(Chainstate& active_chainstate, CTxM
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
+    constexpr CAmount GENESIS_SUBSIDY{3'000'000 * COIN};
+    constexpr CAmount MAX_SUPPLY{8'000'000 * COIN};
+    const CAmount remaining_cap{MAX_SUPPLY - GENESIS_SUBSIDY};
+
     int halvings = nHeight / consensusParams.nSubsidyHalvingInterval;
-    // Force block reward to zero when right shift is undefined or too large.
-    if (halvings >= 64)
-        return 0;
+    if (halvings >= 64) return 0;
 
     CAmount nSubsidy = 50 * COIN; // BitGold: Start with 50 coins per block
-    // Subsidy is cut in half every nSubsidyHalvingInterval blocks.
-    nSubsidy >>= halvings;
-    return nSubsidy;
+    nSubsidy >>= halvings;         // Subsidy is cut in half every interval
+
+    // Calculate coins generated in previous blocks (excluding genesis)
+    int height = nHeight > 0 ? nHeight - 1 : 0;
+    CAmount generated{0};
+    CAmount current = 50 * COIN;
+
+    if (height > 0) {
+        int first_interval = std::min(consensusParams.nSubsidyHalvingInterval - 1, height);
+        CAmount potential = current * first_interval;
+        if (potential >= remaining_cap) {
+            generated = remaining_cap;
+        } else {
+            generated += potential;
+            height -= first_interval;
+            current >>= 1;
+            while (height > 0 && current > 0 && generated < remaining_cap) {
+                int blocks = std::min(consensusParams.nSubsidyHalvingInterval, height);
+                potential = current * blocks;
+                if (generated + potential >= remaining_cap) {
+                    generated = remaining_cap;
+                    break;
+                }
+                generated += potential;
+                height -= blocks;
+                current >>= 1;
+            }
+        }
+    }
+
+    CAmount remaining = remaining_cap - generated;
+    if (remaining <= 0) return 0;
+    return std::min(nSubsidy, remaining);
 }
 
 /**
