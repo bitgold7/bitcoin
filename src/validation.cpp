@@ -6,6 +6,7 @@
 #include <bitcoin-build-config.h> // IWYU pragma: keep
 
 #include <pos/stake.h>
+#include <pos/slashing.h>
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -174,6 +175,13 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
         chain.SetTip(const_cast<CBlockIndex*>(pindexPrev));
         if (!ContextualCheckProofOfStake(block, pindexPrev, view, chain, params)) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "proof of stake check failed");
+        }
+        // Use the coinstake transaction as a validator identifier for slashing purposes.
+        if (block.vtx.size() > 1) {
+            const std::string validator_id = block.vtx[1]->GetHash().ToString();
+            if (pos::g_slashing_tracker.AddEvidence(validator_id, pos::SlashReason::DOUBLE_SIGN, GetTime())) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "slash", "validator double-sign detected");
+            }
         }
     } else {
         // Disallow proof-of-work blocks beyond height 1

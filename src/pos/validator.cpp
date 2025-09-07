@@ -23,4 +23,17 @@ void Validator::ScheduleUnstake(int64_t current_time)
     m_active = false;
 }
 
+void Validator::Slash(SlashType reason)
+{
+    uint8_t penalty = reason == SlashType::DOUBLE_SIGN ? SLASH_PENALTY_DOUBLE_SIGN : SLASH_PENALTY_NOTHING_AT_STAKE;
+    const uint64_t amount = m_stake_amount * penalty / 100;
+    if (amount >= m_stake_amount) {
+        m_stake_amount = 0;
+    } else {
+        m_stake_amount -= amount;
+    }
+    m_active = false;
+    m_locked_until = 0;
+}
+
 } // namespace pos
