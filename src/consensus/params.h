@@ -123,20 +123,37 @@ struct Params {
         return std::chrono::seconds{nPowTargetSpacing};
     }
     int64_t DifficultyAdjustmentInterval() const { return nPowTargetTimespan / nPowTargetSpacing; }
-    // Height at which proof-of-stake activates
+
+    // ---------------------------------------------------------------------
+    // Proof-of-Stake consensus parameters (PoSv3.1)
+    // ---------------------------------------------------------------------
+    // Height at which proof-of-stake activates (first PoS block expected at >= this height)
     int posActivationHeight{1};
-    // Enable proof-of-stake validation when true
+    // Global flag enabling PoS logic (must be true in params AND height >= posActivationHeight)
     bool fEnablePoS{false};
-    // Required timestamp mask for staked blocks
+    // Required timestamp alignment mask for coinstake (e.g. 0xF enforces 16‑second spacing granularity)
     uint32_t nStakeTimestampMask{0xF};
-    // Minimum coin age required for staking
+    // Minimum age (seconds) a UTXO must have since its containing tx time to be eligible (informational, can be 0 if depth rule used)
     int64_t nStakeMinAge{60 * 60};
-    // Seconds between stake modifier recalculations
+    // Minimum confirmations (depth) required for a UTXO to stake
+    int64_t nStakeMinConfirmations{50};
+    // Interval (seconds) between stake modifier recalculations or its conceptual epoch
     int64_t nStakeModifierInterval{60 * 60};
-    // Target limit for proof-of-stake difficulty
+    // Target limit (highest permitted target) for PoS difficulty
     uint256 posLimit;
-    // Target spacing between staked blocks
-    int64_t nStakeTargetSpacing{16};
+    // Optional stronger limit when retargeting down (not always used, kept for future tuning)
+    uint256 posLimitLower;
+    // Desired target spacing between PoS blocks (seconds)
+    int64_t nStakeTargetSpacing{60};
+    // Initial per-block stake reward (before halving), in satoshis
+    int64_t nInitialStakeReward{10 * 100000000LL};
+    // Interval (in blocks) at which the stake reward halves
+    int64_t nStakeHalvingInterval{200000};
+    // Maximum allowed total money supply (cap). Minting beyond this must be clipped.
+    int64_t nMaximumSupply{21000000LL * 100000000LL};
+    // Cap on individual input weight for reward scaling (value above this does not increase proportional reward)
+    int64_t nStakeRewardInputWeightCap{1000 * 100000000LL};
+
     /** The best chain should have at least this much work */
     uint256 nMinimumChainWork;
     /** By default assume that the signatures in ancestors of this block are valid */
