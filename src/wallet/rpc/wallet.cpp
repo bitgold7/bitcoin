@@ -851,30 +851,6 @@ static RPCHelpMan createwalletdescriptor()
                       }};
 }
 
-static RPCHelpMan stakerstatus()
-{
-    return RPCHelpMan{
-        "stakerstatus",
-        "Returns the staking status for this wallet.\n",
-        {},
-        RPCResult{
-            RPCResult::Type::OBJ, "", "", {
-                                              {RPCResult::Type::BOOL, "enabled", "true if staking is enabled via -staker"},
-                                              {RPCResult::Type::BOOL, "staking", "true if the staking thread is running"},
-                                          }},
-        RPCExamples{HelpExampleCli("stakerstatus", "") + HelpExampleRpc("stakerstatus", "")},
-        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
-            const std::shared_ptr<const CWallet> pwallet = GetWalletForJSONRPCRequest(request);
-            if (!pwallet) return UniValue::VNULL;
-            pwallet->BlockUntilSyncedToCurrentChain();
-
-            UniValue obj(UniValue::VOBJ);
-            obj.pushKV("enabled", gArgs.GetBoolArg("-staker", false));
-            obj.pushKV("staking", pwallet->IsStaking());
-            return obj;
-        }};
-}
-
 static RPCHelpMan getstakinginfo()
 {
     return RPCHelpMan{
@@ -883,12 +859,19 @@ static RPCHelpMan getstakinginfo()
         {},
         RPCResult{
             RPCResult::Type::OBJ, "", "", {
-                                              {RPCResult::Type::BOOL, "enabled", "true if staking is enabled via -staker"},
+                                              {RPCResult::Type::BOOL, "enabled", "true if staking is enabled via -staking"},
                                               {RPCResult::Type::BOOL, "staking", "true if the staking thread is running"},
                                           }},
         RPCExamples{HelpExampleCli("getstakinginfo", "") + HelpExampleRpc("getstakinginfo", "")},
-        [](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
-            return stakerstatus().HandleRequest(request);
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            const std::shared_ptr<const CWallet> pwallet = GetWalletForJSONRPCRequest(request);
+            if (!pwallet) return UniValue::VNULL;
+            pwallet->BlockUntilSyncedToCurrentChain();
+
+            UniValue obj(UniValue::VOBJ);
+            obj.pushKV("enabled", gArgs.GetBoolArg("-staking", false));
+            obj.pushKV("staking", pwallet->IsStaking());
+            return obj;
         }};
 }
 
@@ -1093,7 +1076,6 @@ std::span<const CRPCCommand> GetWalletRPCCommands()
         {"wallet", &walletpassphrase},
         {"wallet", &walletpassphrasechange},
         {"wallet", &walletprocesspsbt},
-        {"wallet", &stakerstatus},
         {"wallet", &getstakinginfo},
         {"wallet", &getstakingstats},
         {"wallet", &walletstaking},

@@ -41,7 +41,7 @@ void DummyWalletInit::AddWalletOptions(ArgsManager& argsman) const
         "-paytxfee=<amt>",
         "-signer=<cmd>",
         "-spendzeroconfchange",
-        "-staker",
+        "-staking",
         "-txconfirmtarget=<n>",
         "-wallet=<path>",
         "-walletbroadcast",

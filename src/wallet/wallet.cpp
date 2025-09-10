@@ -3221,7 +3221,7 @@ void CWallet::postInitProcess()
     WITH_LOCK(cs_wallet, chain().requestMempoolTransactions(*this));
 
     // Start staking thread if enabled
-    if (gArgs.GetBoolArg("-staker", false) && !m_staker) {
+    if (gArgs.GetBoolArg("-staking", false) && !m_staker) {
         m_staker = std::make_unique<BitGoldStaker>(*this);
         m_staker->Start();
     }

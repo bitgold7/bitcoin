@@ -19,20 +19,20 @@ These rules are enforced automatically when staking is enabled.
 
 ## Enabling
 
-Start the node with `-staker=1` (or add `staker=1` to `bitcoin.conf`) to run
+Start the node with `-staking=1` (or add `staking=1` to `bitcoin.conf`) to run
 the staking thread. No additional configuration is required for PoSV3, but
 `-debug=staking` may be useful for troubleshooting.
 
 ## Monitoring
 
-Use the `stakerstatus` RPC to check if staking is enabled and running:
+Use the `getstakinginfo` RPC to check if staking is enabled and running:
 
 ```
-$ bitcoin-cli stakerstatus
+$ bitcoin-cli getstakinginfo
 {
   "enabled": true,
   "staking": true
 }
 ```
 
-The `enabled` field indicates whether the `-staker` option is set, while `staking` shows if the staking thread is currently active.
+The `enabled` field indicates whether the `-staking` option is set, while `staking` shows if the staking thread is currently active.

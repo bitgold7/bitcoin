@@ -23,7 +23,7 @@ described below.
    ```
 3. Use `bitgold-cli getstakinginfo` to verify that your node is staking.
 
-The staker will automatically attempt to create new blocks at the protocol's
+The staking thread will automatically attempt to create new blocks at the protocol's
 8-minute target spacing. Staking rewards follow BitGold's 90 000-block halving
 schedule. The staking thread adheres to PoSV3 without additional options, but
 `-debug=staking` can help diagnose failures.
