@@ -1,4 +1,6 @@
 #include <pos/stake.h>
+#include <pos/stakemodifier.h>
+#include <pos/stakemodifier_manager.h>
 #include <chain.h>
 #include <consensus/amount.h>
 #include <consensus/merkle.h>
@@ -97,20 +99,14 @@ BOOST_AUTO_TEST_CASE(kernel_hash_matches_expectation)
     unsigned int nBits = 0x207fffff;
     unsigned int nTimeTx = MIN_STAKE_AGE;
 
-    uint256 expected_modifier;
-    {
-        HashWriter ss_mod;
-        ss_mod << prev_index.GetBlockHash() << prevout.hash << prevout.n;
-        expected_modifier = ss_mod.GetHash();
-    }
+    StakeModifierManager& manager = GetStakeModifierManager();
+    const uint256 prev_modifier = manager.GetModifier();
+    const uint256 expected_modifier = ComputeStakeModifier(&prev_index, prev_modifier);
 
-    uint256 expected_hash;
-    {
-        HashWriter ss_kernel;
-        ss_kernel << expected_modifier << nTimeBlockFrom << prevout.hash << prevout.n
-                  << nTimeTx;
-        expected_hash = ss_kernel.GetHash();
-    }
+    HashWriter ss_kernel;
+    ss_kernel << expected_modifier << hash_block_from << nTimeBlockFrom << prevout.hash << prevout.n
+              << nTimeTx;
+    const uint256 expected_hash = ss_kernel.GetHash();
 
     uint256 hash_proof;
     Consensus::Params params;
@@ -143,6 +139,39 @@ BOOST_AUTO_TEST_CASE(stake_modifier_differs_per_input)
     BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
                                      100 * COIN, prevout2, nTimeTx, proof2, false, params));
     BOOST_CHECK(proof1 != proof2);
+}
+
+BOOST_AUTO_TEST_CASE(compute_historical_modifier)
+{
+    uint256 genesis_hash{1};
+    CBlockIndex genesis;
+    genesis.nHeight = 0;
+    genesis.nTime = 0;
+    genesis.phashBlock = &genesis_hash;
+
+    uint256 hash1{2};
+    CBlockIndex block1;
+    block1.nHeight = 1;
+    block1.nTime = 10;
+    block1.phashBlock = &hash1;
+    block1.pprev = &genesis;
+
+    uint256 hash2{3};
+    CBlockIndex block2;
+    block2.nHeight = 2;
+    block2.nTime = 20;
+    block2.phashBlock = &hash2;
+    block2.pprev = &block1;
+
+    StakeModifierManager manager;
+    const uint256 mod1 = manager.ComputeModifier(&block1);
+    const uint256 mod2 = manager.ComputeModifier(&block2);
+
+    const uint256 exp1 = ComputeStakeModifier(&genesis, uint256{});
+    const uint256 exp2 = ComputeStakeModifier(&block1, exp1);
+
+    BOOST_CHECK_EQUAL(mod1, exp1);
+    BOOST_CHECK_EQUAL(mod2, exp2);
 }
 
 BOOST_AUTO_TEST_CASE(height1_requires_coinstake)

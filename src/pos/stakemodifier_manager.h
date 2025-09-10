@@ -23,6 +23,9 @@ public:
     void ComputeNextModifier(const CBlockIndex* pindexPrev, unsigned int nTime,
                              const Consensus::Params& params);
 
+    /** Compute the stake modifier for the chain up to the given index. */
+    uint256 ComputeModifier(const CBlockIndex* index) const;
+
 private:
     uint256 m_modifier;
     int64_t m_last_update{0};

@@ -33,7 +33,6 @@
 #include <node/blockstorage.h>
 #include <node/connection_types.h>
 #include <node/protocol_version.h>
-#include <node/stake_modifier_manager.h>
 #include <node/timeoffsets.h>
 #include <node/txdownloadman.h>
 #include <node/txorphanage.h>
@@ -43,6 +42,7 @@
 #include <policy/fees.h>
 #include <policy/packages.h>
 #include <policy/policy.h>
+#include <pos/stakemodifier_manager.h>
 #include <pos/stake.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
@@ -784,7 +784,6 @@ private:
      */
     Mutex m_tx_download_mutex ACQUIRED_BEFORE(m_mempool.cs);
     node::TxDownloadManager m_txdownloadman GUARDED_BY(m_tx_download_mutex);
-    node::StakeModifierManager m_stake_modman;
 
     std::unique_ptr<TxReconciliationTracker> m_txreconciliation;
 
@@ -1947,7 +1946,6 @@ PeerManagerImpl::PeerManagerImpl(CConnman& connman, AddrMan& addrman,
       m_chainman(chainman),
       m_mempool(pool),
       m_txdownloadman(node::TxDownloadOptions{pool, m_rng, opts.deterministic_rng}),
-      m_stake_modman(chainman),
       m_warnings{warnings},
       m_opts{opts}
 {
@@ -3351,8 +3349,15 @@ void PeerManagerImpl::ProcessGetStakeMod(CNode& node, Peer& peer, DataStream& vR
     }
     uint256 block_hash;
     vRecv >> block_hash;
-    if (auto mod = m_stake_modman.GetStakeModifier(block_hash)) {
-        peer.m_stake_modifiers_to_send.emplace_back(block_hash, *mod);
+    const CBlockIndex* index;
+    {
+        LOCK(cs_main);
+        index = m_chainman.m_blockman.LookupBlockIndex(block_hash);
+    }
+    if (index) {
+        StakeModifierManager& manager = GetStakeModifierManager();
+        const uint256 mod = manager.ComputeModifier(index);
+        peer.m_stake_modifiers_to_send.emplace_back(block_hash, mod);
     }
 }
 
@@ -3366,7 +3371,9 @@ void PeerManagerImpl::ProcessStakeMod(CNode& node, Peer& peer, DataStream& vRecv
     uint256 block_hash;
     uint256 modifier;
     vRecv >> block_hash >> modifier;
-    m_stake_modman.ProcessStakeModifier(block_hash, modifier);
+    (void)block_hash;
+    (void)modifier;
+    // Stake modifiers are derived locally; nothing to process for now.
 }
 
 void PeerManagerImpl::ProcessBlock(CNode& node, const std::shared_ptr<const CBlock>& block, bool force_processing, bool min_pow_checked)

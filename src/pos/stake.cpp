@@ -4,6 +4,7 @@
 #include <coins.h>
 #include <consensus/amount.h>
 #include <consensus/consensus.h>
+#include <consensus/params.h>
 #include <hash.h>
 #include <logging.h>
 #include <pos/stakemodifier.h>
