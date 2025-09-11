@@ -2257,8 +2257,8 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast,
 
 /**
  * Iterate over the given headers and ensure each one satisfies the proof of
- * work or proof of stake target specified by its nBits field and matches any
- * defined checkpoints for its height.
+ * work target (proof-of-work or proof-of-stake) specified by its nBits field
+ * and matches any defined checkpoints for its height.
  *
  * @param headers       Sequence of consecutive block headers.
  * @param chainparams   Chain parameters providing consensus rules and
@@ -2266,11 +2266,13 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast,
  * @param prev_height   Height of the block preceding \p headers. The first
  *                      header is assumed to be at prev_height + 1.
  */
-bool HasValidProofOfWork(const std::vector<CBlockHeader>& headers,
-                         const CChainParams& chainparams,
-                         int prev_height)
+bool HasValidWork(const std::vector<CBlockHeader>& headers,
+                  const CChainParams& chainparams,
+                  int prev_height)
 {
     const auto& checkpoints{chainparams.Checkpoints().checkpoints};
+    const auto& consensus{chainparams.GetConsensus()};
+    const arith_uint256 work_limit{std::max(UintToArith256(consensus.powLimit), UintToArith256(consensus.posLimit))};
     for (const CBlockHeader& header : headers) {
         bool fNegative{false};
         bool fOverflow{false};
@@ -2278,7 +2280,7 @@ bool HasValidProofOfWork(const std::vector<CBlockHeader>& headers,
         bnTarget.SetCompact(header.nBits, &fNegative, &fOverflow);
 
         // Range checks
-        if (fNegative || fOverflow || bnTarget == 0 || bnTarget > UintToArith256(chainparams.GetConsensus().powLimit)) {
+        if (fNegative || fOverflow || bnTarget == 0 || bnTarget > work_limit) {
             return false;
         }
 
