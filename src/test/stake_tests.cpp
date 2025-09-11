@@ -96,6 +96,32 @@ BOOST_AUTO_TEST_CASE(invalid_kernel_target)
                                       amount, prevout, nTimeTx, hash_proof, false, params));
 }
 
+BOOST_AUTO_TEST_CASE(invalid_kernel_amount)
+{
+    uint256 prev_hash{1};
+    CBlockIndex prev_index;
+    prev_index.nHeight = 1;
+    prev_index.nTime = 100;
+    prev_index.phashBlock = &prev_hash;
+
+    uint256 hash_block_from{2};
+    unsigned int nTimeBlockFrom = 0;
+    CAmount amount = 0; // zero stake amount
+    COutPoint prevout{Txid::FromUint256(uint256{3}), 0};
+
+    uint256 hash_proof;
+    unsigned int nBits = 0x207fffff;
+    unsigned int nTimeTx = MIN_STAKE_AGE;
+    Consensus::Params params;
+
+    StakeModifierManager& man = GetStakeModifierManager();
+    man = StakeModifierManager();
+    man.UpdateOnConnect(&prev_index, params);
+
+    BOOST_CHECK(!CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
+                                      amount, prevout, nTimeTx, hash_proof, false, params));
+}
+
 BOOST_AUTO_TEST_CASE(kernel_hash_matches_expectation)
 {
     uint256 prev_hash{1};
