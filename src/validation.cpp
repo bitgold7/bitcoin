@@ -7,6 +7,7 @@
 
 #include <pos/stake.h>
 #include <pos/difficulty.h>
+#include <pos/stakemodifier_manager.h>
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -160,6 +161,36 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
         }
     }
 
+    const bool fProofOfStake = IsProofOfStake(block);
+    block.fProofOfStake = fProofOfStake;
+
+    if (fProofOfStake) {
+        // coinbase must be empty
+        if (block.vtx[0]->vout.size() != 1 || block.vtx[0]->vout[0].nValue != 0) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cb-pos", "invalid pos coinbase");
+        }
+        const CTransactionRef& coinstake{block.vtx[1]};
+        if (coinstake->IsCoinBase() || coinstake->vin.empty() || coinstake->vout.size() < 2 ||
+            !coinstake->vout[0].scriptPubKey.empty() || coinstake->vout[0].nValue != 0) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-coinstake-structure", "invalid coinstake");
+        }
+        // Reward limit check: outputs must not exceed inputs + subsidy
+        CAmount input_value{0};
+        {
+            LOCK(cs_main);
+            CCoinsViewCache view(&g_chainman->ActiveChainstate().CoinsTip());
+            const Coin& coin = view.AccessCoin(coinstake->vin[0].prevout);
+            if (coin.IsSpent()) return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-coinstake-input", "missing coinstake input");
+            input_value = coin.out.nValue;
+        }
+        CAmount output_value{0};
+        for (const auto& o : coinstake->vout) output_value += o.nValue;
+        CAmount reward = output_value - input_value;
+        if (reward < 0 || reward > GetBlockSubsidy(next_height, params)) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-coinstake-amount", "coinstake pays too much");
+        }
+    }
+
     // Verify merkle root
     if (fCheckMerkleRoot) {
         if (block.hashMerkleRoot != BlockMerkleRoot(block)) {
@@ -182,7 +213,7 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
     // Proof checks
     const int next_height{pindexPrev->nHeight + 1};
     if (params.fEnablePoS && next_height >= params.posActivationHeight) {
-        if (!IsProofOfStake(block)) {
+        if (!fProofOfStake) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "expected proof-of-stake block");
         }
         if (!CheckStakeTimestamp(block, params)) {
@@ -196,8 +227,17 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
                 return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "proof of stake check failed");
             }
         }
+        CBlockIndex* pindexNew{nullptr};
+        {
+            LOCK(cs_main);
+            if (g_chainman) pindexNew = g_chainman->m_blockman.LookupBlockIndex(block.GetHash());
+        }
+        if (pindexNew) {
+            pindexNew->fProofOfStake = true;
+            GetStakeModifierManager().UpdateOnConnect(pindexNew, params);
+        }
     } else {
-        if (IsProofOfStake(block)) {
+        if (fProofOfStake) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-prev", "proof of stake before activation");
         }
         if (fCheckPOW) {
@@ -207,6 +247,14 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
                 UintToArith256(block.GetHash()) > bnTarget) {
                 return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "high-hash", "proof of work failed");
             }
+        }
+        CBlockIndex* pindexNew{nullptr};
+        {
+            LOCK(cs_main);
+            if (g_chainman) pindexNew = g_chainman->m_blockman.LookupBlockIndex(block.GetHash());
+        }
+        if (pindexNew) {
+            pindexNew->fProofOfStake = false;
         }
     }
 

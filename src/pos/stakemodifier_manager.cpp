@@ -39,6 +39,7 @@ void StakeModifierManager::UpdateOnConnect(const CBlockIndex* pindex,
     m_current_modifier = entry.modifier;
     m_current_block_hash = pindex->GetBlockHash();
     m_modifiers[m_current_block_hash] = entry;
+    const_cast<CBlockIndex*>(pindex)->stakeModifier = entry.modifier;
 }
 
 void StakeModifierManager::RemoveOnDisconnect(const CBlockIndex* pindex)
@@ -60,4 +61,5 @@ void StakeModifierManager::RemoveOnDisconnect(const CBlockIndex* pindex)
             m_current_modifier.SetNull();
         }
     }
+    const_cast<CBlockIndex*>(pindex)->stakeModifier.SetNull();
 }

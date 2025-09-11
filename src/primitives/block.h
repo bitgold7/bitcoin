@@ -70,11 +70,13 @@ class CBlock : public CBlockHeader
 public:
     // network and disk
     std::vector<CTransactionRef> vtx;
+    std::vector<unsigned char> vchBlockSig;
 
     // Memory-only flags for caching expensive checks
     mutable bool fChecked;                            // CheckBlock()
     mutable bool m_checked_witness_commitment{false}; // CheckWitnessCommitment()
     mutable bool m_checked_merkle_root{false};        // CheckMerkleRoot()
+    mutable bool fProofOfStake{false};
 
     CBlock()
     {
@@ -89,16 +91,18 @@ public:
 
     SERIALIZE_METHODS(CBlock, obj)
     {
-        READWRITE(AsBase<CBlockHeader>(obj), obj.vtx);
+        READWRITE(AsBase<CBlockHeader>(obj), obj.vtx, obj.vchBlockSig);
     }
 
     void SetNull()
     {
         CBlockHeader::SetNull();
         vtx.clear();
+        vchBlockSig.clear();
         fChecked = false;
         m_checked_witness_commitment = false;
         m_checked_merkle_root = false;
+        fProofOfStake = false;
     }
 
     CBlockHeader GetBlockHeader() const

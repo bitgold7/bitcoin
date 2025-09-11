@@ -1,5 +1,6 @@
 #include <pos/stake.h>
 #include <pos/difficulty.h>
+#include <pos/stakemodifier_manager.h>
 
 #include <arith_uint256.h>
 #include <hash.h>
@@ -37,11 +38,13 @@ bool IsProofOfStake(const CBlock& block)
 
 // Basic stake kernel hash: H( prevout.hash || prevout.n || nTimeBlockFrom || nTimeTx )
 // Later iterations will introduce a proper stake modifier and possibly richer entropy.
-static uint256 ComputeKernelHash(const COutPoint& prevout,
+static uint256 ComputeKernelHash(const uint256& modifier,
+                                 const COutPoint& prevout,
                                  unsigned int nTimeBlockFrom,
                                  unsigned int nTimeTx)
 {
     CHashWriter ss(SER_GETHASH, 0);
+    ss << modifier;
     ss << prevout.hash;
     ss << prevout.n;
     ss << nTimeBlockFrom;
@@ -78,7 +81,8 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
     arith_uint256 bnTargetWeight = bnTarget;
     bnTargetWeight *= bnWeight;
 
-    hashProofOfStake = ComputeKernelHash(prevout, nTimeBlockFrom, nTimeTx);
+    uint256 modifier = GetStakeModifierManager().GetCurrentModifier();
+    hashProofOfStake = ComputeKernelHash(modifier, prevout, nTimeBlockFrom, nTimeTx);
     arith_uint256 bnHash = UintToArith256(hashProofOfStake);
 
     if (fPrintProofOfStake) {
@@ -150,6 +154,22 @@ bool ContextualCheckProofOfStake(const CBlock& block,
     for (const auto& o : coinstake.vout) output_value += o.nValue;
     if (output_value < input_value) return false; // must not burn value in kernel input
     // (Excess is assumed to be stake reward + fees; capped later once reward code lands.)
+
+    // Block signature verification
+    if (block.vchBlockSig.empty()) return false;
+    std::vector<std::vector<unsigned char>> stack;
+    opcodetype opcode;
+    auto it = txin.scriptSig.begin();
+    while (it != txin.scriptSig.end()) {
+        std::vector<unsigned char> data;
+        if (!txin.scriptSig.GetOp(it, opcode, data)) return false;
+        if (opcode > OP_16) return false;
+        stack.push_back(std::move(data));
+    }
+    if (stack.size() < 2) return false;
+    CPubKey pubkey(stack.back());
+    if (!pubkey.IsFullyValid()) return false;
+    if (!pubkey.Verify(block.GetHash(), block.vchBlockSig)) return false;
 
     return true;
 }
