@@ -1206,8 +1206,18 @@ struct MigrationResult {
 [[nodiscard]] util::Result<MigrationResult> MigrateLegacyToDescriptor(std::shared_ptr<CWallet> local_wallet, const SecureString& passphrase, WalletContext& context);
 
 #ifdef ENABLE_BULLETPROOFS
-bool CreateBulletproofProof(CWallet& wallet, const CTransaction& tx, CBulletproof& proof);
-bool VerifyBulletproofProof(const CTransaction& tx, const CBulletproof& proof);
+/**
+ * Generate Bulletproof commitments and range proofs for each transaction output.
+ *
+ * @param wallet Reference to wallet used for randomness (currently unused).
+ * @param tx     Transaction whose outputs will be modified to include Bulletproof data.
+ * @param proofs Vector receiving the generated commitments and proofs.
+ * @returns      true on success, false if commitment or proof generation fails.
+ */
+bool CreateBulletproofProof(CWallet& wallet, CMutableTransaction& tx, std::vector<CBulletproof>& proofs);
+
+/** Verify a collection of Bulletproofs against a transaction's outputs. */
+bool VerifyBulletproofProof(const CTransaction& tx, const std::vector<CBulletproof>& proofs);
 #endif
 } // namespace wallet
 
