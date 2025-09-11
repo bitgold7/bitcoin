@@ -4567,20 +4567,52 @@ std::optional<WalletTXO> CWallet::GetTXO(const COutPoint& outpoint) const
     return it->second;
 }
 #ifdef ENABLE_BULLETPROOFS
-bool CreateBulletproofProof(CWallet& wallet, const CTransaction& tx, CBulletproof& proof)
+bool CreateBulletproofProof(CWallet& wallet, CMutableTransaction& tx, std::vector<CBulletproof>& proofs)
 {
-    (void)wallet;
-    (void)tx;
-    std::memset(&proof.commitment, 0, sizeof(proof.commitment));
-    proof.proof.clear();
-    proof.extra.clear();
+    (void)wallet; // Currently unused
+    static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
+
+    proofs.clear();
+    proofs.reserve(tx.vout.size());
+
+    for (auto& txout : tx.vout) {
+        CBulletproof bp;
+
+        unsigned char blind[32];
+        GetRandBytes({blind, 32});
+
+        if (secp256k1_pedersen_commit(ctx, &bp.commitment, blind, txout.nValue, &secp256k1_generator_h) != 1) {
+            return false;
+        }
+
+        bp.proof.resize(SECP256K1_RANGE_PROOF_MAX_LENGTH);
+        size_t proof_len = bp.proof.size();
+        if (secp256k1_rangeproof_sign(ctx, bp.proof.data(), &proof_len, 0, &bp.commitment, blind,
+                                      nullptr, 0, 0, txout.nValue, &secp256k1_generator_h) != 1) {
+            return false;
+        }
+        bp.proof.resize(proof_len);
+        bp.extra.clear();
+
+        CScript bp_script = txout.scriptPubKey;
+        bp_script << OP_BULLETPROOF
+                  << std::vector<unsigned char>(bp.commitment.data,
+                                                bp.commitment.data + sizeof(bp.commitment.data))
+                  << bp.proof;
+        txout.scriptPubKey = bp_script;
+
+        proofs.push_back(bp);
+    }
     return true;
 }
 
-bool VerifyBulletproofProof(const CTransaction& tx, const CBulletproof& proof)
+bool VerifyBulletproofProof(const CTransaction& tx, const std::vector<CBulletproof>& proofs)
 {
-    (void)tx;
-    return VerifyBulletproof(proof);
+    if (proofs.size() != tx.vout.size()) return false;
+    for (const auto& proof : proofs) {
+        if (!VerifyBulletproof(proof)) return false;
+    }
+    return true;
 }
 #endif
 } // namespace wallet
