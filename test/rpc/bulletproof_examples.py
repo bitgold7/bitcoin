@@ -35,9 +35,9 @@ def rpc_call(method, params=None):
 
 def main():
     try:
-        created = rpc_call("createrawbulletprooftransaction", [[], {}])
-        proof = created.get("result", {}).get("hex")
-        verified = rpc_call("verifybulletproof", [proof])
+        created = rpc_call("createrawbulletprooftransaction", [[], {"data": "00"}])
+        proofs = created.get("result", {}).get("proofs", [])
+        verified = [rpc_call("verifybulletproof", [p]) for p in proofs]
         print("create:", created)
         print("verify:", verified)
     except Exception as err:

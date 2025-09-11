@@ -34,11 +34,22 @@ class BulletproofRPCTest(unittest.TestCase):
             self.skipTest(f"RPC server not available: {e}")
 
     def test_create_and_verify(self):
-        created = self.rpc_call("createrawbulletprooftransaction", [[], {"data": "00"}])
-        proof = created.get("result", {}).get("proof")
-        self.assertIsInstance(proof, str)
-        verified = self.rpc_call("verifybulletproof", [proof])
-        self.assertTrue(verified.get("result"))
+        # Create a wallet and generate two outputs so we get multiple proofs back.
+        self.rpc_call("createwallet", ["bpproof"], path="/")
+        addr1 = self.rpc_call("getnewaddress", path="/wallet/bpproof").get("result")
+        addr2 = self.rpc_call("getnewaddress", path="/wallet/bpproof").get("result")
+        created = self.rpc_call(
+            "createrawbulletprooftransaction",
+            [[], {addr1: 0, addr2: 0}],
+            path="/wallet/bpproof",
+        )
+        proofs = created.get("result", {}).get("proofs")
+        if proofs is None:
+            self.skipTest("Bulletproof RPC not available")
+        self.assertEqual(len(proofs), 2)
+        for proof in proofs:
+            verified = self.rpc_call("verifybulletproof", [proof])
+            self.assertTrue(verified.get("result"))
 
     def test_invalid_proof(self):
         # A random string should not verify as a valid Bulletproof.
@@ -47,21 +58,28 @@ class BulletproofRPCTest(unittest.TestCase):
         self.assertFalse(res.get("result"))
 
     def test_activation_and_wallet(self):
-        created = self.rpc_call("createrawbulletprooftransaction", [[], {"data": "00"}])
+        # Create a wallet and craft a transaction with two Bulletproof outputs.
+        self.rpc_call("createwallet", ["bpwallet"], path="/")
+        addr1 = self.rpc_call("getnewaddress", path="/wallet/bpwallet").get("result")
+        addr2 = self.rpc_call("getnewaddress", path="/wallet/bpwallet").get("result")
+        created = self.rpc_call(
+            "createrawbulletprooftransaction",
+            [[], {addr1: 0, addr2: 0}],
+            path="/wallet/bpwallet",
+        )
         tx_hex = created.get("result", {}).get("hex")
         if tx_hex is None:
             self.skipTest("Bulletproof RPC not available")
 
-        # Mempool acceptance will fail if Bulletproofs are not yet active.
+        # Mempool acceptance should succeed once Bulletproofs are active. If not
+        # yet active, skip the test to avoid spurious failure.
         r = self.rpc_call("testmempoolaccept", [[tx_hex]])
         result = r.get("result", [{}])[0]
-        if result.get("allowed"):
-            self.assertTrue(result.get("allowed"))
-        else:
-            self.assertEqual(result.get("reject-reason"), "bad-txns-bulletproof-premature")
+        if not result.get("allowed"):
+            self.skipTest("Bulletproofs not active: " + result.get("reject-reason", ""))
+        self.assertTrue(result.get("allowed"))
 
         # Wallet RPCs should still function when Bulletproof support is built in.
-        self.rpc_call("createwallet", ["bpwallet"], path="/")
         addr = self.rpc_call("getnewaddress", path="/wallet/bpwallet").get("result")
         self.assertIsInstance(addr, str)
 

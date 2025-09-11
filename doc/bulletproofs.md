@@ -49,12 +49,15 @@ real funds.
 Two RPC methods expose the Bulletproof functionality:
 
 * `createrawbulletprooftransaction inputs outputs`
-  – Creates a raw transaction with Bulletproof range proofs.  Inputs and
+  – Creates a raw transaction with Bulletproof range proofs. Inputs and
     outputs follow the same structure as `createrawtransaction` but the
     resulting transaction sets the Bulletproof version bit and embeds the
-    commitments and proofs.
+    commitments and proofs. The RPC reply includes a `proofs` array
+    containing one proof per output.
 * `verifybulletproof proof`
-  – Verifies a Bulletproof and returns whether it is valid.
+  – Verifies a single Bulletproof and returns whether it is valid. Proofs
+    returned from `createrawbulletprooftransaction` can be checked
+    individually with this RPC.
 
 Both methods are available through `bitgold-cli` when BitGold is
 compiled with Bulletproof support.  Wallets can also create Bulletproof
@@ -67,8 +70,10 @@ is activated on the network.
 bitgold-cli createwallet bpwallet
 bitgold-cli -rpcwallet=bpwallet getnewaddress
 bitgold-cli createrawbulletprooftransaction "[]" "{\"data\":\"00\"}"
+# Result contains "proofs": ["<hex>", ...]
+bitgold-cli verifybulletproof "<hex>"
 ```
 
-The resulting hex string contains the serialized commitment and proof as
+The resulting hex string contains the serialized commitments and proofs as
 described in `doc/bulletproof-serialization.md`.
 
