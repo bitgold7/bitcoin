@@ -41,6 +41,7 @@ Bitcoin Core requires one of the following compilers.
 | [SQLite](../depends/packages/sqlite.mk) (wallet) | [link](https://sqlite.org) | [3.7.17](https://github.com/bitcoin/bitcoin/pull/19077) |
 | [systemtap](../depends/packages/systemtap.mk) ([tracing](tracing.md)) | [link](https://sourceware.org/systemtap/) | N/A |
 | [ZeroMQ](../depends/packages/zeromq.mk) (notifications) | [link](https://github.com/zeromq/libzmq/releases) | 4.0.0 |
+| [libsecp256k1_zkp](https://github.com/BlockstreamResearch/secp256k1-zkp) (Bulletproofs) | [link](https://github.com/BlockstreamResearch/secp256k1-zkp) | 0.6.1 |
 
 ### Runtime
 
@@ -48,3 +49,10 @@ Bitcoin Core requires one of the following compilers.
 | --- | --- | --- |
 | [Fontconfig](../depends/packages/fontconfig.mk) (gui) | [link](https://www.freedesktop.org/wiki/Software/fontconfig/) | 2.6 |
 | [FreeType](../depends/packages/freetype.mk) (gui) | [link](https://freetype.org) | 2.3.0 |
+
+Bulletproofs support requires `libsecp256k1_zkp` to be configured with:
+
+```
+./configure --enable-experimental --enable-module-bppp \
+            --with-ecmult-window=15 --with-ecmult-gen-precision=4
+```
