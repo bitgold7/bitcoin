@@ -53,6 +53,7 @@
 #include <validation.h>
 #include <validationinterface.h>
 #include <versionbits.h>
+#include <dividend/dividend.h>
 
 #include <cstdint>
 
@@ -3395,6 +3396,69 @@ return RPCHelpMan{
     };
 }
 
+static RPCHelpMan getdividendinfo()
+{
+    return RPCHelpMan{
+        "getdividendinfo",
+        "Returns information about the dividend pool and stakes.",
+        {},
+        RPCResult{RPCResult::Type::OBJ, "", "", {
+            {RPCResult::Type::STR_AMOUNT, "pool", "Current dividend pool"},
+            {RPCResult::Type::OBJ, "stakes", "Stake info per address", {{RPCResult::Type::OBJ, "", "", {
+                {RPCResult::Type::STR_AMOUNT, "weight", "Current stake weight"},
+                {RPCResult::Type::NUM, "last_payout", "Height of last payout"},
+                {RPCResult::Type::STR_AMOUNT, "pending", "Pending dividend amount"},
+            }}}},
+        }},
+        RPCExamples{HelpExampleCli("getdividendinfo", "") + HelpExampleRpc("getdividendinfo", "")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            NodeContext& node = EnsureNodeContext(request.context);
+            LOCK(cs_main);
+            Chainstate& chainstate = EnsureChainman(node).ActiveChainstate();
+            UniValue result(UniValue::VOBJ);
+            result.pushKV("pool", ValueFromAmount(chainstate.GetDividendPool()));
+            UniValue stakes(UniValue::VOBJ);
+            for (const auto& [addr, info] : chainstate.GetStakeInfo()) {
+                UniValue obj(UniValue::VOBJ);
+                obj.pushKV("weight", ValueFromAmount(info.weight));
+                obj.pushKV("last_payout", info.last_payout_height);
+                auto it = chainstate.GetPendingDividends().find(addr);
+                obj.pushKV("pending", it != chainstate.GetPendingDividends().end() ? ValueFromAmount(it->second) : ValueFromAmount(0));
+                stakes.pushKV(addr, obj);
+            }
+            result.pushKV("stakes", stakes);
+            return result;
+        }
+    };
+}
+
+static RPCHelpMan claimdividends()
+{
+    return RPCHelpMan{
+        "claimdividends",
+        "Claim pending dividends for an address.",
+        {
+            {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "Address to claim for"},
+        },
+        RPCResult{RPCResult::Type::OBJ, "", "", {
+            {RPCResult::Type::STR, "address", "Address"},
+            {RPCResult::Type::STR_AMOUNT, "amount", "Amount claimed"},
+        }},
+        RPCExamples{HelpExampleCli("claimdividends", "\"addr\"") + HelpExampleRpc("claimdividends", "\"addr\"")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            NodeContext& node = EnsureNodeContext(request.context);
+            LOCK(cs_main);
+            Chainstate& chainstate = EnsureChainman(node).ActiveChainstate();
+            std::string addr = request.params[0].get_str();
+            CAmount amount = chainstate.ClaimDividend(addr);
+            UniValue obj(UniValue::VOBJ);
+            obj.pushKV("address", addr);
+            obj.pushKV("amount", ValueFromAmount(amount));
+            return obj;
+        }
+    };
+}
+
 
 void RegisterBlockchainRPCCommands(CRPCTable& t)
 {
@@ -3423,6 +3487,8 @@ void RegisterBlockchainRPCCommands(CRPCTable& t)
         {"blockchain", &dumptxoutset},
         {"blockchain", &loadtxoutset},
         {"blockchain", &getchainstates},
+        {"blockchain", &getdividendinfo},
+        {"blockchain", &claimdividends},
         {"hidden", &invalidateblock},
         {"hidden", &reconsiderblock},
         {"hidden", &waitfornewblock},

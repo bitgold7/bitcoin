@@ -34,6 +34,7 @@
 #include <util/time.h>
 #include <util/translation.h>
 #include <versionbits.h>
+#include <dividend/dividend.h>
 
 #include <atomic>
 #include <cstdint>
@@ -625,6 +626,11 @@ public:
     //! Accumulated dividend fees awaiting distribution.
     CAmount m_dividend_pool GUARDED_BY(::cs_main){0};
 
+    //! Stake tracking per address.
+    std::map<std::string, StakeInfo> m_stake_info GUARDED_BY(::cs_main);
+    //! Pending dividends ready to be claimed by address.
+    std::map<std::string, CAmount> m_pending_dividends GUARDED_BY(::cs_main);
+
     /**
      * The base of the snapshot this chainstate was created from.
      *
@@ -659,6 +665,10 @@ public:
     void LoadDividendPool() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
     void AddToDividendPool(CAmount amount, int height) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
     CAmount GetDividendPool() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_dividend_pool; }
+    const std::map<std::string, StakeInfo>& GetStakeInfo() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_stake_info; }
+    const std::map<std::string, CAmount>& GetPendingDividends() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_pending_dividends; }
+    void UpdateStakeWeight(const std::string& addr, CAmount weight) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+    CAmount ClaimDividend(const std::string& addr) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     //! @returns A pointer to the mempool.
     CTxMemPool* GetMempool()
