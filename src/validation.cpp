@@ -98,8 +98,10 @@ using node::CBlockIndexWorkComparator;
 using node::SnapshotMetadata;
 
 #ifdef ENABLE_BULLETPROOFS
-/** Extract a Bulletproof commitment and proof from a script. */
-static bool ExtractBulletproofFromScript(const CScript& script, CBulletproof& out)
+/** Extract a Bulletproof commitment and proof from a script.
+ *  Returns true if a Bulletproof was found and successfully extracted.
+ *  Sets @p malformed to true if OP_BULLETPROOF is found but data is missing. */
+static bool ExtractBulletproofFromScript(const CScript& script, CBulletproof& out, bool& malformed)
 {
     CScript::const_iterator pc{script.begin()};
     opcodetype opcode;
@@ -107,10 +109,12 @@ static bool ExtractBulletproofFromScript(const CScript& script, CBulletproof& ou
     while (script.GetOp(pc, opcode, data)) {
         if (opcode != OP_BULLETPROOF) continue;
         if (!script.GetOp(pc, opcode, data) || data.size() != sizeof(out.commitment.data)) {
+            malformed = true;
             return false;
         }
         std::copy(data.begin(), data.end(), out.commitment.data);
         if (!script.GetOp(pc, opcode, out.proof)) {
+            malformed = true;
             return false;
         }
         return true;
@@ -120,17 +124,31 @@ static bool ExtractBulletproofFromScript(const CScript& script, CBulletproof& ou
 
 bool CheckBulletproofs(const CTransaction& tx, TxValidationState& state)
 {
-    for (const auto& txin : tx.vin) {
+    bool has_bp{false};
+    auto check_script = [&](const CScript& script) -> bool {
         CBulletproof bp;
-        if (ExtractBulletproofFromScript(txin.scriptSig, bp) && !VerifyBulletproof(bp)) {
+        bool malformed{false};
+        bool present = ExtractBulletproofFromScript(script, bp, malformed);
+        if (malformed) {
             return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
         }
+        if (present) {
+            has_bp = true;
+            if (!VerifyBulletproof(bp)) {
+                return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
+            }
+        }
+        return true;
+    };
+
+    for (const auto& txin : tx.vin) {
+        if (!check_script(txin.scriptSig)) return false;
     }
     for (const auto& txout : tx.vout) {
-        CBulletproof bp;
-        if (ExtractBulletproofFromScript(txout.scriptPubKey, bp) && !VerifyBulletproof(bp)) {
-            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
-        }
+        if (!check_script(txout.scriptPubKey)) return false;
+    }
+    if (tx.UsesBulletproofs() && !has_bp) {
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof-missing");
     }
     return true;
 }
@@ -252,7 +270,22 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
         }
     }
 
-    // Enforce Bulletproof activation: blocks before activation must not contain Bulletproof transactions.
+    // Enforce Bulletproof activation.
+#ifdef ENABLE_BULLETPROOFS
+    if (!DeploymentActiveAfter(pindexPrev, *g_chainman, Consensus::DEPLOYMENT_BULLETPROOF)) {
+        for (const auto& tx : block.vtx) {
+            if (tx->UsesBulletproofs()) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-bulletproof-premature", "Bulletproof not yet active");
+            }
+        }
+    } else {
+        for (const auto& tx : block.vtx) {
+            if (!CheckBulletproofs(*tx, state)) {
+                return false;
+            }
+        }
+    }
+#else
     if (!DeploymentActiveAfter(pindexPrev, *g_chainman, Consensus::DEPLOYMENT_BULLETPROOF)) {
         for (const auto& tx : block.vtx) {
             if (tx->UsesBulletproofs()) {
@@ -260,6 +293,7 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
             }
         }
     }
+#endif
 
     return true;
 }
@@ -596,8 +630,14 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, TxValidationS
 
     // Call CheckInputScripts() to cache signature and script validity against current tip consensus rules.
 #ifdef ENABLE_BULLETPROOFS
-    if (!CheckBulletproofs(tx, state)) {
-        return false;
+    const CBlockIndex* tip_index{nullptr};
+    if (g_chainman) {
+        tip_index = g_chainman->m_blockman.LookupBlockIndex(coins_tip.GetBestBlock());
+    }
+    if (tip_index && DeploymentActiveAfter(tip_index, *g_chainman, Consensus::DEPLOYMENT_BULLETPROOF)) {
+        if (!CheckBulletproofs(tx, state)) {
+            return false;
+        }
     }
 #endif
     return CheckInputScripts(tx, state, view, flags, /* cacheSigStore= */ true, /* cacheFullScriptStore= */ true, txdata, validation_cache);
