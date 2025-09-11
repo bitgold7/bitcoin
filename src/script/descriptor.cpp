@@ -4,6 +4,7 @@
 
 #include <script/descriptor.h>
 
+#include <bulletproofs.h>
 #include <hash.h>
 #include <key_io.h>
 #include <pubkey.h>
@@ -31,6 +32,35 @@
 using util::Split;
 
 namespace {
+
+/** Parse a Bulletproof commitment/proof pair encoded as hex strings separated by a comma. */
+bool ParseBulletproofData(const std::string& data,
+                         std::vector<unsigned char>& commitment,
+                         std::vector<unsigned char>& proof,
+                         std::string& error)
+{
+    const auto parts{Split(data, ',')};
+    if (parts.size() != 2) {
+        error = "bpv(): expected <commitment>,<proof>";
+        return false;
+    }
+    const std::string commit_hex{parts[0].begin(), parts[0].end()};
+    const std::string proof_hex{parts[1].begin(), parts[1].end()};
+    if (!IsHex(commit_hex) || !IsHex(proof_hex)) {
+        error = "bpv(): arguments must be hex";
+        return false;
+    }
+    commitment = ParseHex(commit_hex);
+    proof = ParseHex(proof_hex);
+    return true;
+}
+
+/** Format a Bulletproof commitment/proof pair as a comma separated hex string. */
+std::string FormatBulletproofData(const std::vector<unsigned char>& commitment,
+                                  const std::vector<unsigned char>& proof)
+{
+    return HexStr(commitment) + "," + HexStr(proof);
+}
 
 ////////////////////////////////////////////////////////////////////////////
 // Checksum                                                               //
@@ -833,6 +863,31 @@ public:
     std::unique_ptr<DescriptorImpl> Clone() const override
     {
         return std::make_unique<RawDescriptor>(m_script);
+    }
+};
+
+/** A parsed bpv(C,P) descriptor carrying a Bulletproof commitment and proof. */
+class BulletproofDescriptor final : public DescriptorImpl
+{
+    const std::vector<unsigned char> m_commitment;
+    const std::vector<unsigned char> m_proof;
+protected:
+    std::string ToStringExtra() const override { return FormatBulletproofData(m_commitment, m_proof); }
+    std::vector<CScript> MakeScripts(const std::vector<CPubKey>&, std::span<const CScript>, FlatSigningProvider&) const override
+    {
+        return Vector(CScript());
+    }
+public:
+    BulletproofDescriptor(std::vector<unsigned char> commitment, std::vector<unsigned char> proof)
+        : DescriptorImpl({}, "bpv"), m_commitment(std::move(commitment)), m_proof(std::move(proof)) {}
+    bool IsSolvable() const final { return false; }
+    std::optional<OutputType> GetOutputType() const override { return std::nullopt; }
+    bool IsSingleType() const final { return true; }
+    bool ToPrivateString(const SigningProvider&, std::string&) const final { return false; }
+    std::optional<int64_t> ScriptSize() const override { return 0; }
+    std::unique_ptr<DescriptorImpl> Clone() const override
+    {
+        return std::make_unique<BulletproofDescriptor>(m_commitment, m_proof);
     }
 };
 
@@ -2077,6 +2132,20 @@ std::vector<std::unique_ptr<DescriptorImpl>> ParseScript(uint32_t& key_exp_index
         return ret;
     } else if (Func("raw", expr)) {
         error = "Can only have raw() at top level";
+        return {};
+    }
+    if (ctx == ParseScriptContext::TOP && Func("bpv", expr)) {
+        auto arg = Expr(expr);
+        if (expr.size()) {
+            error = strprintf("bpv(): expected two arguments");
+            return {};
+        }
+        std::vector<unsigned char> commitment, proof;
+        if (!ParseBulletproofData(std::string(arg.begin(), arg.end()), commitment, proof, error)) return {};
+        ret.emplace_back(std::make_unique<BulletproofDescriptor>(std::move(commitment), std::move(proof)));
+        return ret;
+    } else if (Func("bpv", expr)) {
+        error = "Can only have bpv() at top level";
         return {};
     }
     // Process miniscript expressions.
