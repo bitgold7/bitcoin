@@ -4,7 +4,7 @@
 #include <arith_uint256.h>
 #include <hash.h>
 #include <primitives/transaction.h>
-#include <script/standard.h>
+#include <script/solver.h>
 #include <pubkey.h>
 #include <util/overflow.h>
 #include <logging.h>
@@ -36,6 +36,17 @@ bool IsProofOfStake(const CBlock& block)
     return IsCoinStakeTx(*block.vtx[1]);
 }
 
+/** Extract a pubkey from a script if it is a simple P2PK script. */
+static bool ExtractPubKeyFromScript(const CScript& script, CPubKey& pubkey)
+{
+    std::vector<std::vector<unsigned char>> solutions;
+    if (Solver(script, solutions) == TxoutType::PUBKEY && !solutions.empty()) {
+        pubkey = CPubKey(solutions[0]);
+        return pubkey.IsValid();
+    }
+    return false;
+}
+
 bool CheckBlockSignature(const CBlock& block)
 {
     if (!IsProofOfStake(block)) {
@@ -51,20 +62,44 @@ bool CheckBlockSignature(const CBlock& block)
         return false;
     }
 
-    const CScript& scriptSig{tx.vin[0].scriptSig};
-    CScript::const_iterator it = scriptSig.begin();
-    std::vector<unsigned char> vchSigScratch;
-    opcodetype op;
-    // For typical P2PKH scripts: <sig> <pubkey>
-    if (!scriptSig.GetOp(it, op, vchSigScratch)) {
-        return false;
-    }
-    std::vector<unsigned char> vchPubKey;
-    if (!scriptSig.GetOp(it, op, vchPubKey)) {
-        return false;
+    const CTxIn& txin{tx.vin[0]};
+    CPubKey pubkey;
+
+    // First try to extract the pubkey from witness data (P2WPKH or wrapped)
+    const auto& stack = txin.scriptWitness.stack;
+    if (stack.size() >= 2) {
+        pubkey = CPubKey(stack[1]);
     }
 
-    CPubKey pubkey(vchPubKey);
+    // If witness did not provide a valid key, fall back to scriptSig parsing
+    if (!pubkey.IsValid()) {
+        std::vector<std::vector<unsigned char>> pushes;
+        CScript::const_iterator it = txin.scriptSig.begin();
+        std::vector<unsigned char> data;
+        opcodetype op;
+        while (txin.scriptSig.GetOp(it, op, data)) {
+            pushes.emplace_back(data);
+        }
+
+        // Typical patterns:
+        //  * P2PKH or P2SH-P2PKH: <sig> <pubkey> [...redeem]
+        if (pushes.size() >= 2) {
+            pubkey = CPubKey(pushes[pushes.size() >= 3 ? pushes.size() - 2 : 1]);
+        }
+
+        //  * P2SH-P2WPKH: scriptSig pushes redeem script only, pubkey in witness
+        //  * P2PK: scriptSig only has sig; pubkey is in the output script
+        if (!pubkey.IsValid() && !pushes.empty()) {
+            CScript redeem(pushes.back().begin(), pushes.back().end());
+            if (!ExtractPubKeyFromScript(redeem, pubkey)) {
+                // maybe the coinstake output is a P2PK script
+                if (tx.vout.size() > 1) {
+                    ExtractPubKeyFromScript(tx.vout[1].scriptPubKey, pubkey);
+                }
+            }
+        }
+    }
+
     if (!pubkey.IsValid()) {
         return false;
     }
@@ -78,12 +113,12 @@ static uint256 ComputeKernelHash(const COutPoint& prevout,
                                  unsigned int nTimeBlockFrom,
                                  unsigned int nTimeTx)
 {
-    CHashWriter ss(SER_GETHASH, 0);
+    HashWriter ss;
     ss << prevout.hash;
     ss << prevout.n;
     ss << nTimeBlockFrom;
     ss << nTimeTx;
-    return ss.GetHash();
+    return ss.GetSHA256();
 }
 
 bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
@@ -119,7 +154,7 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
     arith_uint256 bnHash = UintToArith256(hashProofOfStake);
 
     if (fPrintProofOfStake) {
-        LogDebug(BCLog::STAKE, "CheckStakeKernelHash: hash=%s target=%s amt=%lld\n",
+        LogDebug(BCLog::STAKING, "CheckStakeKernelHash: hash=%s target=%s amt=%lld\n",
                  hashProofOfStake.ToString(), bnTargetWeight.ToString(), amount);
     }
 
@@ -139,7 +174,7 @@ bool ContextualCheckProofOfStake(const CBlock& block,
     const CTransaction& coinstake = *block.vtx[1];
 
     // Enforce block time == coinstake tx time (v3 convention)
-    if (block.nTime != coinstake.nTime) return false;
+    if (block.nTime != coinstake.nLockTime) return false;
     if ((block.nTime & params.nStakeTimestampMask) != 0) return false;
 
     // Check single coinstake only

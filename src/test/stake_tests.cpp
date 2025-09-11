@@ -8,6 +8,8 @@
 #include <primitives/transaction.h>
 #include <hash.h>
 #include <script/script.h>
+#include <script/standard.h>
+#include <key.h>
 #include <validation.h>
 #include <test/util/setup_common.h>
 #include <boost/test/unit_test.hpp>
@@ -208,6 +210,64 @@ BOOST_AUTO_TEST_CASE(coinstake_structure)
     block_bad.vtx.emplace_back(MakeTransactionRef(coinbase));
     block_bad.vtx.emplace_back(MakeTransactionRef(bad));
     BOOST_CHECK(!IsProofOfStake(block_bad));
+}
+
+BOOST_AUTO_TEST_CASE(block_signature_standard_scripts)
+{
+    CKey key;
+    key.MakeNewKey(true);
+    CPubKey pubkey{key.GetPubKey()};
+    std::vector<unsigned char> dummy_sig(72, 0);
+
+    auto make_block = [&](const CScript& scriptSig, const CScriptWitness& witness) {
+        CMutableTransaction coinbase;
+        coinbase.vin.resize(1);
+        coinbase.vin[0].prevout.SetNull();
+        coinbase.vout.resize(1);
+
+        CMutableTransaction coinstake;
+        coinstake.vin.resize(1);
+        coinstake.vout.resize(2);
+        coinstake.vout[0].SetNull();
+        coinstake.vin[0].scriptSig = scriptSig;
+        coinstake.vin[0].scriptWitness = witness;
+
+        CBlock block;
+        block.vtx.emplace_back(MakeTransactionRef(coinbase));
+        block.vtx.emplace_back(MakeTransactionRef(coinstake));
+        block.hashMerkleRoot = BlockMerkleRoot(block);
+        std::vector<unsigned char> block_sig;
+        key.Sign(block.GetHash(), block_sig);
+        block.vchBlockSig = block_sig;
+        return block;
+    };
+
+    // P2PKH
+    CScript p2pkh_sig;
+    p2pkh_sig << dummy_sig << ToByteVector(pubkey);
+    BOOST_CHECK(CheckBlockSignature(make_block(p2pkh_sig, CScriptWitness{})));
+
+    // Native P2WPKH
+    CScriptWitness wit2;
+    wit2.stack.push_back(dummy_sig);
+    wit2.stack.push_back(ToByteVector(pubkey));
+    BOOST_CHECK(CheckBlockSignature(make_block(CScript(), wit2)));
+
+    // P2SH-wrapped P2WPKH
+    CScript redeem = CScript() << OP_0 << ToByteVector(pubkey.GetID());
+    CScript p2sh_wit_sig;
+    p2sh_wit_sig << std::vector<unsigned char>(redeem.begin(), redeem.end());
+    CScriptWitness wit3;
+    wit3.stack.push_back(dummy_sig);
+    wit3.stack.push_back(ToByteVector(pubkey));
+    BOOST_CHECK(CheckBlockSignature(make_block(p2sh_wit_sig, wit3)));
+
+    // Legacy P2SH-P2PKH
+    CScript redeem_pkh = GetScriptForDestination(PKHash(pubkey));
+    CScript p2sh_sig;
+    p2sh_sig << dummy_sig << ToByteVector(pubkey)
+             << std::vector<unsigned char>(redeem_pkh.begin(), redeem_pkh.end());
+    BOOST_CHECK(CheckBlockSignature(make_block(p2sh_sig, CScriptWitness{})));
 }
 
 BOOST_AUTO_TEST_CASE(height1_requires_coinstake)
