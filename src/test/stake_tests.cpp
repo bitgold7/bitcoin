@@ -1,6 +1,7 @@
 #include <pos/stake.h>
 #include <pos/stakemodifier.h>
 #include <pos/stakemodifier_manager.h>
+#include <pos/difficulty.h>
 #include <chain.h>
 #include <consensus/amount.h>
 #include <consensus/merkle.h>
@@ -315,9 +316,10 @@ BOOST_AUTO_TEST_CASE(valid_height1_coinstake)
     coin.nHeight = 0;
     view.AddCoin(prevout, std::move(coin), false);
 
+    Consensus::Params params;
     CBlock block;
-    block.nTime = MIN_STAKE_AGE + 16;
-    block.nBits = 0x207fffff;
+    block.nTime = params.nStakeMinAge + 16;
+    block.nBits = GetPoSNextTargetRequired(&prev_index, block.nTime, params);
 
     CMutableTransaction coinbase;
     coinbase.vin.resize(1);
@@ -334,7 +336,6 @@ BOOST_AUTO_TEST_CASE(valid_height1_coinstake)
     coinstake.vout[1].nValue = 1 * COIN;
     block.vtx.emplace_back(MakeTransactionRef(std::move(coinstake)));
 
-    Consensus::Params params;
     BOOST_CHECK(ContextualCheckProofOfStake(block, &prev_index, view, chain, params));
 }
 
@@ -359,9 +360,10 @@ BOOST_AUTO_TEST_CASE(reject_low_stake_amount)
     coin.nHeight = 0;
     view.AddCoin(prevout, std::move(coin), false);
 
+    Consensus::Params params;
     CBlock block;
-    block.nTime = MIN_STAKE_AGE + 16;
-    block.nBits = 0x207fffff;
+    block.nTime = params.nStakeMinAge + 16;
+    block.nBits = GetPoSNextTargetRequired(&prev_index, block.nTime, params);
 
     CMutableTransaction coinbase;
     coinbase.vin.resize(1);
@@ -378,7 +380,6 @@ BOOST_AUTO_TEST_CASE(reject_low_stake_amount)
     coinstake.vout[1].nValue = COIN / 2;
     block.vtx.emplace_back(MakeTransactionRef(std::move(coinstake)));
 
-    Consensus::Params params;
     BOOST_CHECK(!ContextualCheckProofOfStake(block, &prev_index, view, chain, params));
 }
 
@@ -404,9 +405,10 @@ BOOST_AUTO_TEST_CASE(height1_allows_young_coinstake)
     coin.nHeight = 0;
     view.AddCoin(prevout, std::move(coin), false);
 
+    Consensus::Params params;
     CBlock block;
-    block.nTime = MIN_STAKE_AGE; // younger than required age relative to prev_index
-    block.nBits = 0x207fffff;
+    block.nTime = params.nStakeMinAge; // younger than required age relative to prev_index
+    block.nBits = GetPoSNextTargetRequired(&prev_index, block.nTime, params);
 
     CMutableTransaction coinbase;
     coinbase.vin.resize(1);
@@ -423,7 +425,6 @@ BOOST_AUTO_TEST_CASE(height1_allows_young_coinstake)
     coinstake.vout[1].nValue = 1 * COIN;
     block.vtx.emplace_back(MakeTransactionRef(std::move(coinstake)));
 
-    Consensus::Params params;
     BOOST_CHECK(ContextualCheckProofOfStake(block, &prev_index, view, chain, params));
 }
 
@@ -503,6 +504,50 @@ BOOST_FIXTURE_TEST_CASE(process_new_block_rejects_pow_height2, ChainTestingSetup
         g_chainman->BlockIndex().erase(prev_hash);
     }
     g_chainman = nullptr;
+}
+
+BOOST_AUTO_TEST_CASE(stake_modifier_version_selection)
+{
+    // Set up a previous block index
+    uint256 prev_hash{1};
+    CBlockIndex prev_index;
+    prev_index.nHeight = 1;
+    prev_index.nTime = 100;
+    prev_index.phashBlock = &prev_hash;
+
+    uint256 hash_block_from{2};
+    unsigned int nTimeBlockFrom = 0;
+    CAmount amount = 100 * COIN;
+    COutPoint prevout{Txid::FromUint256(uint256{3}), 0};
+    unsigned int nBits = 0x207fffff;
+    unsigned int nTimeTx = MIN_STAKE_AGE;
+
+    // Version 0 uses the legacy modifier routine
+    Consensus::Params params0;
+    params0.nStakeModifierVersion = 0;
+    uint256 mod0 = GetStakeModifier(&prev_index, nTimeTx, params0);
+    HashWriter ss0;
+    ss0 << mod0 << prevout.hash << prevout.n << nTimeBlockFrom << nTimeTx;
+    uint256 expect0 = ss0.GetHash();
+    uint256 proof0;
+    BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
+                                     amount, prevout, nTimeTx, proof0, false, params0));
+    BOOST_CHECK_EQUAL(proof0, expect0);
+
+    // Version 1 pulls the modifier from the manager
+    Consensus::Params params1;
+    params1.nStakeModifierVersion = 1;
+    StakeModifierManager& man = GetStakeModifierManager();
+    man = StakeModifierManager();
+    man.UpdateOnConnect(&prev_index, params1);
+    uint256 mod1 = man.GetCurrentModifier();
+    HashWriter ss1;
+    ss1 << mod1 << prevout.hash << prevout.n << nTimeBlockFrom << nTimeTx;
+    uint256 expect1 = ss1.GetHash();
+    uint256 proof1;
+    BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
+                                     amount, prevout, nTimeTx, proof1, false, params1));
+    BOOST_CHECK_EQUAL(proof1, expect1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

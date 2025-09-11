@@ -1,5 +1,6 @@
 #include <pos/stake.h>
 #include <pos/difficulty.h>
+#include <pos/stakemodifier.h>
 #include <pos/stakemodifier_manager.h>
 
 #include <arith_uint256.h>
@@ -119,7 +120,12 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
     arith_uint256 bnTargetWeight = bnTarget;
     bnTargetWeight *= bnWeight;
 
-    const uint256 stake_modifier{GetStakeModifierManager().GetCurrentModifier()};
+    uint256 stake_modifier;
+    if (params.nStakeModifierVersion >= 1) {
+        stake_modifier = GetStakeModifierManager().GetCurrentModifier();
+    } else {
+        stake_modifier = GetStakeModifier(pindexPrev, nTimeTx, params);
+    }
     hashProofOfStake = ComputeKernelHash(stake_modifier, prevout, nTimeBlockFrom, nTimeTx);
     arith_uint256 bnHash = UintToArith256(hashProofOfStake);
 
@@ -179,13 +185,14 @@ bool ContextualCheckProofOfStake(const CBlock& block,
     const CBlockIndex* pindexFrom = chain[coin_height];
     if (!pindexFrom) return false;
     int64_t coin_age = block.GetBlockTime() - pindexFrom->GetBlockTime();
-    if (coin_age < MIN_STAKE_AGE) return false;
+    if (coin_age < params.nStakeMinAge) return false; // enforce minimum stake age
 
     // Reconstruct previous stake source block time for kernel (using pindexFrom)
     unsigned int nTimeBlockFrom = pindexFrom->GetBlockTime();
 
-    // Determine nBits / target for this PoS block
+    // Determine nBits / target for this PoS block and verify header difficulty
     unsigned int nBits = GetPoSNextTargetRequired(pindexPrev, block.GetBlockTime(), params);
+    if (block.nBits != nBits) return false;
 
     uint256 hashProofOfStake;
     if (!CheckStakeKernelHash(pindexPrev, nBits,

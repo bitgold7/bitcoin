@@ -134,6 +134,8 @@ struct Params {
     int64_t nStakeMinAge{60 * 60};
     // Interval between stake modifier recalculations (seconds)
     int64_t nStakeModifierInterval{60 * 60};
+    // Version of stake modifier algorithm (0=legacy, 1=interval-based)
+    int nStakeModifierVersion{1};
     // Minimum confirmations required for staking (blocks)
     int nStakeMinConfirmations{80};
     // Maximum coin-age weight for reward scaling (seconds)
