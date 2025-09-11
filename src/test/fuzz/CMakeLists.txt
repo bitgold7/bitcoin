@@ -27,6 +27,7 @@ add_executable(fuzz
   cluster_linearize.cpp
   coins_view.cpp
   coinscache_sim.cpp
+  coinstake_parse.cpp
   connman.cpp
   crypto.cpp
   crypto_aes256.cpp
@@ -41,6 +42,7 @@ add_executable(fuzz
   decode_tx.cpp
   descriptor_parse.cpp
   deserialize.cpp
+  dividend_payout.cpp
   eval_script.cpp
   feefrac.cpp
   fee_rate.cpp
@@ -114,6 +116,7 @@ add_executable(fuzz
   signet.cpp
   socks5.cpp
   span.cpp
+  stake_kernel.cpp
   string.cpp
   strprintf.cpp
   system.cpp
