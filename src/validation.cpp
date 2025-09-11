@@ -240,9 +240,11 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
     // Proof checks
     const int next_height{pindexPrev->nHeight + 1};
     if (params.fEnablePoS && next_height >= params.posActivationHeight) {
+        // After activation only proof-of-stake blocks are allowed
         if (!IsProofOfStake(block)) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "expected proof-of-stake block");
         }
+        // Timestamp must respect the network's stake mask and drift limits
         if (!CheckStakeTimestamp(block, params)) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time", "invalid proof-of-stake timestamp");
         }
@@ -250,10 +252,12 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
             LOCK(cs_main);
             CCoinsViewCache view(&g_chainman->ActiveChainstate().CoinsTip());
             const CChain& chain{g_chainman->ActiveChain()};
+            // ContextualCheckProofOfStake enforces coinstake format, minimum age and difficulty
             if (!ContextualCheckProofOfStake(block, pindexPrev, view, chain, params)) {
                 return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "proof of stake check failed");
             }
         }
+        // The block must be signed by the coinstake input
         if (!CheckBlockSignature(block)) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-signature", "invalid proof of stake block signature");
         }
