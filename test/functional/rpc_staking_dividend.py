@@ -53,4 +53,4 @@ class StakingDividendRPCTest(BitcoinTestFramework):
         assert "eligible" in elig
 
 if __name__ == '__main__':
-    StakingDividendRPCTest().main()
+    StakingDividendRPCTest(__file__).main()
