@@ -138,7 +138,10 @@ void BitGoldStaker::ThreadStakeMiner()
                         coinstake.vin[0].nSequence = CTxIn::SEQUENCE_FINAL;
                         coinstake.vout.resize(2);
                         coinstake.vout[0].SetNull();
-                        coinstake.vout[1].nValue = stake_out.txout.nValue + GetProofOfStakeReward(pindexPrev->nHeight + 1, /*fees=*/0, consensus);
+                        int64_t coin_age_weight = int64_t(nTimeTx) - int64_t(pindexFrom->GetBlockTime());
+                        coinstake.vout[1].nValue = stake_out.txout.nValue +
+                                                   GetProofOfStakeReward(pindexPrev->nHeight + 1, /*fees=*/0,
+                                                                        coin_age_weight, consensus);
                         coinstake.vout[1].scriptPubKey = stake_out.txout.scriptPubKey;
                         {
                             LOCK(m_wallet.cs_wallet);

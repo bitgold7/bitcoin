@@ -109,6 +109,7 @@ public:
         consensus.nStakeMinAge = 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.nStakeMinConfirmations = 80;
+        consensus.nStakeMaxAgeWeight = 60 * 60 * 24 * 30;
         consensus.posLimit = consensus.powLimit;
         consensus.posLimitLower = consensus.powLimit;
         consensus.nStakeTargetSpacing = 8 * 60;
@@ -242,6 +243,7 @@ public:
         consensus.nStakeMinAge = 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.nStakeMinConfirmations = 80;
+        consensus.nStakeMaxAgeWeight = 60 * 60 * 24 * 30;
         consensus.posLimit = consensus.powLimit;
         consensus.posLimitLower = consensus.powLimit;
         consensus.nStakeTargetSpacing = 8 * 60;
@@ -393,6 +395,7 @@ public:
         consensus.nStakeMinAge = 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.nStakeMinConfirmations = 80;
+        consensus.nStakeMaxAgeWeight = 60 * 60 * 24 * 30;
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.enforce_BIP94 = false;
         consensus.fPowNoRetargeting = false;
@@ -500,6 +503,7 @@ public:
         consensus.nStakeMinAge = 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.nStakeMinConfirmations = 80;
+        consensus.nStakeMaxAgeWeight = 60 * 60 * 24 * 30;
         consensus.posLimit = consensus.powLimit;
         consensus.posLimitLower = consensus.powLimit;
         consensus.nStakeTargetSpacing = 8 * 60;

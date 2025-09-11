@@ -136,6 +136,8 @@ struct Params {
     int64_t nStakeModifierInterval{60 * 60};
     // Minimum confirmations required for staking (blocks)
     int nStakeMinConfirmations{80};
+    // Maximum coin-age weight for reward scaling (seconds)
+    int64_t nStakeMaxAgeWeight{60 * 60 * 24 * 30};
     // Upper target limit for proof-of-stake difficulty
     uint256 posLimit;
     // Lower target limit for proof-of-stake difficulty

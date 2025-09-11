@@ -9,6 +9,7 @@
 #include <util/overflow.h>
 #include <logging.h>
 #include <validation.h>
+#include <algorithm>
 
 #include <cassert>
 #include <set>
@@ -80,7 +81,7 @@ static uint256 ComputeKernelHash(const uint256& stake_modifier,
                                  unsigned int nTimeBlockFrom,
                                  unsigned int nTimeTx)
 {
-    CHashWriter ss(SER_GETHASH, 0);
+    HashWriter ss;
     ss << stake_modifier;
     ss << prevout.hash;
     ss << prevout.n;
@@ -123,7 +124,7 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
     arith_uint256 bnHash = UintToArith256(hashProofOfStake);
 
     if (fPrintProofOfStake) {
-        LogDebug(BCLog::STAKE, "CheckStakeKernelHash: hash=%s target=%s amt=%lld\n",
+        LogDebug(BCLog::STAKING, "CheckStakeKernelHash: hash=%s target=%s amt=%lld\n",
                  hashProofOfStake.ToString(), bnTargetWeight.ToString(), amount);
     }
 
@@ -131,11 +132,13 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
     return true;
 }
 
-CAmount GetProofOfStakeReward(int nHeight, CAmount nFees, const Consensus::Params& params)
+CAmount GetProofOfStakeReward(int nHeight, CAmount nFees, int64_t coin_age_weight, const Consensus::Params& params)
 {
     CAmount subsidy = GetBlockSubsidy(nHeight, params);
+    int64_t weight = std::min<int64_t>(coin_age_weight, params.nStakeMaxAgeWeight);
+    CAmount staking_reward = subsidy * weight / params.nStakeMinAge;
     CAmount validator_fee = nFees * 9 / 10;
-    return subsidy + validator_fee;
+    return staking_reward + validator_fee;
 }
 
 bool ContextualCheckProofOfStake(const CBlock& block,
@@ -150,7 +153,7 @@ bool ContextualCheckProofOfStake(const CBlock& block,
     const CTransaction& coinstake = *block.vtx[1];
 
     // Enforce block time == coinstake tx time (v3 convention)
-    if (block.nTime != coinstake.nTime) return false;
+    if (block.nTime != coinstake.nLockTime) return false;
     if ((block.nTime & params.nStakeTimestampMask) != 0) return false;
 
     // Check single coinstake only
@@ -175,7 +178,8 @@ bool ContextualCheckProofOfStake(const CBlock& block,
     // Minimum age (time based) – approximate using ancestor median time past difference.
     const CBlockIndex* pindexFrom = chain[coin_height];
     if (!pindexFrom) return false;
-    if (block.GetBlockTime() - pindexFrom->GetBlockTime() < MIN_STAKE_AGE) return false;
+    int64_t coin_age = block.GetBlockTime() - pindexFrom->GetBlockTime();
+    if (coin_age < MIN_STAKE_AGE) return false;
 
     // Reconstruct previous stake source block time for kernel (using pindexFrom)
     unsigned int nTimeBlockFrom = pindexFrom->GetBlockTime();
@@ -224,7 +228,7 @@ bool ContextualCheckProofOfStake(const CBlock& block,
     CAmount output_value = 0;
     for (const auto& o : coinstake.vout) output_value += o.nValue;
 
-    CAmount reward = GetProofOfStakeReward(spend_height, fees, params);
+    CAmount reward = GetProofOfStakeReward(spend_height, fees, coin_age, params);
     CAmount max_allowed = input_value + reward;
 
     if (output_value < input_value) return false; // must not burn value
