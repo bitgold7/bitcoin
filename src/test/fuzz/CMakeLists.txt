@@ -22,6 +22,7 @@ add_executable(fuzz
   blockfilter.cpp
   bloom_filter.cpp
   buffered_file.cpp
+  bulletproof_parse.cpp
   chain.cpp
   checkqueue.cpp
   cluster_linearize.cpp
