@@ -1,6 +1,6 @@
 #include <pos/stake.h>
 #include <pos/stakemodifier.h>
-#include <pos/stakemodifier_manager.h>
+#include <node/stake_modifier_manager.h>
 #include <pos/difficulty.h>
 #include <chain.h>
 #include <consensus/amount.h>
@@ -36,12 +36,11 @@ BOOST_AUTO_TEST_CASE(valid_kernel)
     unsigned int nTimeTx = nTimeBlockFrom + MIN_STAKE_AGE; // exactly minimum age
     Consensus::Params params;
 
-    StakeModifierManager& man = GetStakeModifierManager();
-    man = StakeModifierManager();
+    node::StakeModifierManager man;
     man.UpdateOnConnect(&prev_index, params);
 
     BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
-                                     amount, prevout, nTimeTx, hash_proof, false, params));
+                                     amount, prevout, nTimeTx, man, hash_proof, false, params));
 }
 
 BOOST_AUTO_TEST_CASE(invalid_kernel_time)
@@ -62,12 +61,11 @@ BOOST_AUTO_TEST_CASE(invalid_kernel_time)
     unsigned int nTimeTx = MIN_STAKE_AGE - 16; // not old enough and masked
     Consensus::Params params;
 
-    StakeModifierManager& man = GetStakeModifierManager();
-    man = StakeModifierManager();
+    node::StakeModifierManager man;
     man.UpdateOnConnect(&prev_index, params);
 
     BOOST_CHECK(!CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
-                                      amount, prevout, nTimeTx, hash_proof, false, params));
+                                      amount, prevout, nTimeTx, man, hash_proof, false, params));
 }
 
 BOOST_AUTO_TEST_CASE(invalid_kernel_target)
@@ -88,12 +86,11 @@ BOOST_AUTO_TEST_CASE(invalid_kernel_target)
     unsigned int nTimeTx = MIN_STAKE_AGE;    // minimal age
     Consensus::Params params;
 
-    StakeModifierManager& man = GetStakeModifierManager();
-    man = StakeModifierManager();
+    node::StakeModifierManager man;
     man.UpdateOnConnect(&prev_index, params);
 
     BOOST_CHECK(!CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
-                                      amount, prevout, nTimeTx, hash_proof, false, params));
+                                      amount, prevout, nTimeTx, man, hash_proof, false, params));
 }
 
 BOOST_AUTO_TEST_CASE(invalid_kernel_amount)
@@ -139,8 +136,7 @@ BOOST_AUTO_TEST_CASE(kernel_hash_matches_expectation)
     unsigned int nTimeTx = MIN_STAKE_AGE;
 
     Consensus::Params params;
-    StakeModifierManager& man = GetStakeModifierManager();
-    man = StakeModifierManager();
+    node::StakeModifierManager man;
     man.UpdateOnConnect(&prev_index, params);
     uint256 stake_mod = man.GetCurrentModifier();
 
@@ -153,7 +149,7 @@ BOOST_AUTO_TEST_CASE(kernel_hash_matches_expectation)
 
     uint256 hash_proof;
     BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
-                                     amount, prevout, nTimeTx, hash_proof, false, params));
+                                     amount, prevout, nTimeTx, man, hash_proof, false, params));
     BOOST_CHECK_EQUAL(hash_proof, expected_hash);
 }
 
@@ -174,16 +170,15 @@ BOOST_AUTO_TEST_CASE(stake_modifier_differs_per_input)
     COutPoint prevout2{Txid::FromUint256(uint256{4}), 1};
 
     Consensus::Params params;
-    StakeModifierManager& man = GetStakeModifierManager();
-    man = StakeModifierManager();
+    node::StakeModifierManager man;
     man.UpdateOnConnect(&prev_index, params);
 
     uint256 proof1;
     BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
-                                     100 * COIN, prevout1, nTimeTx, proof1, false, params));
+                                     100 * COIN, prevout1, nTimeTx, man, proof1, false, params));
     uint256 proof2;
     BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
-                                     100 * COIN, prevout2, nTimeTx, proof2, false, params));
+                                     100 * COIN, prevout2, nTimeTx, man, proof2, false, params));
     BOOST_CHECK(proof1 != proof2);
 }
 
@@ -198,8 +193,7 @@ BOOST_AUTO_TEST_CASE(stake_modifier_refresh)
     Consensus::Params params;
     params.nStakeModifierInterval = 60; // short interval for test
 
-    StakeModifierManager& man = GetStakeModifierManager();
-    man = StakeModifierManager();
+    node::StakeModifierManager man;
 
     // Connect initial block and compute modifier
     man.UpdateOnConnect(&prev_index, params);
@@ -241,8 +235,7 @@ BOOST_AUTO_TEST_CASE(stake_modifier_reorg)
     CBlockIndex b3; b3.nHeight = 3; b3.nTime = 1100; b3.pprev = &b2; b3.phashBlock = &h3;
 
     Consensus::Params params; params.nStakeModifierInterval = 60;
-    StakeModifierManager& man = GetStakeModifierManager();
-    man = StakeModifierManager();
+    node::StakeModifierManager man;
 
     man.UpdateOnConnect(&b1, params);
     uint256 mod1 = man.GetCurrentModifier();
@@ -556,15 +549,15 @@ BOOST_AUTO_TEST_CASE(stake_modifier_version_selection)
     ss0 << mod0 << prevout.hash << prevout.n << nTimeBlockFrom << nTimeTx;
     uint256 expect0 = ss0.GetHash();
     uint256 proof0;
+    node::StakeModifierManager dummy_man; // unused for version 0
     BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
-                                     amount, prevout, nTimeTx, proof0, false, params0));
+                                     amount, prevout, nTimeTx, dummy_man, proof0, false, params0));
     BOOST_CHECK_EQUAL(proof0, expect0);
 
     // Version 1 pulls the modifier from the manager
     Consensus::Params params1;
     params1.nStakeModifierVersion = 1;
-    StakeModifierManager& man = GetStakeModifierManager();
-    man = StakeModifierManager();
+    node::StakeModifierManager man;
     man.UpdateOnConnect(&prev_index, params1);
     uint256 mod1 = man.GetCurrentModifier();
     HashWriter ss1;
@@ -572,7 +565,7 @@ BOOST_AUTO_TEST_CASE(stake_modifier_version_selection)
     uint256 expect1 = ss1.GetHash();
     uint256 proof1;
     BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
-                                     amount, prevout, nTimeTx, proof1, false, params1));
+                                     amount, prevout, nTimeTx, man, proof1, false, params1));
     BOOST_CHECK_EQUAL(proof1, expect1);
 }
 

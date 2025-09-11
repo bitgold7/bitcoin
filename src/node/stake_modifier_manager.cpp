@@ -2,29 +2,84 @@
 
 #include <algorithm>
 #include <chain.h>
+#include <consensus/params.h>
 #include <pos/stakemodifier.h>
 #include <validation.h>
 #include <vector>
 
 namespace node {
 
-std::optional<uint256> StakeModifierManager::GetStakeModifier(const uint256& block_hash)
+StakeModifierManager::StakeModifierManager() : m_current_modifier{}, m_current_block_hash{} {}
+
+std::optional<uint256> StakeModifierManager::GetModifier(const uint256& block_hash) const
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = m_modifiers.find(block_hash);
+    if (it == m_modifiers.end()) return std::nullopt;
+    return it->second.modifier;
+}
+
+uint256 StakeModifierManager::GetCurrentModifier() const
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_current_modifier;
+}
+
+void StakeModifierManager::UpdateOnConnect(const CBlockIndex* pindex, const Consensus::Params& params)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    ModifierEntry entry{};
+    if (pindex->pprev) {
+        auto it = m_modifiers.find(pindex->pprev->GetBlockHash());
+        if (it != m_modifiers.end()) entry = it->second;
+    }
+    if (entry.modifier.IsNull() || static_cast<int64_t>(pindex->nTime) - entry.last_update >= params.nStakeModifierInterval) {
+        entry.modifier = ComputeStakeModifier(pindex->pprev, entry.modifier);
+        entry.last_update = pindex->nTime;
+    }
+    m_current_modifier = entry.modifier;
+    m_current_block_hash = pindex->GetBlockHash();
+    m_modifiers[m_current_block_hash] = entry;
+}
+
+void StakeModifierManager::RemoveOnDisconnect(const CBlockIndex* pindex)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    const uint256 hash = pindex->GetBlockHash();
+    m_modifiers.erase(hash);
+    if (m_current_block_hash == hash) {
+        if (pindex->pprev) {
+            m_current_block_hash = pindex->pprev->GetBlockHash();
+            auto it = m_modifiers.find(m_current_block_hash);
+            if (it != m_modifiers.end()) {
+                m_current_modifier = it->second.modifier;
+            } else {
+                m_current_modifier.SetNull();
+            }
+        } else {
+            m_current_block_hash.SetNull();
+            m_current_modifier.SetNull();
+        }
+    }
+}
+
+std::optional<uint256> StakeModifierManager::GetStakeModifier(ChainstateManager& chainman, const uint256& block_hash)
 {
     LOCK(cs_main);
     std::lock_guard<std::mutex> lock(m_mutex);
-    auto it = m_cache.find(block_hash);
-    if (it != m_cache.end()) return it->second;
+    auto it = m_modifiers.find(block_hash);
+    if (it != m_modifiers.end()) return it->second.modifier;
 
-    const CBlockIndex* index = m_chainman.m_blockman.LookupBlockIndex(block_hash);
+    const CBlockIndex* index = chainman.m_blockman.LookupBlockIndex(block_hash);
     if (index == nullptr) return std::nullopt;
 
     // Walk back until a cached modifier is found.
     std::vector<const CBlockIndex*> ancestors;
     uint256 modifier{};
     for (const CBlockIndex* p = index->pprev; p; p = p->pprev) {
-        auto it2 = m_cache.find(p->GetBlockHash());
-        if (it2 != m_cache.end()) {
-            modifier = it2->second;
+        auto it2 = m_modifiers.find(p->GetBlockHash());
+        if (it2 != m_modifiers.end()) {
+            modifier = it2->second.modifier;
             break;
         }
         ancestors.push_back(p);
@@ -32,27 +87,27 @@ std::optional<uint256> StakeModifierManager::GetStakeModifier(const uint256& blo
     std::reverse(ancestors.begin(), ancestors.end());
     for (const CBlockIndex* ancestor : ancestors) {
         modifier = ComputeStakeModifier(ancestor, modifier);
-        m_cache.emplace(ancestor->GetBlockHash(), modifier);
+        m_modifiers.emplace(ancestor->GetBlockHash(), ModifierEntry{modifier, ancestor->nTime});
     }
     modifier = ComputeStakeModifier(index->pprev, modifier);
-    m_cache.emplace(block_hash, modifier);
+    m_modifiers.emplace(block_hash, ModifierEntry{modifier, index->nTime});
     return modifier;
 }
 
-bool StakeModifierManager::ProcessStakeModifier(const uint256& block_hash, const uint256& modifier)
+bool StakeModifierManager::ProcessStakeModifier(ChainstateManager& chainman, const uint256& block_hash, const uint256& modifier)
 {
     LOCK(cs_main);
     std::lock_guard<std::mutex> lock(m_mutex);
-    const CBlockIndex* index = m_chainman.m_blockman.LookupBlockIndex(block_hash);
+    const CBlockIndex* index = chainman.m_blockman.LookupBlockIndex(block_hash);
     if (index == nullptr) return false;
 
     // Determine expected modifier using cached data.
     std::vector<const CBlockIndex*> ancestors;
     uint256 prev_mod{};
     for (const CBlockIndex* p = index->pprev; p; p = p->pprev) {
-        auto it = m_cache.find(p->GetBlockHash());
-        if (it != m_cache.end()) {
-            prev_mod = it->second;
+        auto it = m_modifiers.find(p->GetBlockHash());
+        if (it != m_modifiers.end()) {
+            prev_mod = it->second.modifier;
             break;
         }
         ancestors.push_back(p);
@@ -60,13 +115,14 @@ bool StakeModifierManager::ProcessStakeModifier(const uint256& block_hash, const
     std::reverse(ancestors.begin(), ancestors.end());
     for (const CBlockIndex* ancestor : ancestors) {
         prev_mod = ComputeStakeModifier(ancestor, prev_mod);
-        m_cache[ancestor->GetBlockHash()] = prev_mod;
+        m_modifiers[ancestor->GetBlockHash()] = ModifierEntry{prev_mod, ancestor->nTime};
     }
     uint256 expected = ComputeStakeModifier(index->pprev, prev_mod);
     if (expected != modifier) return false;
 
-    m_cache[block_hash] = modifier;
+    m_modifiers[block_hash] = ModifierEntry{modifier, index->nTime};
     return true;
 }
 
 } // namespace node
+

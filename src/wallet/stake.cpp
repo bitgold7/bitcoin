@@ -4,6 +4,7 @@
 #include <consensus/merkle.h>
 #include <interfaces/chain.h>
 #include <node/context.h>
+#include <node/stake_modifier_manager.h>
 #include <pos/stake.h>
 #include <util/time.h>
 #include <validation.h>
@@ -109,9 +110,10 @@ void Stake::ThreadStakeMiner()
                         nTimeTx &= ~consensus.nStakeTimestampMask;
                         unsigned int nBits = pindexPrev->nBits;
                         uint256 hash_proof;
+                        node::StakeModifierManager& man = *Assert(node_context->stake_modman);
                         if (!CheckStakeKernelHash(pindexPrev, nBits, pindexFrom->GetBlockHash(),
                                                   pindexFrom->nTime, stake_out.txout.nValue, stake_out.outpoint,
-                                                  nTimeTx, hash_proof, true, consensus)) {
+                                                  nTimeTx, man, hash_proof, true, consensus)) {
                             continue;
                         }
 

@@ -192,9 +192,6 @@ public:
 
     bool fProofOfStake{false};
     uint256 hashProofOfStake{};
-    uint64_t nStakeModifier{0};
-    int nStakeModifierHeight{0};
-    unsigned int nStakeModifierTime{0};
 
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     int32_t nSequenceId{0};
@@ -209,10 +206,7 @@ public:
           nBits{block.nBits},
           nNonce{block.nNonce},
           fProofOfStake{false},
-          hashProofOfStake{},
-          nStakeModifier{0},
-          nStakeModifierHeight{0},
-          nStakeModifierTime{0}
+          hashProofOfStake{}
     {
     }
 
@@ -409,17 +403,11 @@ public:
         try {
             READWRITE(obj.fProofOfStake);
             READWRITE(obj.hashProofOfStake);
-            READWRITE(VARINT(obj.nStakeModifier));
-            READWRITE(VARINT_MODE(obj.nStakeModifierHeight, VarIntMode::NONNEGATIVE_SIGNED));
-            READWRITE(VARINT(obj.nStakeModifierTime));
         } catch (const std::ios_base::failure&) {
             if (ser_action.ForRead()) {
                 auto& obj_nc = const_cast<CDiskBlockIndex&>(obj);
                 obj_nc.fProofOfStake = false;
                 obj_nc.hashProofOfStake.SetNull();
-                obj_nc.nStakeModifier = 0;
-                obj_nc.nStakeModifierHeight = 0;
-                obj_nc.nStakeModifierTime = 0;
             } else {
                 throw;
             }

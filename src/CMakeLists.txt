@@ -304,7 +304,6 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   policy/truc_policy.cpp
   pos/stake.cpp
   pos/stakemodifier.cpp
-  pos/stakemodifier_manager.cpp
   pos/difficulty.cpp
   rest.cpp
   rpc/blockchain.cpp

@@ -6,6 +6,7 @@
 #include <consensus/consensus.h>
 #include <net.h>
 #include <net_processing.h>
+#include <node/stake_modifier_manager.h>
 #include <node/warnings.h>
 #include <protocol.h>
 #include <script/script.h>
@@ -50,8 +51,10 @@ FUZZ_TARGET(p2p_handshake, .init = ::initialize)
     node::Warnings warnings{};
     NetGroupManager netgroupman{{}};
     AddrMan addrman{netgroupman, /*deterministic=*/true, 0};
+    node::StakeModifierManager stake_modman;
     auto peerman = PeerManager::make(connman, addrman,
                                      /*banman=*/nullptr, chainman,
+                                     stake_modman,
                                      *g_setup->m_node.mempool, warnings,
                                      PeerManager::Options{
                                          .reconcile_txs = true,
