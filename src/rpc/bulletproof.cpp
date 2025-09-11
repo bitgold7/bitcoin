@@ -35,7 +35,7 @@ static RPCHelpMan createrawbulletprooftransaction()
                 {RPCResult::Type::STR_HEX, "hex", "The serialized transaction in hex."},
                 {RPCResult::Type::ARR, "proofs", "Bulletproof range proofs for each output.",
                     {
-                        {RPCResult::Type::STR_HEX, "proof", "Bulletproof range proof"},
+                        {RPCResult::Type::STR_HEX, "", "Bulletproof range proof"},
                     }
                 },
             }
