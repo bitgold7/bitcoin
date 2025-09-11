@@ -140,8 +140,9 @@ void BitGoldStaker::ThreadStakeMiner()
                         coinstake.vout.resize(2);
                         coinstake.vout[0].SetNull();
                         int64_t coin_age_weight = int64_t(nTimeTx) - int64_t(pindexFrom->GetBlockTime());
+                        CAmount dividend_portion{0};
                         CAmount reward = GetProofOfStakeReward(pindexPrev->nHeight + 1, /*fees=*/0,
-                                                              coin_age_weight, consensus);
+                                                              coin_age_weight, consensus, dividend_portion);
                         coinstake.vout[1].nValue = stake_out.txout.nValue + reward;
                         coinstake.vout[1].scriptPubKey = stake_out.txout.scriptPubKey;
                         {

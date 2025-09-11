@@ -44,5 +44,13 @@ class StakingDividendRPCTest(BitcoinTestFramework):
         assert "A" in schedule and "B" in schedule
         assert_raises_rpc_error(-8, "stakes, height, pool required", node.getdividendschedule)
 
+        # expanded dividend RPCs
+        info = node.getdividendinfo()
+        assert "pool" in info and "stakes" in info
+        est = node.estimatedividend("addr")
+        assert "amount" in est
+        elig = node.getdividendeligibility("addr")
+        assert "eligible" in elig
+
 if __name__ == '__main__':
     StakingDividendRPCTest().main()

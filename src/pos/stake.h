@@ -39,8 +39,9 @@ bool ContextualCheckProofOfStake(const CBlock& block, const CBlockIndex* pindexP
  * Compute the proof-of-stake reward for a block at a given height. The reward
  * consists of the per-block subsidy (inflation) plus the validator's portion
  * of transaction fees (currently 90%).
+ * @param[out] dividend_portion amount to allocate to dividend pool
  */
-CAmount GetProofOfStakeReward(int nHeight, CAmount nFees, int64_t coin_age_weight, const Consensus::Params& params);
+CAmount GetProofOfStakeReward(int nHeight, CAmount nFees, int64_t coin_age_weight, const Consensus::Params& params, CAmount& dividend_portion);
 
 /** Return true if the block appears to be proof-of-stake. */
 bool IsProofOfStake(const CBlock& block);

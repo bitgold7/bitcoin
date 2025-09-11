@@ -138,13 +138,17 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
     return true;
 }
 
-CAmount GetProofOfStakeReward(int nHeight, CAmount nFees, int64_t coin_age_weight, const Consensus::Params& params)
+CAmount GetProofOfStakeReward(int nHeight, CAmount nFees, int64_t coin_age_weight, const Consensus::Params& params, CAmount& dividend_portion)
 {
     CAmount subsidy = GetBlockSubsidy(nHeight, params);
     int64_t weight = std::min<int64_t>(coin_age_weight, params.nStakeMaxAgeWeight);
-    CAmount staking_reward = subsidy * weight / params.nStakeMinAge;
+    CAmount total_subsidy = subsidy * weight / params.nStakeMinAge;
+    CAmount staker_subsidy = total_subsidy * 9 / 10;
+    CAmount dividend_subsidy = total_subsidy - staker_subsidy;
     CAmount validator_fee = nFees * 9 / 10;
-    return staking_reward + validator_fee;
+    CAmount dividend_fee = nFees - validator_fee;
+    dividend_portion = dividend_subsidy + dividend_fee;
+    return staker_subsidy + validator_fee;
 }
 
 bool ContextualCheckProofOfStake(const CBlock& block,
@@ -235,7 +239,8 @@ bool ContextualCheckProofOfStake(const CBlock& block,
     CAmount output_value = 0;
     for (const auto& o : coinstake.vout) output_value += o.nValue;
 
-    CAmount reward = GetProofOfStakeReward(spend_height, fees, coin_age, params);
+    CAmount dividend_unused{0};
+    CAmount reward = GetProofOfStakeReward(spend_height, fees, coin_age, params, dividend_unused);
     CAmount max_allowed = input_value + reward;
 
     if (output_value < input_value) return false; // must not burn value

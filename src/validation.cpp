@@ -2347,9 +2347,13 @@ void Chainstate::AddToDividendPool(CAmount amount, int height)
     CoinsDB().WriteDividendPool(m_dividend_pool);
 }
 
-void Chainstate::UpdateStakeWeight(const std::string& addr, CAmount weight)
+void Chainstate::UpdateStakeWeight(const std::string& addr, CAmount weight, int height)
 {
-    m_stake_info[addr].weight = weight;
+    StakeInfo& info = m_stake_info[addr];
+    if (info.weight != weight) {
+        info.weight = weight;
+        info.start_height = height;
+    }
 }
 
 CAmount Chainstate::ClaimDividend(const std::string& addr)

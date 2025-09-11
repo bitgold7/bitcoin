@@ -168,9 +168,11 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     coinbaseTx.vout[0].scriptPubKey = m_options.coinbase_output_script;
     CAmount validator_fee = nFees * 9 / 10;
     CAmount dividend_fee = nFees - validator_fee;
-    m_chainstate.AddToDividendPool(dividend_fee, nHeight);
-    coinbaseTx.vout[0].nValue = validator_fee + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
-    // Dividend portion is currently unassigned; reserved for future distribution.
+    CAmount subsidy = GetBlockSubsidy(nHeight, chainparams.GetConsensus());
+    CAmount validator_subsidy = subsidy * 9 / 10;
+    CAmount dividend_subsidy = subsidy - validator_subsidy;
+    m_chainstate.AddToDividendPool(dividend_fee + dividend_subsidy, nHeight);
+    coinbaseTx.vout[0].nValue = validator_fee + validator_subsidy;
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     Assert(nHeight > 0);
     coinbaseTx.nLockTime = static_cast<uint32_t>(nHeight - 1);
@@ -625,8 +627,10 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     coinstake.vout.resize(2);
     coinstake.vout[0].SetNull();
     int64_t coin_age_weight = consensus.nStakeMinAge; // Placeholder until wallet provides age
-    coinstake.vout[1].nValue = stake_out->txout.nValue +
-                               GetProofOfStakeReward(height, /*fees=*/0, coin_age_weight, consensus);
+    CAmount dividend_reward{0};
+    CAmount reward = GetProofOfStakeReward(height, /*fees=*/0, coin_age_weight, consensus, dividend_reward);
+    coinstake.vout[1].nValue = stake_out->txout.nValue + reward;
+    chainstate.AddToDividendPool(dividend_reward, height);
     coinstake.vout[1].scriptPubKey = stake_out->txout.scriptPubKey;
     {
         LOCK(wallet.cs_wallet);

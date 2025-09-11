@@ -7,11 +7,16 @@
 
 struct StakeInfo {
     CAmount weight{0};
+    int start_height{0};
     int last_payout_height{0};
 };
 
 namespace dividend {
 using Payouts = std::map<std::string, CAmount>;
+
+// Minimum stake weight and duration required for eligibility
+static constexpr CAmount MIN_STAKE_WEIGHT{1 * COIN};
+static constexpr int MIN_STAKE_DURATION{1440};
 
 /**
  * Calculate dividend payouts for a set of stakes.

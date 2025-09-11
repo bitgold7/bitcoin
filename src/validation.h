@@ -667,7 +667,7 @@ public:
     CAmount GetDividendPool() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_dividend_pool; }
     const std::map<std::string, StakeInfo>& GetStakeInfo() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_stake_info; }
     const std::map<std::string, CAmount>& GetPendingDividends() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_pending_dividends; }
-    void UpdateStakeWeight(const std::string& addr, CAmount weight) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+    void UpdateStakeWeight(const std::string& addr, CAmount weight, int height) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
     CAmount ClaimDividend(const std::string& addr) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     //! @returns A pointer to the mempool.

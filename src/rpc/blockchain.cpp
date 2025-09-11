@@ -3406,6 +3406,7 @@ static RPCHelpMan getdividendinfo()
             {RPCResult::Type::STR_AMOUNT, "pool", "Current dividend pool"},
             {RPCResult::Type::OBJ, "stakes", "Stake info per address", {{RPCResult::Type::OBJ, "", "", {
                 {RPCResult::Type::STR_AMOUNT, "weight", "Current stake weight"},
+                {RPCResult::Type::NUM, "start_height", "Height when stake was last updated"},
                 {RPCResult::Type::NUM, "last_payout", "Height of last payout"},
                 {RPCResult::Type::STR_AMOUNT, "pending", "Pending dividend amount"},
             }}}},
@@ -3421,6 +3422,7 @@ static RPCHelpMan getdividendinfo()
             for (const auto& [addr, info] : chainstate.GetStakeInfo()) {
                 UniValue obj(UniValue::VOBJ);
                 obj.pushKV("weight", ValueFromAmount(info.weight));
+                obj.pushKV("start_height", info.start_height);
                 obj.pushKV("last_payout", info.last_payout_height);
                 auto it = chainstate.GetPendingDividends().find(addr);
                 obj.pushKV("pending", it != chainstate.GetPendingDividends().end() ? ValueFromAmount(it->second) : ValueFromAmount(0));
@@ -3428,6 +3430,73 @@ static RPCHelpMan getdividendinfo()
             }
             result.pushKV("stakes", stakes);
             return result;
+        }
+    };
+}
+
+static RPCHelpMan estimatedividend()
+{
+    return RPCHelpMan{
+        "estimatedividend",
+        "Estimate pending dividend payout for an address.",
+        {{"address", RPCArg::Type::STR, RPCArg::Optional::NO, "Address to query"}},
+        RPCResult{RPCResult::Type::OBJ, "", "", {
+            {RPCResult::Type::STR, "address", "Address"},
+            {RPCResult::Type::STR_AMOUNT, "amount", "Estimated dividend"},
+        }},
+        RPCExamples{HelpExampleCli("estimatedividend", "\"addr\"") + HelpExampleRpc("estimatedividend", "\"addr\"")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            NodeContext& node = EnsureNodeContext(request.context);
+            LOCK(cs_main);
+            Chainstate& chainstate = EnsureChainman(node).ActiveChainstate();
+            std::string addr = request.params[0].get_str();
+            const auto& stakes = chainstate.GetStakeInfo();
+            auto payouts = dividend::CalculatePayouts(stakes, chainstate.m_chain.Height(), chainstate.GetDividendPool());
+            CAmount amt = 0;
+            auto it = payouts.find(addr);
+            if (it != payouts.end()) amt = it->second;
+            UniValue obj(UniValue::VOBJ);
+            obj.pushKV("address", addr);
+            obj.pushKV("amount", ValueFromAmount(amt));
+            return obj;
+        }
+    };
+}
+
+static RPCHelpMan getdividendeligibility()
+{
+    return RPCHelpMan{
+        "getdividendeligibility",
+        "Check whether an address meets dividend eligibility thresholds.",
+        {{"address", RPCArg::Type::STR, RPCArg::Optional::NO, "Address to query"}},
+        RPCResult{RPCResult::Type::OBJ, "", "", {
+            {RPCResult::Type::BOOL, "eligible", "True if address qualifies"},
+            {RPCResult::Type::STR_AMOUNT, "weight", "Current stake weight"},
+            {RPCResult::Type::NUM, "age", "Blocks since stake start"},
+        }},
+        RPCExamples{HelpExampleCli("getdividendeligibility", "\"addr\"") + HelpExampleRpc("getdividendeligibility", "\"addr\"")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            NodeContext& node = EnsureNodeContext(request.context);
+            LOCK(cs_main);
+            Chainstate& chainstate = EnsureChainman(node).ActiveChainstate();
+            std::string addr = request.params[0].get_str();
+            UniValue obj(UniValue::VOBJ);
+            const auto& stakes = chainstate.GetStakeInfo();
+            auto it = stakes.find(addr);
+            if (it == stakes.end()) {
+                obj.pushKV("eligible", false);
+                obj.pushKV("weight", ValueFromAmount(0));
+                obj.pushKV("age", 0);
+                return obj;
+            }
+            const StakeInfo& info = it->second;
+            int height = chainstate.m_chain.Height();
+            int age = height - info.start_height;
+            bool eligible = info.weight >= dividend::MIN_STAKE_WEIGHT && age >= dividend::MIN_STAKE_DURATION;
+            obj.pushKV("eligible", eligible);
+            obj.pushKV("weight", ValueFromAmount(info.weight));
+            obj.pushKV("age", age);
+            return obj;
         }
     };
 }
@@ -3488,6 +3557,8 @@ void RegisterBlockchainRPCCommands(CRPCTable& t)
         {"blockchain", &loadtxoutset},
         {"blockchain", &getchainstates},
         {"blockchain", &getdividendinfo},
+        {"blockchain", &estimatedividend},
+        {"blockchain", &getdividendeligibility},
         {"blockchain", &claimdividends},
         {"hidden", &invalidateblock},
         {"hidden", &reconsiderblock},
