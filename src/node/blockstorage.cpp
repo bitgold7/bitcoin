@@ -43,6 +43,24 @@
 #include <optional>
 #include <unordered_map>
 
+namespace {
+uint64_t NetworkDefaultPruneTarget(ChainType chain)
+{
+    switch (chain) {
+    case ChainType::MAIN:
+        return DEFAULT_PRUNE_TARGET_MAINNET;
+    case ChainType::TESTNET:
+    case ChainType::TESTNET4:
+        return DEFAULT_PRUNE_TARGET_TESTNET;
+    case ChainType::SIGNET:
+        return DEFAULT_PRUNE_TARGET_SIGNET;
+    case ChainType::REGTEST:
+        return DEFAULT_PRUNE_TARGET_REGTEST;
+    }
+    return DEFAULT_PRUNE_TARGET_MAINNET;
+}
+} // namespace
+
 namespace kernel {
 static constexpr uint8_t DB_BLOCK_FILES{'f'};
 static constexpr uint8_t DB_BLOCK_INDEX{'b'};
@@ -312,8 +330,8 @@ void BlockManager::FindFilesToPrune(
 {
     LOCK2(cs_main, cs_LastBlockFile);
     // Distribute our -prune budget over all chainstates.
-    const auto target = std::max(
-        MIN_DISK_SPACE_FOR_BLOCK_FILES, GetPruneTarget() / chainman.GetAll().size());
+    const uint64_t network_min = NetworkDefaultPruneTarget(GetParams().GetChainType());
+    const auto target = std::max(network_min, GetPruneTarget() / chainman.GetAll().size());
     const uint64_t target_sync_height = chainman.m_best_header->nHeight;
 
     if (chain.m_chain.Height() < 0 || target == 0) {

@@ -26,9 +26,9 @@ class Bech32HRPTest(BitcoinTestFramework):
     def run_test(self):
         self.log.info("Check Bech32 HRPs for testnet and signet")
         tb_addr = self.nodes[0].getnewaddress(address_type='bech32')
-        assert_equal(tb_addr[:2], 'tb')
+        assert_equal(tb_addr[:3], 'tbg')
         sb_addr = self.nodes[1].getnewaddress(address_type='bech32')
-        assert_equal(sb_addr[:2], 'sb')
+        assert_equal(sb_addr[:3], 'sbg')
 
 if __name__ == '__main__':
     Bech32HRPTest(__file__).main()

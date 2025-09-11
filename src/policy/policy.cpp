@@ -23,7 +23,7 @@
 #include <cstddef>
 #include <vector>
 
-bool g_enable_priority{true};
+bool g_enable_priority{false};
 int64_t g_max_priority{100};
 
 CAmount GetDustThreshold(const CTxOut& txout, const CFeeRate& dustRelayFeeIn)

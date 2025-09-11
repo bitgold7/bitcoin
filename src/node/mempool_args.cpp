@@ -78,6 +78,8 @@ util::Result<void> ApplyArgsManOptions(const ArgsManager& argsman, const CChainP
         LogPrintf("Increasing minrelaytxfee to %s to match incrementalrelayfee\n", mempool_opts.min_relay_feerate.ToString());
     }
 
+    g_enable_priority = argsman.GetBoolArg("-bgdpriority", false);
+
     // Feerate used to define dust.  Shouldn't be changed lightly as old
     // implementations may inadvertently create non-standard transactions
     if (const auto arg{argsman.GetArg("-dustrelayfee")}) {

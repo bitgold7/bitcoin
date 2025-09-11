@@ -5,6 +5,20 @@ Setup
 ---------------------
 BitGold is a proof-of-stake cryptocurrency derived from Bitcoin. It targets 8-minute block times and the block subsidy halves every 90 000 blocks. The software downloads and, by default, stores the entire history of BitGold transactions, which requires several hundred gigabytes or more of disk space. Depending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to several days or more.
 
+### Disk usage and pruning
+
+Approximate blockchain sizes and recommended `-prune` targets:
+
+| Network | Chain data | Suggested prune target |
+|---------|------------|-----------------------|
+| Mainnet | ~720 GB chain + 14 GB state | 2048 MiB |
+| Testnet | ~200 GB chain + 19 GB state | 1024 MiB |
+| Signet  | <1 GB total | 550 MiB |
+| Regtest | negligible | 550 MiB |
+
+Using pruning dramatically reduces disk requirements but will require re-downloading the
+blockchain if disabled later.
+
 To download BitGold, visit [bitgold.org](https://bitgold.org/en/download/).
 
 Running
@@ -37,6 +51,8 @@ Drag BitGold to your applications folder, and then run BitGold.
 * Ask for help on [Bitcoin StackExchange](https://bitcoin.stackexchange.com).
 * Ask for help on #bitcoin on Libera Chat. If you don't have an IRC client, you can use [web.libera.chat](https://web.libera.chat/#bitcoin).
 * Ask for help on the [BitcoinTalk](https://bitcointalk.org/) forums, in the [Technical Support board](https://bitcointalk.org/index.php?board=4.0).
+
+Additional documents in this directory provide more detail on specific topics, including [signet](signet.md) for testing on a public network.
 
 Building
 ---------------------
@@ -91,6 +107,9 @@ The Bitcoin repo's [root README](/README.md) contains relevant information on th
 - [ZMQ](zmq.md)
 - [Staking](staking.md)
 - [Bulletproofs](bulletproofs.md)
+- [Whitepaper Lite](whitepaper-lite.md)
+- [Operator Guide](operator-guide.md)
+- [Wallet Guide](wallet-guide.md)
 
 License
 ---------------------

@@ -13,9 +13,9 @@ class CBlockIndex;
 
 // Default timestamp granularity for staked blocks (16 seconds, PoSV3.1)
 static constexpr unsigned int STAKE_TIMESTAMP_MASK = 0xF;
-// Default minimum coin age for staking (1 hour, PoSV3.1)
+// Default minimum coin age for staking (8 hours, PoSV3.1)
 // Network-specific values are provided via consensus parameters
-static constexpr int64_t MIN_STAKE_AGE = 60 * 60;
+static constexpr int64_t MIN_STAKE_AGE = 8 * 60 * 60;
 
 /** Check that the kernel for a stake meets the required target */
 bool CheckStakeKernelHash(const CBlockIndex* pindexPrev, unsigned int nBits,
