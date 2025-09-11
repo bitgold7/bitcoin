@@ -447,3 +447,20 @@ jobs:
           path: ${{ env.CCACHE_DIR }}
           # https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
           key: ${{ github.job }}-ccache-${{ github.run_id }}
+
+  bootstrap-testnet:
+    name: 'Bootstrap signet'
+    runs-on: ubuntu-24.04
+    if: ${{ vars.SKIP_BRANCH_PUSH != 'true' || github.event_name == 'pull_request' }}
+    timeout-minutes: 60
+    env:
+      FILE_ENV: './ci/test/00_setup_env_native_nowallet_libbitcoinkernel.sh'
+      BOOTSTRAP_FRESH_TESTNET: 'true'
+      RUN_UNIT_TESTS: 'false'
+      RUN_FUNCTIONAL_TESTS: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: CI script
+        run: ./ci/test_run_all.sh
