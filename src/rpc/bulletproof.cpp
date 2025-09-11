@@ -76,13 +76,13 @@ static RPCHelpMan createrawbulletprooftransaction()
                 throw JSONRPCError(RPC_INVALID_PARAMETER, "Transaction must have at least one output");
             }
 
-            const CTransaction tx{mtx};
+            std::vector<CBulletproof> proofs_vec;
+            if (!wallet::CreateBulletproofProof(*wallet, mtx, proofs_vec)) {
+                throw JSONRPCError(RPC_WALLET_ERROR, "Failed to create Bulletproofs");
+            }
             UniValue proofs(UniValue::VARR);
-            for (size_t i = 0; i < mtx.vout.size(); ++i) {
-                CBulletproof bp;
-                if (!wallet::CreateBulletproofProof(*wallet, tx, bp)) {
-                    throw JSONRPCError(RPC_WALLET_ERROR, strprintf("Failed to create Bulletproof for output %u", i));
-                }
+            for (size_t i = 0; i < proofs_vec.size(); ++i) {
+                const CBulletproof& bp = proofs_vec[i];
                 mtx.vout[i].scriptPubKey << OP_BULLETPROOF
                     << std::vector<unsigned char>(bp.commitment.data, bp.commitment.data + sizeof(bp.commitment.data))
                     << bp.proof;

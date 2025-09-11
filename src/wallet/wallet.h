@@ -56,6 +56,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <array>
 
 #include <boost/signals2/signal.hpp>
 
@@ -553,6 +554,11 @@ public:
 
     /** Proof-of-stake staker thread. */
     std::unique_ptr<Stake> m_staker;
+
+#ifdef ENABLE_BULLETPROOFS
+    /** Mapping of confidential outputs to their blinding factors and values. */
+    std::map<COutPoint, std::pair<std::array<unsigned char,32>, CAmount>> m_confidential_outputs GUARDED_BY(cs_wallet);
+#endif
 
     /** Cached staking statistics. */
     StakingStats m_staking_stats GUARDED_BY(cs_wallet);
@@ -1142,6 +1148,14 @@ public:
     //! Find the private key for the given key id from the wallet's descriptors, if available
     //! Returns nullopt when no descriptor has the key or if the wallet is locked.
     std::optional<CKey> GetKey(const CKeyID& keyid) const;
+
+#ifdef ENABLE_BULLETPROOFS
+    /** Record the blinding factor and value for a confidential output. */
+    void AddConfidentialOutput(const COutPoint& outpoint, const unsigned char blind[32], CAmount value);
+
+    /** Retrieve the wallet's known value for a confidential output. */
+    std::optional<CAmount> GetConfidentialValue(const COutPoint& outpoint) const;
+#endif
 };
 
 /**
