@@ -141,8 +141,8 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].threshold = 1815;          // 90%
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].period = 2016;
 
-        consensus.nMinimumChainWork = uint256{"0000000000000000000000000000000000000000b1f3b93b65b16d035a82be84"};
-        consensus.defaultAssumeValid = uint256{"00000000000000000001b658dd1120e82e66d2790811f89ede9742ada3ed6d77"}; // 886157
+        consensus.nMinimumChainWork = uint256{};
+        consensus.defaultAssumeValid = uint256{};
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -160,9 +160,10 @@ public:
 
         // To create a new genesis block, modify the timestamp, nonce, and the message in CreateGenesisBlock
         // Then, run the node to get the required hashMerkleRoot and hashGenesisBlock
-        genesis = CreateGenesisBlock(1704067200, 12345, 0x1e0ffff0, 1, 3000000 * COIN);
+        genesis = CreateGenesisBlock(1704067200, 4742768, 0x1e0ffff0, 1, 3000000 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256{"c7a6c842f7b1811b4e8ed0964291e9eb91a9ca01bb85256acb2f723f9983424b"});
+        consensus.defaultAssumeValid = consensus.hashGenesisBlock;
+        assert(consensus.hashGenesisBlock == uint256{"00000babd2ad2c038bb1161bc106e2ea0c0918a52ca462068b9e866ee48c444c"});
         assert(genesis.hashMerkleRoot == uint256{"66c868e09d6a774ca6019e4f757f1d4e9aafe9633151111451c8767db6d8dd62"});
         // Ensure DNS entries are coordinated externally before release.
         vSeeds.emplace_back("seed.bitgold.org");
@@ -214,7 +215,6 @@ public:
 
         checkpointData = {{
             {0, consensus.hashGenesisBlock},
-            {950000, uint256{"0000000000000000000aabbccddeeff00112233445566778899aabbccddeeff0"}},
         }};
     }
 };
@@ -281,8 +281,8 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].threshold = 1512;         // 75%
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].period = 2016;
 
-        consensus.nMinimumChainWork = uint256{"0000000000000000000000000000000000000000000015f5e0c9f13455b0eb17"};
-        consensus.defaultAssumeValid = uint256{"00000000000003fc7967410ba2d0a8a8d50daedc318d43e8baf1a9782c236a57"}; // 3974606
+        consensus.nMinimumChainWork = uint256{};
+        consensus.defaultAssumeValid = uint256{};
 
         pchMessageStart[0] = 0xb1;
         pchMessageStart[1] = 0xd2;
@@ -293,9 +293,10 @@ public:
         m_assumed_blockchain_size = 200;
         m_assumed_chain_state_size = 19;
 
-        genesis = CreateGenesisBlock(1710000000, 165845, 0x1e0ffff0, 1, 3000000 * COIN);
+        genesis = CreateGenesisBlock(1710000000, 1955521, 0x1e0ffff0, 1, 3000000 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256{"0000040004f9014602db7db01927c8cd4ddda840c1b4c5bdc10ba588dc288f93"});
+        consensus.defaultAssumeValid = consensus.hashGenesisBlock;
+        assert(consensus.hashGenesisBlock == uint256{"000004592798e247e45c04fa8b6352f0ff697b36aea925825a8594720cdcae42"});
         assert(genesis.hashMerkleRoot == uint256{"66c868e09d6a774ca6019e4f757f1d4e9aafe9633151111451c8767db6d8dd62"});
         vFixedSeeds.clear();
         vSeeds.clear();
@@ -333,7 +334,6 @@ public:
 
         checkpointData = {{
             {0, consensus.hashGenesisBlock},
-            {3974606, uint256{"00000000000003fc7967410ba2d0a8a8d50daedc318d43e8baf1a9782c236a57"}},
         }};
     }
 };
@@ -356,16 +356,11 @@ public:
             bin = "512103ad5e0edad18cb1f0fc0d28a3d4f1f3e445640337489abb10404f2d1e086be430210359ef5021964fe22d6f8e05b2463c9540ce96883fe3b278760f048f5189f2e6c452ae"_hex_v_u8;
             vFixedSeeds = std::vector<uint8_t>(std::begin(chainparams_seed_signet), std::end(chainparams_seed_signet));
 
-            consensus.nMinimumChainWork = uint256{"000000000000000000000000000000000000000000000000000002b517f3d1a1"};
-            consensus.defaultAssumeValid = uint256{"000000895a110f46e59eb82bbc5bfb67fa314656009c295509c21b4999f5180a"}; // 237722
-            m_assumed_blockchain_size = 11;
-            m_assumed_chain_state_size = 1;
-            chainTxData = ChainTxData{
-                // Data from RPC: getchaintxstats 4096 000000895a110f46e59eb82bbc5bfb67fa314656009c295509c21b4999f5180a
-                .nTime = 1741019645,
-                .tx_count = 16540736,
-                .dTxRate = 1.064918879911595,
-            };
+            consensus.nMinimumChainWork = uint256{};
+            consensus.defaultAssumeValid = uint256{};
+            m_assumed_blockchain_size = 0;
+            m_assumed_chain_state_size = 0;
+            chainTxData = ChainTxData{0, 0, 0};
         } else {
             bin = *options.challenge;
             consensus.nMinimumChainWork = uint256{};
@@ -444,10 +439,11 @@ public:
         nDefaultPort = 38888;
         nPruneAfterHeight = 1000;
 
-        genesis = CreateGenesisBlock(1598918400, 52613770, 0x1e0377ae, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(1598918400, 11848446, 0x1e0377ae, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-// assert(consensus.hashGenesisBlock == uint256{"00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6"});
-// assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
+        consensus.defaultAssumeValid = consensus.hashGenesisBlock;
+        assert(consensus.hashGenesisBlock == uint256{"000000c42955cec380a7570b65b05346ba5c2c38891e35811623a7db1650998e"});
+        assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
         // No DNS seeds for BitGold
 
         m_assumeutxo_data = {
@@ -469,16 +465,9 @@ public:
         fDefaultConsistencyChecks = false;
         m_is_mockable_chain = false;
 
-        if (!options.challenge) {
-            checkpointData = {{
-                {0, consensus.hashGenesisBlock},
-                {237722, uint256{"000000895a110f46e59eb82bbc5bfb67fa314656009c295509c21b4999f5180a"}},
-            }};
-        } else {
-            checkpointData = {{
-                {0, consensus.hashGenesisBlock},
-            }};
-        }
+        checkpointData = {{
+            {0, consensus.hashGenesisBlock},
+        }};
     }
 };
 
@@ -583,8 +572,8 @@ public:
 
         genesis = CreateGenesisBlock(1296688602, 2, 0x207fffff, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-// assert(consensus.hashGenesisBlock == uint256{"0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"});
-// assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
+        assert(consensus.hashGenesisBlock == uint256{"0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"});
+        assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
         // No DNS seeds for BitGold
 
         vFixedSeeds.clear(); //!< Regtest mode doesn't have any fixed seeds.
