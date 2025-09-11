@@ -4580,15 +4580,32 @@ std::optional<WalletTXO> CWallet::GetTXO(const COutPoint& outpoint) const
     return it->second;
 }
 #ifdef ENABLE_BULLETPROOFS
+void CWallet::AddConfidentialOutput(const COutPoint& outpoint, const unsigned char blind[32], CAmount value)
+{
+    LOCK(cs_wallet);
+    std::array<unsigned char,32> b{};
+    std::copy(blind, blind + 32, b.begin());
+    m_confidential_outputs[outpoint] = std::make_pair(b, value);
+}
+
+std::optional<CAmount> CWallet::GetConfidentialValue(const COutPoint& outpoint) const
+{
+    LOCK(cs_wallet);
+    auto it = m_confidential_outputs.find(outpoint);
+    if (it == m_confidential_outputs.end()) return std::nullopt;
+    return it->second.second;
+}
+#endif
+#ifdef ENABLE_BULLETPROOFS
 bool CreateBulletproofProof(CWallet& wallet, CMutableTransaction& tx, std::vector<CBulletproof>& proofs)
 {
-    (void)wallet; // Currently unused
     static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
 
     proofs.clear();
     proofs.reserve(tx.vout.size());
 
-    for (auto& txout : tx.vout) {
+    for (size_t i = 0; i < tx.vout.size(); ++i) {
+        auto& txout = tx.vout[i];
         CBulletproof bp;
 
         unsigned char blind[32];
@@ -4605,7 +4622,11 @@ bool CreateBulletproofProof(CWallet& wallet, CMutableTransaction& tx, std::vecto
             return false;
         }
         bp.proof.resize(proof_len);
-        bp.extra.clear();
+        bp.extra.assign(blind, blind + 32);
+
+        // Store blinding factor and hide value inside the commitment
+        wallet.AddConfidentialOutput(COutPoint{tx.GetHash(), (uint32_t)i}, blind, txout.nValue);
+        txout.nValue = 0;
 
         CScript bp_script = txout.scriptPubKey;
         bp_script << OP_BULLETPROOF

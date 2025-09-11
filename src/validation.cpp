@@ -126,7 +126,10 @@ static bool ExtractBulletproofFromScript(const CScript& script, CBulletproof& ou
 bool CheckBulletproofs(const CTransaction& tx, TxValidationState& state)
 {
     bool has_bp{false};
-    auto check_script = [&](const CScript& script) -> bool {
+    std::vector<secp256k1_pedersen_commitment> input_comms;
+    std::vector<secp256k1_pedersen_commitment> output_comms;
+    auto check_script = [&](const CScript& script,
+                           std::vector<secp256k1_pedersen_commitment>& commits) -> bool {
         CBulletproof bp;
         bool malformed{false};
         bool present = ExtractBulletproofFromScript(script, bp, malformed);
@@ -138,18 +141,29 @@ bool CheckBulletproofs(const CTransaction& tx, TxValidationState& state)
             if (!VerifyBulletproof(bp)) {
                 return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
             }
+            commits.push_back(bp.commitment);
         }
         return true;
     };
 
     for (const auto& txin : tx.vin) {
-        if (!check_script(txin.scriptSig)) return false;
+        if (!check_script(txin.scriptSig, input_comms)) return false;
     }
     for (const auto& txout : tx.vout) {
-        if (!check_script(txout.scriptPubKey)) return false;
+        if (!check_script(txout.scriptPubKey, output_comms)) return false;
+        if (tx.UsesBulletproofs() && txout.nValue != 0) {
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof-value");
+        }
     }
     if (tx.UsesBulletproofs() && !has_bp) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof-missing");
+    }
+    if (tx.UsesBulletproofs()) {
+        static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
+        if (secp256k1_pedersen_verify_tally(ctx, input_comms.data(), input_comms.size(),
+                                            output_comms.data(), output_comms.size()) != 1) {
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof-balance");
+        }
     }
     return true;
 }
