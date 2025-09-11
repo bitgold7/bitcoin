@@ -382,14 +382,15 @@ BOOST_AUTO_TEST_CASE(bulletproof_validation_tests)
     BOOST_CHECK(!CheckBulletproofs(tx, state));
     BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-bulletproof");
 
-    // Transaction without Bulletproof data should succeed.
+    // Transaction without Bulletproof data should fail.
     CMutableTransaction mtx2;
     mtx2.version = CTransaction::CURRENT_VERSION | CTransaction::BULLETPROOF_VERSION;
     mtx2.vin.emplace_back();
     mtx2.vout.emplace_back(CAmount{0}, CScript());
     const CTransaction tx2{mtx2};
     TxValidationState state2;
-    BOOST_CHECK(CheckBulletproofs(tx2, state2));
+    BOOST_CHECK(!CheckBulletproofs(tx2, state2));
+    BOOST_CHECK_EQUAL(state2.GetRejectReason(), "bad-bulletproof-missing");
 }
 #endif
 
