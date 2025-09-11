@@ -8,6 +8,7 @@ class StakingDividendRPCTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 1
         self.setup_clean_chain = True
+        self.extra_args = [["-dividendpayouts=0"]]
 
     def run_test(self):
         node = self.nodes[0]
@@ -26,14 +27,8 @@ class StakingDividendRPCTest(BitcoinTestFramework):
         # dividend pool operations
         pool = node.getdividendpool()
         assert "amount" in pool
-        assert pool["amount"] > 0
-        assert_raises_rpc_error(-8, "address and amount required", node.claimdividends)
-        assert_raises_rpc_error(-8, "amount must be positive", node.claimdividends, "addr", Decimal("-1"))
-        assert_raises_rpc_error(-8, "insufficient dividend pool", node.claimdividends, "addr", pool["amount"] + 1)
-        res = node.claimdividends("addr", Decimal("1"))
-        assert_equal(res["claimed"], Decimal("1"))
-        new_pool = node.getdividendpool()
-        assert_equal(new_pool["amount"], pool["amount"] - Decimal("1"))
+        assert_equal(pool["amount"], Decimal("0"))
+        assert_raises_rpc_error(-1, "dividend payouts are disabled", node.claimdividends, "addr")
 
         # dividend schedule
         stakes = [

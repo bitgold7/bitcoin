@@ -5,8 +5,9 @@
 
 #include <bitcoin-build-config.h> // IWYU pragma: keep
 
-#include <pos/stake.h>
+#include <common/args.h>
 #include <pos/difficulty.h>
+#include <pos/stake.h>
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -20,6 +21,7 @@
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
 #include <cuckoocache.h>
+#include <dividend/dividend.h>
 #include <flatfile.h>
 #include <hash.h>
 #include <kernel/chain.h>
@@ -35,9 +37,9 @@
 #include <logging/timer.h>
 #include <node/blockstorage.h>
 #include <node/utxo_snapshot.h>
-#include <dividend/dividend.h>
 #include <policy/ephemeral_policy.h>
 #include <policy/policy.h>
+#include <policy/priority.h>
 #include <policy/rbf.h>
 #include <policy/settings.h>
 #include <policy/truc_policy.h>
@@ -47,7 +49,6 @@
 #include <script/script.h>
 #include <script/sigcache.h>
 #include <signet.h>
-#include <policy/priority.h>
 #include <tinyformat.h>
 #include <txdb.h>
 #include <txmempool.h>
@@ -67,7 +68,6 @@
 #include <util/trace.h>
 #include <util/translation.h>
 #include <validationinterface.h>
-#include <util/moneystr.h>
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
@@ -79,8 +79,8 @@
 #include <deque>
 #include <numeric>
 #include <optional>
-#include <set>
 #include <ranges>
+#include <set>
 #include <span>
 #include <string>
 #include <tuple>
@@ -271,7 +271,8 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
                     in_val += coin.out.nValue;
                 }
                 CAmount out_val{0};
-                for (const auto& o : tx.vout) out_val += o.nValue;
+                for (const auto& o : tx.vout)
+                    out_val += o.nValue;
                 if (in_val < out_val) {
                     return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-in-belowout");
                 }
@@ -290,7 +291,8 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
             static constexpr int QUARTER_BLOCKS{16200};
             const int height{pindexPrev->nHeight + 1};
             CAmount pool_before = chainstate.GetDividendPool() + dividend_fee;
-            if (height % QUARTER_BLOCKS == 0) {
+            const bool payouts_enabled = gArgs.GetBoolArg("-dividendpayouts", false);
+            if (payouts_enabled && height % QUARTER_BLOCKS == 0) {
                 auto payouts = dividend::CalculatePayouts(chainstate.GetStakeInfo(), height, pool_before);
                 if (reward_tx.vout.size() != 3 + payouts.size()) {
                     return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-payout-missing");
@@ -2373,7 +2375,7 @@ void Chainstate::AddToDividendPool(CAmount amount, int height)
 {
     m_dividend_pool += amount;
     static constexpr int QUARTER_BLOCKS{16200};
-    if (height > 0 && height % QUARTER_BLOCKS == 0) {
+    if (gArgs.GetBoolArg("-dividendpayouts", false) && height > 0 && height % QUARTER_BLOCKS == 0) {
         m_dividend_pool = 0;
     }
     CoinsDB().WriteDividendPool(m_dividend_pool);
@@ -2405,7 +2407,7 @@ bool IsBlockMutated(const CBlock& block, bool check_witness_root)
     }
 
     const bool has_witness_tx = std::any_of(block.vtx.begin(), block.vtx.end(),
-        [](const CTransactionRef& tx) { return tx->HasWitness(); });
+                                            [](const CTransactionRef& tx) { return tx->HasWitness(); });
 
     if (check_witness_root) {
         block.m_checked_witness_commitment = true;
