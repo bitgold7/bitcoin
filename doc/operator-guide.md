@@ -17,6 +17,10 @@ Enable staking by setting `staking=1` in `bitgold.conf` and unlocking your walle
 
 Use the `getnetworkinfo`, `getstakinginfo`, and `getblockchaininfo` RPC commands to monitor node health. For production deployments integrate with external monitoring systems to track resource usage and network connectivity.
 
+## Block and Mempool Limits
+
+By default the node enforces a maximum block weight of 20,000,000 weight units and a block-wide budget of 100,000 signature operations. Individual transactions are limited by policy to 400,000 weight units. The functional test suite includes coverage that constructs and mines a full 20&nbsp;M weight block containing a transaction exercising the entire 100&nbsp;k sigop allotment to ensure both consensus and mempool acceptance remain stable, even when `-bgdpriority` is enabled.
+
 ## Upgrades
 
 Stay current with new releases. Stop the daemon, install the update, and restart. For minimal downtime consider running redundant nodes and updating them in sequence.
