@@ -387,7 +387,7 @@ public:
 /** Functions for validating blocks and updating the block tree */
 
 /** Context-independent validity checks */
-bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
+bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& consensusParams, bool fCheckMerkleRoot = true);
 
 #ifdef ENABLE_BULLETPROOFS
 /** Validate Bulletproof commitments and proofs in a transaction. */
@@ -400,8 +400,6 @@ bool CheckBulletproofs(const CTransaction& tx, TxValidationState& state);
  * @param[in]   block       The block we want to process. Must connect to the
  *                          current tip.
  * @param[in]   chainstate  The chainstate to connect to.
- * @param[in]   check_pow   perform proof-of-work check, nBits in the header
- *                          is always checked
  * @param[in]   check_merkle_root check the merkle root
  *
  * @return Valid or Invalid state. This doesn't currently return an Error state,
@@ -409,13 +407,20 @@ bool CheckBulletproofs(const CTransaction& tx, TxValidationState& state);
  *         chainstate. (This is different from functions like AcceptBlock which
  *         can fail trying to save new data.)
  *
- * For signets the challenge verification is skipped when check_pow is false.
  */
 BlockValidationState TestBlockValidity(
     Chainstate& chainstate,
     const CBlock& block,
     bool check_pow,
     bool check_merkle_root) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+
+inline BlockValidationState TestBlockValidity(
+    Chainstate& chainstate,
+    const CBlock& block,
+    bool check_merkle_root) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+{
+    return TestBlockValidity(chainstate, block, /*check_pow=*/false, check_merkle_root);
+}
 
 /** Check with the proof of work on each blockheader matches the value in nBits */
 bool HasValidProofOfWork(const std::vector<CBlockHeader>& headers, const CChainParams& chainparams, int prev_height);

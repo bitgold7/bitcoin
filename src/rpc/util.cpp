@@ -1400,8 +1400,3 @@ std::vector<RPCResult> ScriptPubKeyDoc() {
          };
 }
 
-uint256 GetTarget(const CBlockIndex& blockindex, const uint256 pow_limit)
-{
-    (void)blockindex;
-    return pow_limit;
-}
