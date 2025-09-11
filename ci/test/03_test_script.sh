@@ -212,3 +212,7 @@ if [ "$RUN_FUZZ_TESTS" = "true" ]; then
     "${DIR_FUZZ_IN}" \
     --empty_min_time=60
 fi
+
+if [ "$BOOTSTRAP_FRESH_TESTNET" = "true" ]; then
+  "${BASE_ROOT_DIR}/ci/test/04_bootstrap_fresh_testnet.sh"
+fi

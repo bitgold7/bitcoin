@@ -38,6 +38,8 @@ Drag BitGold to your applications folder, and then run BitGold.
 * Ask for help on #bitcoin on Libera Chat. If you don't have an IRC client, you can use [web.libera.chat](https://web.libera.chat/#bitcoin).
 * Ask for help on the [BitcoinTalk](https://bitcointalk.org/) forums, in the [Technical Support board](https://bitcointalk.org/index.php?board=4.0).
 
+Additional documents in this directory provide more detail on specific topics, including [signet](signet.md) for testing on a public network.
+
 Building
 ---------------------
 The following are developer notes on how to build BitGold on your native platform. They are not complete guides, but include notes on the necessary libraries, compile flags, etc.

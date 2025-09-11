@@ -357,11 +357,12 @@ public:
         vSeeds.clear();
 
         if (!options.challenge) {
+            // Default signet challenge as defined in BIP325
             bin = "512103ad5e0edad18cb1f0fc0d28a3d4f1f3e445640337489abb10404f2d1e086be430210359ef5021964fe22d6f8e05b2463c9540ce96883fe3b278760f048f5189f2e6c452ae"_hex_v_u8;
             vFixedSeeds = std::vector<uint8_t>(std::begin(chainparams_seed_signet), std::end(chainparams_seed_signet));
 
-            consensus.nMinimumChainWork = uint256{};
-            consensus.defaultAssumeValid = uint256{};
+            consensus.nMinimumChainWork = uint256{"0000000000000000000000000000000000000000000000000000012f0987b7a0"};
+            consensus.defaultAssumeValid = uint256{"0000000f098e8a6d5dc2c8e6240eb87699395a1a18bb40437fcf278a3985e551"};
             m_assumed_blockchain_size = 0;
             m_assumed_chain_state_size = 0;
             chainTxData = ChainTxData{0, 0, 0};
@@ -471,6 +472,7 @@ public:
 
         checkpointData = {{
             {0, consensus.hashGenesisBlock},
+            {269000, uint256{"0000000f098e8a6d5dc2c8e6240eb87699395a1a18bb40437fcf278a3985e551"}},
         }};
     }
 };
