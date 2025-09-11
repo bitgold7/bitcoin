@@ -117,6 +117,9 @@ if(ENABLE_WALLET)
 endif()
 cmake_dependent_option(BUILD_WALLET_TOOL "Build bitcoin-wallet tool." ${BUILD_TESTS} "ENABLE_WALLET" OFF)
 
+# Optional Bulletproofs support requires libsecp256k1_zkp >= 0.4.0
+option(ENABLE_BULLETPROOFS "Enable Bulletproof transaction support." ON)
+
 option(REDUCE_EXPORTS "Attempt to reduce exported symbols in the resulting executables." OFF)
 option(WERROR "Treat compiler warnings as errors." OFF)
 option(WITH_CCACHE "Attempt to use ccache for compiling." ON)
@@ -669,6 +672,7 @@ message("  bitcoin-chainstate (experimental) ... ${BUILD_UTIL_CHAINSTATE}")
 message("  libbitcoinkernel (experimental) ..... ${BUILD_KERNEL_LIB}")
 message("Optional features:")
 message("  wallet support ...................... ${ENABLE_WALLET}")
+message("  bulletproof support ................ ${ENABLE_BULLETPROOFS}")
 message("  external signer ..................... ${ENABLE_EXTERNAL_SIGNER}")
 message("  ZeroMQ .............................. ${WITH_ZMQ}")
 if(ENABLE_IPC)

@@ -20,7 +20,7 @@ const std::array<VBDeploymentInfo,Consensus::MAX_VERSION_BITS_DEPLOYMENTS> Versi
     VBDeploymentInfo{
         .name = "bulletproof",
         .gbt_optional_rule = true,
-    },
+    }, // BIP9 deployment for Bulletproof commitments
 };
 
 std::string DeploymentName(Consensus::BuriedDeployment dep)
