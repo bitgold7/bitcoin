@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+# Simple configure wrapper for CMake with Bulletproofs toggle.
+set -e
+BULLETPROOFS=ON
+ARGS=""
+for arg in "$@"; do
+  case "$arg" in
+    --without-bulletproofs)
+      BULLETPROOFS=OFF
+      ;;
+    *)
+      ARGS="$ARGS $arg"
+      ;;
+  esac
+
+done
+cmake -DENABLE_BULLETPROOFS=$BULLETPROOFS $ARGS
