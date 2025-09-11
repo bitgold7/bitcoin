@@ -98,7 +98,6 @@ Miner block size limiting deprecated
 ------------------------------------
 
 Though blockmaxweight has been preferred for limiting the size of blocks returned by
-getblocktemplate since 0.13.0, blockmaxsize remained as an option for those who wished
 to limit their block size directly. Using this option resulted in a few UI issues as
 well as non-optimal fee selection and ever-so-slightly worse performance, and has thus
 now been deprecated. Further, the blockmaxsize option is now used only to calculate an

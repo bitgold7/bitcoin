@@ -27,7 +27,6 @@ There are no significant changes for other operating systems.
 - #14416 `eb2cc84` Fix OSX dmg issue (10.12 to 10.14) (jonasschnelli)
 
 ### Documentation
-- #14509 `1b5af2c` [0.17] doc: use SegWit in getblocktemplate example (Sjors)
 
 Credits
 =======

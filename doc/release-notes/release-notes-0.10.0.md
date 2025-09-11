@@ -280,12 +280,10 @@ Mining and relay policy enhancements
 ------------------------------------
 
 Bitcoin Core's block templates are now for version 3 blocks only, and any mining
-software relying on its `getblocktemplate` must be updated in parallel to use
 libblkmaker either version 0.4.2 or any version from 0.5.1 onward.
 If you are solo mining, this will affect you the moment you upgrade Bitcoin
 Core, which must be done prior to BIP66 achieving its 951/1001 status.
 If you are mining with the stratum mining protocol: this does not affect you.
-If you are mining with the getblocktemplate protocol to a pool: this will affect
 you at the pool operator's discretion, which must be no later than BIP66
 achieving its 951/1001 status.
 
@@ -296,7 +294,6 @@ Bitcoin Core now supports BIP 22 long polling, so mining software can be
 notified immediately of new templates rather than having to poll periodically.
 
 Support for BIP 23 block proposals is now available in Bitcoin Core's
-`getblocktemplate` method. This enables miners to check the basic validity of
 their next block before expending work on it, reducing risks of accidental
 hardforks or mining invalid blocks.
 
@@ -354,7 +351,6 @@ RPC:
 - `f87ba3d` added includeWatchonly argument to 'gettransaction' because it affects balance calculation
 - `0fa2f88` added includedWatchonly argument to listreceivedbyaddress/...account
 - `6c37f7f` `getrawchangeaddress`: fail when keypool exhausted and wallet locked
-- `ff6a7af` getblocktemplate: longpolling support
 - `c4a321f` Add peerid to getpeerinfo to allow correlation with the logs
 - `1b4568c` Add vout to ListTransactions output
 - `b33bd7a` Implement "getchaintips" RPC command to monitor blockchain forks
@@ -577,7 +573,6 @@ Tests:
 - `a90689f` Remove timing-based signature cache unit test
 - `236982c` Add skiplist unit tests
 - `f4b00be` Add CChain::GetLocator() unit test
-- `b45a6e8` Add test for getblocktemplate longpolling
 - `cdf305e` Set -discover=0 in regtest framework
 - `ed02282` additional test for OP_SIZE in script_valid.json
 - `0072d98` script tests: BOOLAND, BOOLOR decode to integer

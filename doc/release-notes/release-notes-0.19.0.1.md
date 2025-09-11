@@ -266,7 +266,6 @@ RPC
   whether that soft fork is active (e.g. BIP9 or BIP90).  See the RPC
   help for details. (#16060)
 
-- `getblocktemplate` no longer returns a `rules` array containing `CSV`
   and `segwit` (the BIP9 deployments that are currently in active
   state). (#16060)
 
@@ -534,7 +533,6 @@ Build system changes
 - #16240 JSONRPCRequest-aware RPCHelpMan (kallewoof)
 - #15996 Deprecate totalfee argument in `bumpfee` (instagibbs)
 - #16467 sendrawtransaction help privacy note (jonatack)
-- #16596 Fix getblocktemplate CLI example (emilengler)
 - #15986 Add checksum to getdescriptorinfo (sipa)
 - #16647 add weight to getmempoolentry output (fanquake)
 - #16695 Add window final block height to getchaintxstats (leto)

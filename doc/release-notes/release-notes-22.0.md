@@ -421,7 +421,6 @@ A detailed list of changes in this version follows. To keep the list to a manage
 - bitcoin/bitcoin#20286 Deprecate `addresses` and `reqSigs` from RPC outputs (mjdietzx)
 - bitcoin/bitcoin#20459 Fail to return undocumented return values (MarcoFalke)
 - bitcoin/bitcoin#20461 Validate `-rpcauth` arguments (promag)
-- bitcoin/bitcoin#20556 Properly document return values (`submitblock`, `gettxout`, `getblocktemplate`, `scantxoutset`) (MarcoFalke)
 - bitcoin/bitcoin#20755 Remove deprecated fields from `getpeerinfo` (amitiuttarwar)
 - bitcoin/bitcoin#20832 Better error messages for invalid addresses (eilx2)
 - bitcoin/bitcoin#20867 Support up to 20 keys for multisig under Segwit context (darosior)
