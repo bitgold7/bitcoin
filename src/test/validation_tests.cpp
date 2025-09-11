@@ -11,6 +11,7 @@
 #include <signet.h>
 #include <uint256.h>
 #include <util/chaintype.h>
+#include <util/time.h>
 #include <validation.h>
 #include <script/script.h>
 
@@ -390,6 +391,41 @@ BOOST_AUTO_TEST_CASE(bulletproof_validation_tests)
     const CTransaction tx2{mtx2};
     TxValidationState state2;
     BOOST_CHECK(CheckBulletproofs(tx2, state2));
+}
+
+BOOST_FIXTURE_TEST_CASE(bulletproof_activation_tests, TestChain100Setup)
+{
+    // Create a standard mempool transaction and set the Bulletproof version bit.
+    CMutableTransaction mtx = CreateValidMempoolTransaction(m_coinbase_txns[0], /*input_vout=*/0,
+                                                           /*input_height=*/0, m_coinbase_key,
+                                                           CScript() << OP_RETURN, /*output_amount=*/0,
+                                                           /*submit=*/false);
+    mtx.version |= CTransaction::BULLETPROOF_VERSION;
+    const CTransactionRef tx = MakeTransactionRef(mtx);
+
+    // Temporarily disable the deployment to simulate pre-activation.
+    const auto& chainparams = Params();
+    auto& dep = const_cast<Consensus::BIP9Deployment&>(chainparams.GetConsensus().vDeployments[Consensus::DEPLOYMENT_BULLETPROOF]);
+    const auto old_start = dep.nStartTime;
+    dep.nStartTime = Consensus::BIP9Deployment::NEVER_ACTIVE;
+
+    MempoolAcceptResult res;
+    {
+        LOCK(cs_main);
+        res = AcceptToMemoryPool(*m_node.chainman->ActiveChainstate(), tx, GetTime(), /*bypass_limits=*/false, /*test_accept=*/true);
+    }
+    BOOST_CHECK_EQUAL(res.m_state.GetRejectReason(), "bad-txns-bulletproof-premature");
+
+    // Activate the deployment and verify that the same transaction is accepted.
+    dep.nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
+    {
+        LOCK(cs_main);
+        res = AcceptToMemoryPool(*m_node.chainman->ActiveChainstate(), tx, GetTime(), /*bypass_limits=*/false, /*test_accept=*/true);
+    }
+    BOOST_CHECK(res.m_result_type == MempoolAcceptResult::ResultType::VALID);
+
+    // Restore original deployment parameters.
+    dep.nStartTime = old_start;
 }
 #endif
 
