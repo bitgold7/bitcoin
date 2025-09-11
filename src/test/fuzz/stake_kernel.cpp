@@ -1,4 +1,5 @@
 #include <pos/stake.h>
+#include <node/stake_modifier_manager.h>
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
@@ -23,5 +24,6 @@ FUZZ_TARGET(stake_kernel)
     Consensus::Params params;
     params.nStakeTimestampMask = fdp.ConsumeIntegral<unsigned int>();
     params.nStakeModifierVersion = fdp.ConsumeIntegral<int>();
-    (void)CheckStakeKernelHash(&dummy, nBits, hashBlockFrom, nTimeBlockFrom, amount, prevout, nTimeTx, hashProofOfStake, false, params);
+    node::StakeModifierManager man;
+    (void)CheckStakeKernelHash(&dummy, nBits, hashBlockFrom, nTimeBlockFrom, amount, prevout, nTimeTx, man, hashProofOfStake, false, params);
 }

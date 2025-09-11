@@ -42,6 +42,7 @@ class SignalInterrupt;
 namespace node {
 class KernelNotifications;
 class Warnings;
+class StakeModifierManager;
 
 //! NodeContext struct containing references to chain state and connection
 //! state.
@@ -89,6 +90,7 @@ struct NodeContext {
     std::atomic<int> exit_status{EXIT_SUCCESS};
     //! Manages all the node warnings
     std::unique_ptr<node::Warnings> warnings;
+    std::unique_ptr<node::StakeModifierManager> stake_modman;
     std::thread background_init_thread;
 
     //! Declare default constructor and destructor that are not inline, so code

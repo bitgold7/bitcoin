@@ -513,6 +513,7 @@ class PeerManagerImpl final : public PeerManager
 public:
     PeerManagerImpl(CConnman& connman, AddrMan& addrman,
                     BanMan* banman, ChainstateManager& chainman,
+                    node::StakeModifierManager& stake_modman,
                     CTxMemPool& pool, node::Warnings& warnings, Options opts);
 
     /** Overridden from CValidationInterface. */
@@ -784,7 +785,7 @@ private:
      */
     Mutex m_tx_download_mutex ACQUIRED_BEFORE(m_mempool.cs);
     node::TxDownloadManager m_txdownloadman GUARDED_BY(m_tx_download_mutex);
-    node::StakeModifierManager m_stake_modman;
+    node::StakeModifierManager& m_stake_modman;
 
     std::unique_ptr<TxReconciliationTracker> m_txreconciliation;
 
@@ -1930,13 +1931,15 @@ std::optional<std::string> PeerManagerImpl::FetchBlock(NodeId peer_id, const CBl
 
 std::unique_ptr<PeerManager> PeerManager::make(CConnman& connman, AddrMan& addrman,
                                                BanMan* banman, ChainstateManager& chainman,
+                                               node::StakeModifierManager& stake_modman,
                                                CTxMemPool& pool, node::Warnings& warnings, Options opts)
 {
-    return std::make_unique<PeerManagerImpl>(connman, addrman, banman, chainman, pool, warnings, opts);
+    return std::make_unique<PeerManagerImpl>(connman, addrman, banman, chainman, stake_modman, pool, warnings, opts);
 }
 
 PeerManagerImpl::PeerManagerImpl(CConnman& connman, AddrMan& addrman,
                                  BanMan* banman, ChainstateManager& chainman,
+                                 node::StakeModifierManager& stake_modman,
                                  CTxMemPool& pool, node::Warnings& warnings, Options opts)
     : m_rng{opts.deterministic_rng},
       m_fee_filter_rounder{CFeeRate{DEFAULT_MIN_RELAY_TX_FEE}, m_rng},
@@ -1947,7 +1950,7 @@ PeerManagerImpl::PeerManagerImpl(CConnman& connman, AddrMan& addrman,
       m_chainman(chainman),
       m_mempool(pool),
       m_txdownloadman(node::TxDownloadOptions{pool, m_rng, opts.deterministic_rng}),
-      m_stake_modman(chainman),
+      m_stake_modman(stake_modman),
       m_warnings{warnings},
       m_opts{opts}
 {
@@ -3351,7 +3354,7 @@ void PeerManagerImpl::ProcessGetStakeMod(CNode& node, Peer& peer, DataStream& vR
     }
     uint256 block_hash;
     vRecv >> block_hash;
-    if (auto mod = m_stake_modman.GetStakeModifier(block_hash)) {
+    if (auto mod = m_stake_modman.GetStakeModifier(m_chainman, block_hash)) {
         peer.m_stake_modifiers_to_send.emplace_back(block_hash, *mod);
     }
 }
@@ -3366,7 +3369,7 @@ void PeerManagerImpl::ProcessStakeMod(CNode& node, Peer& peer, DataStream& vRecv
     uint256 block_hash;
     uint256 modifier;
     vRecv >> block_hash >> modifier;
-    if (!m_stake_modman.ProcessStakeModifier(block_hash, modifier)) {
+    if (!m_stake_modman.ProcessStakeModifier(m_chainman, block_hash, modifier)) {
         Misbehaving(peer, "invalid-stakemod");
         node.fDisconnect = true;
     }

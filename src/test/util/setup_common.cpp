@@ -26,6 +26,7 @@
 #include <node/mempool_args.h>
 #include <node/miner.h>
 #include <node/peerman_args.h>
+#include <node/stake_modifier_manager.h>
 #include <node/warnings.h>
 #include <noui.h>
 #include <policy/fees.h>
@@ -273,6 +274,7 @@ ChainTestingSetup::ChainTestingSetup(const ChainType chainType, TestOpts opts)
             },
         };
         m_node.chainman = std::make_unique<ChainstateManager>(*Assert(m_node.shutdown_signal), chainman_opts, blockman_opts);
+        m_node.stake_modman = std::make_unique<node::StakeModifierManager>();
     };
     m_make_chainman();
 }
@@ -342,6 +344,7 @@ TestingSetup::TestingSetup(
     peerman_opts.deterministic_rng = true;
     m_node.peerman = PeerManager::make(*m_node.connman, *m_node.addrman,
                                        m_node.banman.get(), *m_node.chainman,
+                                       *m_node.stake_modman,
                                        *m_node.mempool, *m_node.warnings,
                                        peerman_opts);
 

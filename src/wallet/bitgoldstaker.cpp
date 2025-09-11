@@ -6,6 +6,7 @@
 #include <interfaces/chain.h>
 #include <key.h>
 #include <node/context.h>
+#include <node/stake_modifier_manager.h>
 #include <pos/stake.h>
 #include <script/standard.h>
 #include <util/time.h>
@@ -141,8 +142,9 @@ void BitGoldStaker::ThreadStakeMiner()
                         uint256 hash_proof;
                         LogTrace(BCLog::STAKING, "ThreadStakeMiner: checking kernel for %s", stake_out.outpoint.ToString());
                         RecordAttempt();
+                        node::StakeModifierManager& man = *Assert(node_context->stake_modman);
                         if (!CheckStakeKernelHash(pindexPrev, nBits, pindexFrom->GetBlockHash(), pindexFrom->nTime,
-                                                  stake_out.txout.nValue, stake_out.outpoint, nTimeTx, hash_proof, true,
+                                                  stake_out.txout.nValue, stake_out.outpoint, nTimeTx, man, hash_proof, true,
                                                   consensus)) {
                             LogDebug(BCLog::STAKING, "ThreadStakeMiner: kernel check failed\n");
                             continue;

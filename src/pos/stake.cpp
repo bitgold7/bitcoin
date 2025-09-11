@@ -1,7 +1,7 @@
 #include <pos/stake.h>
 #include <pos/difficulty.h>
 #include <pos/stakemodifier.h>
-#include <pos/stakemodifier_manager.h>
+#include <node/stake_modifier_manager.h>
 
 #include <arith_uint256.h>
 #include <hash.h>
@@ -98,6 +98,7 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
                           CAmount amount,
                           const COutPoint& prevout,
                           unsigned int nTimeTx,
+                          node::StakeModifierManager& stake_modman,
                           uint256& hashProofOfStake,
                           bool fPrintProofOfStake,
                           const Consensus::Params& params)
@@ -122,7 +123,7 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
 
     uint256 stake_modifier;
     if (params.nStakeModifierVersion >= 1) {
-        stake_modifier = GetStakeModifierManager().GetCurrentModifier();
+        stake_modifier = stake_modman.GetCurrentModifier();
     } else {
         stake_modifier = GetStakeModifier(pindexPrev, nTimeTx, params);
     }

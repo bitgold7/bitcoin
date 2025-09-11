@@ -5,6 +5,7 @@
 #include <chain.h>
 #include <coins.h>
 #include <consensus/params.h>
+#include <node/stake_modifier_manager.h>
 #include <primitives/block.h>
 #include <uint256.h>
 #include <util/time.h>
@@ -21,8 +22,8 @@ static constexpr int64_t MIN_STAKE_AGE = 8 * 60 * 60;
 bool CheckStakeKernelHash(const CBlockIndex* pindexPrev, unsigned int nBits,
                           uint256 hashBlockFrom, unsigned int nTimeBlockFrom,
                           CAmount amount, const COutPoint& prevout,
-                          unsigned int nTimeTx, uint256& hashProofOfStake,
-                          bool fPrintProofOfStake,
+                          unsigned int nTimeTx, node::StakeModifierManager& stake_modman,
+                          uint256& hashProofOfStake, bool fPrintProofOfStake,
                           const Consensus::Params& params);
 
 /**

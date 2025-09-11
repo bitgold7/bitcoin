@@ -14,7 +14,7 @@ The repository already contains a sizeable PoS implementation:
   * `IsProofOfStake` utility
   * constant `MIN_STAKE_AGE` (8h); target spacing is configured via consensus parameter `nStakeTargetSpacing`
   * minimum stake age, coinstake format, difficulty retargeting, and block signature validation are enforced during block checks
-* **Stake modifier handling** – `src/pos/stakemodifier.cpp` and `src/pos/stakemodifier_manager.cpp` provide modifier computation and a manager refreshing it at fixed intervals.
+* **Stake modifier handling** – `src/pos/stakemodifier.cpp` provides modifier computation and `src/node/stake_modifier_manager.cpp` tracks and caches modifiers for validation and P2P.
 * **Difficulty retargeting** – `src/pos/difficulty.cpp` supplies a PoS retarget routine used by `GetNextWorkRequired`.
 * **Wallet staking** – `src/wallet/bitgoldstaker.cpp` contains a staking loop that constructs and signs coinstakes and submits PoS blocks.
 * **Network protocol support** – new P2P message types (`COINSTAKE`, `STAKEMODIFIER`) are declared in `src/protocol.h` and handled throughout `net.cpp`, `protocol.cpp`, and `net_processing.cpp`.
