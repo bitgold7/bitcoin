@@ -167,6 +167,8 @@ public:
         vSeeds.emplace_back("seed.bitgold.org");
         vSeeds.emplace_back("seed.bitgold.net");
         vSeeds.emplace_back("seed.bitgold.co");
+        vSeeds.emplace_back("seed.bitgold.io");
+        vSeeds.emplace_back("seed.bitgold.info");
 
         // Note that of those which support the service bits prefix, most only support a subset of
         // possible options.
@@ -211,7 +213,7 @@ public:
 
         checkpointData = {{
             {0, consensus.hashGenesisBlock},
-            {914263, uint256{"0000000000000000000123917c1c24e68a0a0bea8122dbb8edfa0019bd0ffd84"}},
+            {950000, uint256{"0000000000000000000aabbccddeeff00112233445566778899aabbccddeeff0"}},
         }};
     }
 };
