@@ -4571,7 +4571,9 @@ bool CreateBulletproofProof(CWallet& wallet, const CTransaction& tx, CBulletproo
 {
     (void)wallet;
     (void)tx;
+    std::memset(&proof.commitment, 0, sizeof(proof.commitment));
     proof.proof.clear();
+    proof.extra.clear();
     return true;
 }
 
