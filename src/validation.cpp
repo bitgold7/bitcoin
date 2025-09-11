@@ -5,8 +5,8 @@
 
 #include <bitcoin-build-config.h> // IWYU pragma: keep
 
-#include <pos/stake.h>
 #include <pos/difficulty.h>
+#include <pos/stake.h>
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -66,7 +66,6 @@
 #include <util/trace.h>
 #include <util/translation.h>
 #include <validationinterface.h>
-#include <util/moneystr.h>
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
@@ -78,8 +77,8 @@
 #include <deque>
 #include <numeric>
 #include <optional>
-#include <set>
 #include <ranges>
+#include <set>
 #include <span>
 #include <string>
 #include <tuple>
@@ -544,12 +543,6 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, TxValidationS
     }
 
     // Call CheckInputScripts() to cache signature and script validity against current tip consensus rules.
-#ifdef ENABLE_BULLETPROOFS
-    // Placeholder: validate any Bulletproof data attached to the transaction
-    if (!VerifyBulletproof(CBulletproof{})) {
-        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
-    }
-#endif
     return CheckInputScripts(tx, state, view, flags, /* cacheSigStore= */ true, /* cacheFullScriptStore= */ true, txdata, validation_cache);
 }
 
@@ -2269,7 +2262,7 @@ bool IsBlockMutated(const CBlock& block, bool check_witness_root)
     }
 
     const bool has_witness_tx = std::any_of(block.vtx.begin(), block.vtx.end(),
-        [](const CTransactionRef& tx) { return tx->HasWitness(); });
+                                            [](const CTransactionRef& tx) { return tx->HasWitness(); });
 
     if (check_witness_root) {
         block.m_checked_witness_commitment = true;

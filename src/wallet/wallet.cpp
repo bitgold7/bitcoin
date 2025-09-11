@@ -3,8 +3,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <wallet/wallet.h>
 #include <wallet/spend.h>
+#include <wallet/wallet.h>
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
@@ -32,7 +32,6 @@
 #include <key.h>
 #include <key_io.h>
 #include <logging.h>
-#include <random.h>
 #include <node/types.h>
 #include <outputtype.h>
 #include <policy/feerate.h>
@@ -70,10 +69,10 @@
 #include <wallet/crypter.h>
 #include <wallet/db.h>
 #include <wallet/external_signer_scriptpubkeyman.h>
+#include <wallet/receive.h>
 #include <wallet/scriptpubkeyman.h>
 #include <wallet/transaction.h>
 #include <wallet/types.h>
-#include <wallet/receive.h>
 #include <wallet/walletdb.h>
 #include <wallet/walletutil.h>
 
@@ -4570,8 +4569,32 @@ std::optional<WalletTXO> CWallet::GetTXO(const COutPoint& outpoint) const
 bool CreateBulletproofProof(CWallet& wallet, const CTransaction& tx, CBulletproof& proof)
 {
     (void)wallet;
-    (void)tx;
-    proof.proof.clear();
+    static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+
+    uint64_t value = 0;
+    for (const auto& out : tx.vout) {
+        value += out.nValue;
+    }
+
+    unsigned char blind[32];
+    unsigned char nonce[32];
+    GetRandBytes(blind);
+    GetRandBytes(nonce);
+
+    secp256k1_pedersen_commitment commit;
+    if (!secp256k1_pedersen_commit(ctx, &commit, blind, value, secp256k1_generator_h)) {
+        return false;
+    }
+
+    unsigned char proof_data[5134];
+    size_t proof_len = sizeof(proof_data);
+    if (!secp256k1_rangeproof_sign(ctx, proof_data, &proof_len, 0, &commit, blind, nonce, 0, 64, value, secp256k1_generator_h)) {
+        return false;
+    }
+
+    proof.proof.assign(proof_data, proof_data + proof_len);
+    proof.commitment.assign(reinterpret_cast<unsigned char*>(&commit),
+                            reinterpret_cast<unsigned char*>(&commit) + sizeof(commit));
     return true;
 }
 
