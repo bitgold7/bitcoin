@@ -449,8 +449,8 @@ public:
         consensus.defaultAssumeValid = consensus.hashGenesisBlock;
         assert(consensus.hashGenesisBlock == uint256{"000000c42955cec380a7570b65b05346ba5c2c38891e35811623a7db1650998e"});
         assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
-        vSeeds.emplace_back("signet-seed.bitgold.org:38888");
-        vSeeds.emplace_back("seed-signet.bitgold.org:38888");
+        vSeeds.emplace_back("signet-seed.bitgold.org");
+        vSeeds.emplace_back("seed-signet.bitgold.org");
 
         m_assumeutxo_data = {
             {
@@ -581,8 +581,8 @@ public:
         consensus.hashGenesisBlock = genesis.GetHash();
         assert(consensus.hashGenesisBlock == uint256{"0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"});
         assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
-        vSeeds.emplace_back("regtest-seed.bitgold.org:38333");
-        vSeeds.emplace_back("seed-regtest.bitgold.org:38333");
+        vSeeds.emplace_back("regtest-seed.bitgold.org");
+        vSeeds.emplace_back("seed-regtest.bitgold.org");
 
         vFixedSeeds.clear(); //!< Regtest mode doesn't have any fixed seeds.
 
