@@ -7,6 +7,7 @@
 #include <chainparams.h>
 #include <consensus/merkle.h>
 #include <consensus/validation.h>
+#include <consensus/consensus.h>
 #include <node/miner.h>
 #include <random.h>
 #include <test/util/random.h>
@@ -360,5 +361,118 @@ BOOST_AUTO_TEST_CASE(witness_commitment_index)
     pblock.vtx[0] = MakeTransactionRef(std::move(txCoinbase));
 
     BOOST_CHECK_EQUAL(GetWitnessCommitmentIndex(pblock), 2);
+}
+
+BOOST_AUTO_TEST_CASE(mine_high_priority_first)
+{
+    // Ensure a clean mempool
+    {
+        LOCK(m_node.mempool->cs);
+        m_node.mempool->TrimToSize(0);
+    }
+
+    // Mine enough blocks to have spendable coinbase outputs
+    std::vector<CTransactionRef> coinbases;
+    auto mine_block = [&]() {
+        BlockAssembler::Options opts;
+        opts.coinbase_output_script = P2WSH_OP_TRUE;
+        CBlock block = BlockAssembler{m_node.chainman->ActiveChainstate(), m_node.mempool.get(), opts}.CreateNewBlock()->block;
+        node::RegenerateCommitments(block, *Assert(m_node.chainman));
+        Assert(m_node.chainman)->ProcessNewBlock(std::make_shared<const CBlock>(block), true, true, nullptr);
+        coinbases.push_back(block.vtx[0]);
+        SetMockTime(GetTime() + 1);
+    };
+    for (int i = 0; i < COINBASE_MATURITY + 1; ++i) mine_block();
+
+    // Helper to create a spend from a coinbase with given fee
+    auto make_spend = [](const CTransactionRef& coinbase, CAmount fee) {
+        CMutableTransaction mtx;
+        mtx.vin.emplace_back(COutPoint(coinbase->GetHash(), 0), CScript(), 0);
+        mtx.vout.emplace_back(coinbase->vout[0].nValue - fee, P2WSH_OP_TRUE);
+        mtx.vin[0].scriptWitness.stack.emplace_back();
+        CScript ws = CScript() << OP_TRUE;
+        mtx.vin[0].scriptWitness.stack.emplace_back(std::vector<unsigned char>(ws.begin(), ws.end()));
+        return MakeTransactionRef(std::move(mtx));
+    };
+
+    CTransactionRef tx_high = make_spend(coinbases[0], /*fee=*/1000);
+    CTransactionRef tx_low = make_spend(coinbases[1], /*fee=*/2000);
+
+    BOOST_CHECK(WITH_LOCK(::cs_main, return AcceptToMemoryPool(m_node.chainman->ActiveChainstate(), tx_high, GetTime(), false, false).m_result_type == MempoolAcceptResult::ResultType::VALID));
+    BOOST_CHECK(WITH_LOCK(::cs_main, return AcceptToMemoryPool(m_node.chainman->ActiveChainstate(), tx_low, GetTime(), false, false).m_result_type == MempoolAcceptResult::ResultType::VALID));
+
+    // Set explicit priorities
+    {
+        LOCK(m_node.mempool->cs);
+        auto it_high = m_node.mempool->mapTx.find(tx_high->GetHash());
+        m_node.mempool->mapTx.modify(it_high, [](CTxMemPoolEntry& e) { e.SetPriority(100); });
+        auto it_low = m_node.mempool->mapTx.find(tx_low->GetHash());
+        m_node.mempool->mapTx.modify(it_low, [](CTxMemPoolEntry& e) { e.SetPriority(0); });
+    }
+
+    unsigned int coinbase_weight = GetTransactionWeight(*coinbases.back());
+    unsigned int high_weight = GetTransactionWeight(*tx_high);
+    BlockAssembler::Options opts;
+    opts.coinbase_output_script = P2WSH_OP_TRUE;
+    opts.nBlockMaxWeight = coinbase_weight + high_weight;
+    auto ptemplate = BlockAssembler{m_node.chainman->ActiveChainstate(), m_node.mempool.get(), opts}.CreateNewBlock();
+
+    BOOST_REQUIRE_EQUAL(ptemplate->block.vtx.size(), 2);
+    BOOST_CHECK_EQUAL(ptemplate->block.vtx[1]->GetHash(), tx_high->GetHash());
+
+    {
+        LOCK(m_node.mempool->cs);
+        m_node.mempool->TrimToSize(0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(trim_keeps_high_priority)
+{
+    {
+        LOCK(m_node.mempool->cs);
+        m_node.mempool->TrimToSize(0);
+    }
+
+    std::vector<CTransactionRef> coinbases;
+    auto mine_block = [&]() {
+        BlockAssembler::Options opts;
+        opts.coinbase_output_script = P2WSH_OP_TRUE;
+        CBlock block = BlockAssembler{m_node.chainman->ActiveChainstate(), m_node.mempool.get(), opts}.CreateNewBlock()->block;
+        node::RegenerateCommitments(block, *Assert(m_node.chainman));
+        Assert(m_node.chainman)->ProcessNewBlock(std::make_shared<const CBlock>(block), true, true, nullptr);
+        coinbases.push_back(block.vtx[0]);
+        SetMockTime(GetTime() + 1);
+    };
+    for (int i = 0; i < COINBASE_MATURITY + 1; ++i) mine_block();
+
+    auto make_spend = [](const CTransactionRef& coinbase, CAmount fee) {
+        CMutableTransaction mtx;
+        mtx.vin.emplace_back(COutPoint(coinbase->GetHash(), 0), CScript(), 0);
+        mtx.vout.emplace_back(coinbase->vout[0].nValue - fee, P2WSH_OP_TRUE);
+        mtx.vin[0].scriptWitness.stack.emplace_back();
+        CScript ws = CScript() << OP_TRUE;
+        mtx.vin[0].scriptWitness.stack.emplace_back(std::vector<unsigned char>(ws.begin(), ws.end()));
+        return MakeTransactionRef(std::move(mtx));
+    };
+
+    CTransactionRef tx_high = make_spend(coinbases[0], /*fee=*/1000);
+    CTransactionRef tx_low = make_spend(coinbases[1], /*fee=*/2000);
+
+    BOOST_CHECK(WITH_LOCK(::cs_main, return AcceptToMemoryPool(m_node.chainman->ActiveChainstate(), tx_high, GetTime(), false, false).m_result_type == MempoolAcceptResult::ResultType::VALID));
+    BOOST_CHECK(WITH_LOCK(::cs_main, return AcceptToMemoryPool(m_node.chainman->ActiveChainstate(), tx_low, GetTime(), false, false).m_result_type == MempoolAcceptResult::ResultType::VALID));
+
+    {
+        LOCK(m_node.mempool->cs);
+        auto it_high = m_node.mempool->mapTx.find(tx_high->GetHash());
+        m_node.mempool->mapTx.modify(it_high, [](CTxMemPoolEntry& e) { e.SetPriority(100); });
+        auto it_low = m_node.mempool->mapTx.find(tx_low->GetHash());
+        m_node.mempool->mapTx.modify(it_low, [](CTxMemPoolEntry& e) { e.SetPriority(0); });
+
+        size_t usage = m_node.mempool->DynamicMemoryUsage();
+        m_node.mempool->TrimToSize(usage - 1);
+        BOOST_CHECK(m_node.mempool->exists(tx_high->GetHash()));
+        BOOST_CHECK(!m_node.mempool->exists(tx_low->GetHash()));
+        m_node.mempool->TrimToSize(0);
+    }
 }
 BOOST_AUTO_TEST_SUITE_END()

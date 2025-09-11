@@ -68,6 +68,7 @@ struct CTxMemPoolModifiedEntry {
     CAmount GetModFeesWithAncestors() const { return nModFeesWithAncestors; }
     size_t GetTxSize() const { return iter->GetTxSize(); }
     const CTransaction& GetTx() const { return iter->GetTx(); }
+    int64_t GetPriority() const { return iter->GetPriority(); }
 
     CTxMemPool::txiter iter;
     uint64_t nSizeWithAncestors;
@@ -114,7 +115,7 @@ struct CTxMemPoolModifiedEntry_Indices final : boost::multi_index::indexed_by<
         modifiedentry_iter,
         CompareCTxMemPoolIter
     >,
-    // sorted by modified ancestor fee rate
+    // sorted by priority then modified ancestor fee rate
     boost::multi_index::ordered_non_unique<
         // Reuse same tag from CTxMemPool's similar index
         boost::multi_index::tag<ancestor_score>,
