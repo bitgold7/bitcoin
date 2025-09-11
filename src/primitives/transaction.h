@@ -297,6 +297,8 @@ class CTransaction
 public:
     // Default transaction version.
     static const uint32_t CURRENT_VERSION{2};
+    // Transaction version flag indicating inclusion of Bulletproof commitments.
+    static const uint32_t BULLETPROOF_VERSION{1u << 28};
 
     // The local variables are made const to prevent unintended modification
     // without updating the cached hash value. However, CTransaction is not
@@ -339,6 +341,9 @@ public:
     bool IsNull() const {
         return vin.empty() && vout.empty();
     }
+
+    /** Return true if this transaction signals Bulletproof support. */
+    bool UsesBulletproofs() const { return (version & BULLETPROOF_VERSION) != 0; }
 
     const Txid& GetHash() const LIFETIMEBOUND { return hash; }
     const Wtxid& GetWitnessHash() const LIFETIMEBOUND { return m_witness_hash; };

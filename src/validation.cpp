@@ -210,6 +210,15 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
         }
     }
 
+    // Enforce Bulletproof activation: blocks before activation must not contain Bulletproof transactions.
+    if (!DeploymentActiveAfter(pindexPrev, *g_chainman, Consensus::DEPLOYMENT_BULLETPROOF)) {
+        for (const auto& tx : block.vtx) {
+            if (tx->UsesBulletproofs()) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-bulletproof-premature", "Bulletproof not yet active");
+            }
+        }
+    }
+
     return true;
 }
 
@@ -931,6 +940,12 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     // be mined yet.
     if (!CheckFinalTxAtTip(*Assert(m_active_chainstate.m_chain.Tip()), tx)) {
         return state.Invalid(TxValidationResult::TX_PREMATURE_SPEND, "non-final");
+    }
+
+    // Bulletproof transactions are invalid until the deployment activates.
+    const CBlockIndex* tip{m_active_chainstate.m_chain.Tip()};
+    if (tx.UsesBulletproofs() && !DeploymentActiveAfter(tip, m_chainman, Consensus::DEPLOYMENT_BULLETPROOF)) {
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-bulletproof-premature");
     }
 
     if (m_pool.exists(tx.GetWitnessHash())) {

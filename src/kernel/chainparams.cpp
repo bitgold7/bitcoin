@@ -131,6 +131,14 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].threshold = 1815;               // 90%
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].period = 2016;
 
+        // Deployment of Bulletproof commitments (currently disabled)
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].bit = 3;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nStartTime = Consensus::BIP9Deployment::NEVER_ACTIVE;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].min_activation_height = 0; // No activation delay
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].threshold = 1815;          // 90%
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].period = 2016;
+
         consensus.nMinimumChainWork = uint256{"0000000000000000000000000000000000000000b1f3b93b65b16d035a82be84"};
         consensus.defaultAssumeValid = uint256{"00000000000000000001b658dd1120e82e66d2790811f89ede9742ada3ed6d77"}; // 886157
 
@@ -255,6 +263,14 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].min_activation_height = 0; // No activation delay
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].threshold = 1512;          // 75%
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].period = 2016;
+
+        // Deployment of Bulletproof commitments (currently disabled)
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].bit = 3;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nStartTime = Consensus::BIP9Deployment::NEVER_ACTIVE;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].min_activation_height = 0; // No activation delay
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].threshold = 1512;         // 75%
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].period = 2016;
 
         consensus.nMinimumChainWork = uint256{"0000000000000000000000000000000000000000000015f5e0c9f13455b0eb17"};
         consensus.defaultAssumeValid = uint256{"00000000000003fc7967410ba2d0a8a8d50daedc318d43e8baf1a9782c236a57"}; // 3974606
@@ -401,6 +417,14 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].threshold = 1815;          // 90%
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].period = 2016;
 
+        // Deployment of Bulletproof commitments (signet defaults to active for testing)
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].bit = 3;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].min_activation_height = 0; // No activation delay
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].threshold = 1815;         // 90%
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].period = 2016;
+
         pchMessageStart[0] = 0xb2;
         pchMessageStart[1] = 0xc3;
         pchMessageStart[2] = 0xd4;
@@ -497,6 +521,14 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].min_activation_height = 0; // No activation delay
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].threshold = 108;           // 75%
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].period = 144;
+
+        // Deployment of Bulletproof commitments (regtest defaults to active for testing)
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].bit = 3;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].min_activation_height = 0; // No activation delay
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].threshold = 108;          // 75%
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].period = 144;
 
         consensus.nMinimumChainWork = uint256{};
         consensus.defaultAssumeValid = uint256{};
