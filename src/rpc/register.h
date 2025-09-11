@@ -23,6 +23,7 @@ void RegisterSignMessageRPCCommands(CRPCTable&);
 void RegisterSignerRPCCommands(CRPCTable &tableRPC);
 void RegisterBulletproofRPCCommands(CRPCTable&);
 void RegisterTxoutProofRPCCommands(CRPCTable&);
+void RegisterDividendRPCCommands(CRPCTable&);
 #ifdef ENABLE_WALLET
 void RegisterStakingRPCCommands(CRPCTable&);
 #endif
@@ -46,6 +47,7 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &t)
 #ifdef ENABLE_WALLET
     RegisterStakingRPCCommands(t);
 #endif
+    RegisterDividendRPCCommands(t);
 }
 
 #endif // BITCOIN_RPC_REGISTER_H

@@ -998,39 +998,6 @@ static RPCHelpMan walletstaking()
         }};
 }
 
-static RPCHelpMan startstaking()
-{
-    return RPCHelpMan{
-        "startstaking",
-        "Start the staking thread for this wallet.",
-        {},
-        RPCResult{RPCResult::Type::BOOL, "", "true if staking is active"},
-        RPCExamples{HelpExampleCli("startstaking", "") + HelpExampleRpc("startstaking", "")},
-        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
-            std::shared_ptr<CWallet> pwallet = GetWalletForJSONRPCRequest(request);
-            if (!pwallet) return UniValue::VNULL;
-            pwallet->BlockUntilSyncedToCurrentChain();
-            pwallet->StartStakeMiner();
-            return UniValue(pwallet->IsStaking());
-        }};
-}
-
-static RPCHelpMan stopstaking()
-{
-    return RPCHelpMan{
-        "stopstaking",
-        "Stop the staking thread for this wallet.",
-        {},
-        RPCResult{RPCResult::Type::BOOL, "", "false if staking stopped"},
-        RPCExamples{HelpExampleCli("stopstaking", "") + HelpExampleRpc("stopstaking", "")},
-        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
-            std::shared_ptr<CWallet> pwallet = GetWalletForJSONRPCRequest(request);
-            if (!pwallet) return UniValue::VNULL;
-            pwallet->BlockUntilSyncedToCurrentChain();
-            pwallet->StopStakeMiner();
-            return UniValue(pwallet->IsStaking());
-        }};
-}
 
 static RPCHelpMan getnewshieldedaddress()
 {
@@ -1206,8 +1173,6 @@ std::span<const CRPCCommand> GetWalletRPCCommands()
         {"wallet", &getstakingstats},
         {"wallet", &getstakingrewards},
         {"wallet", &walletstaking},
-        {"wallet", &startstaking},
-        {"wallet", &stopstaking},
         {"wallet", &getstakestat},
     };
     return commands;
