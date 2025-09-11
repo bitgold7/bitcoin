@@ -624,7 +624,7 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     coinstake.vin[0].nSequence = CTxIn::SEQUENCE_FINAL;
     coinstake.vout.resize(2);
     coinstake.vout[0].SetNull();
-    coinstake.vout[1].nValue = stake_out->txout.nValue + GetBlockSubsidy(height, consensus);
+    coinstake.vout[1].nValue = stake_out->txout.nValue + GetProofOfStakeReward(height, /*fees=*/0, consensus);
     coinstake.vout[1].scriptPubKey = stake_out->txout.scriptPubKey;
     {
         LOCK(wallet.cs_wallet);
