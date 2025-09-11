@@ -133,7 +133,7 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].threshold = 1815;               // 90%
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].period = 2016;
 
-        // Deployment of Bulletproof commitments
+        // Deployment of Bulletproof commitments (final parameters)
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].bit = 3;
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nStartTime = 1735689600; // Jan 1st, 2025
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nTimeout = 1767225600;   // Jan 1st, 2026
@@ -275,7 +275,7 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].threshold = 1512;          // 75%
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].period = 2016;
 
-        // Deployment of Bulletproof commitments
+        // Deployment of Bulletproof commitments (final parameters)
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].bit = 3;
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nStartTime = 1735689600; // Jan 1st, 2025
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nTimeout = 1767225600;   // Jan 1st, 2026

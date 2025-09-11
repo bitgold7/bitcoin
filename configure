@@ -1,20 +1,8 @@
 #!/usr/bin/env sh
-# Simple configure wrapper for CMake with Bulletproofs toggle.
-# Bulletproof support requires libsecp256k1_zkp >= 0.6.1.
+# Simple configure wrapper for CMake.
 set -e
-BULLETPROOFS=ON
 ARGS=""
 for arg in "$@"; do
-  case "$arg" in
-    --without-bulletproofs)
-      BULLETPROOFS=OFF
-      ;;
-    --with-bulletproofs)
-      BULLETPROOFS=ON
-      ;;
-    *)
-      ARGS="$ARGS $arg"
-      ;;
-  esac
+  ARGS="$ARGS $arg"
 done
-cmake -DENABLE_BULLETPROOFS=$BULLETPROOFS $ARGS
+cmake $ARGS
