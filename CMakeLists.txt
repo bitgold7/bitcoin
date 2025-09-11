@@ -117,7 +117,7 @@ if(ENABLE_WALLET)
 endif()
 cmake_dependent_option(BUILD_WALLET_TOOL "Build bitcoin-wallet tool." ${BUILD_TESTS} "ENABLE_WALLET" OFF)
 
-# Optional Bulletproofs support requires libsecp256k1_zkp >= 0.4.0
+# Optional Bulletproofs support requires libsecp256k1_zkp >= 0.6.1
 option(ENABLE_BULLETPROOFS "Enable Bulletproof transaction support." ON)
 
 option(REDUCE_EXPORTS "Attempt to reduce exported symbols in the resulting executables." OFF)
