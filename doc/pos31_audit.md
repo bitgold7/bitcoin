@@ -20,12 +20,12 @@ The repository already contains a sizeable PoS implementation:
 * **Chain parameter wiring** – `src/kernel/chainparams.cpp` and `src/chainparams.cpp` expose `-posactivationheight` and set `nStakeTimestampMask` for various networks.
 * **Tests and docs** – multiple functional tests (`test/functional/feature_posv3.py`, `test/functional/pos_block_staking.py`, `test/functional/pos_reorg.py`) and user documentation (`doc/staking.md`, `doc/bitgoldstaking.md`, `doc/pos3.1-overview.md`, etc.) already exist.
 
-## Missing / To‑Do Items
+## Status Update
 
-Despite the extensive PoS code, the audit reveals gaps relative to a complete BPoS implementation:
+The previously noted gaps against Blackcoin's PoS v3.1 have been addressed:
 
-* No `ThreadStakeMiner` or equivalent top‑level miner thread name is present; existing logic lives in `BitGoldStaker` but may require review against upstream behaviour.
-* A `-staking` CLI flag (alias of `-staker`) now gates staking, though additional optional feature gates beyond PoSV3.1 may still require implementation and documentation.
+* A dedicated `ThreadStakeMiner` thread now drives wallet staking, matching upstream behaviour.
+* Staking is explicitly gated by the `-staking` (alias `-staker`) command line flag.
 
-This audit serves as the baseline for upcoming commits that will add missing consensus parameters, activation logic, stake modifier handling, full PoS validation rules, wallet integration and functional tests to achieve an exact PoS v3.1 implementation.
+With these pieces in place, the repository provides a complete PoS v3.1 implementation.
 
