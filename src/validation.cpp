@@ -178,7 +178,7 @@ TRACEPOINT_SEMAPHORE(mempool, replaced);
 TRACEPOINT_SEMAPHORE(mempool, rejected);
 ChainstateManager* g_chainman{nullptr};
 
-bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& params, bool fCheckPOW, bool fCheckMerkleRoot)
+bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& params, bool fCheckMerkleRoot)
 {
     // Check block weight
     if (GetBlockWeight(block) > MAX_BLOCK_WEIGHT) {
@@ -259,14 +259,6 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
     } else {
         if (IsProofOfStake(block)) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-prev", "proof of stake before activation");
-        }
-        if (fCheckPOW) {
-            arith_uint256 bnTarget;
-            bnTarget.SetCompact(block.nBits);
-            if (bnTarget <= 0 || bnTarget > UintToArith256(params.powLimit) ||
-                UintToArith256(block.GetHash()) > bnTarget) {
-                return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "high-hash", "proof of work failed");
-            }
         }
     }
 
@@ -2203,29 +2195,8 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast,
         return GetPoSNextTargetRequired(pindexLast, pblock->GetBlockTime(), params);
     }
 
-    arith_uint256 bnLimit = UintToArith256(params.powLimit);
-
-    if (params.fPowNoRetargeting) {
-        return pindexLast->nBits;
-    }
-
-    // Difficulty retargeting inspired by Bitcoin's Digishield implementation.
-    const int64_t target_spacing = params.nPowTargetSpacing;
-    const int64_t interval = params.DifficultyAdjustmentInterval();
-
-    int64_t actual_spacing = pblock->nTime - pindexLast->nTime;
-    if (actual_spacing < 0) actual_spacing = target_spacing;
-
-    arith_uint256 bnNew;
-    bnNew.SetCompact(pindexLast->nBits);
-    bnNew *= ((interval - 1) * target_spacing + 2 * actual_spacing);
-    bnNew /= ((interval + 1) * target_spacing);
-
-    if (bnNew <= 0 || bnNew > bnLimit) {
-        bnNew = bnLimit;
-    }
-
-    return bnNew.GetCompact();
+    // With proof-of-work removed, keep the previous difficulty for premine blocks.
+    return pindexLast->nBits;
 }
 
 /**

@@ -92,10 +92,6 @@ struct BlockCheckOptions {
      */
     bool check_merkle_root{true};
 
-    /**
-     * Set false to omit the proof-of-work check
-     */
-    bool check_pow{true};
 };
 } // namespace node
 

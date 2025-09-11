@@ -48,5 +48,4 @@ struct BlockWaitOptions $Proxy.wrap("node::BlockWaitOptions") {
 
 struct BlockCheckOptions $Proxy.wrap("node::BlockCheckOptions") {
     checkMerkleRoot @0 :Bool $Proxy.name("check_merkle_root");
-    checkPow @1 :Bool $Proxy.name("check_pow");
 }

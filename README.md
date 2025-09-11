@@ -11,8 +11,7 @@ What is BitGold?
 
 BitGold connects to the BitGold peer-to-peer network to download and fully
 validate blocks and transactions. The protocol targets 8-minute block times and
-the block subsidy halves every 90 000 blocks. In addition to proof-of-work,
-BitGold implements proof-of-stake staking so holders can help secure the
+the block subsidy halves every 90 000 blocks. BitGold implements proof-of-stake staking so holders can help secure the
 network. The software also includes a wallet and graphical user interface,
 which can be optionally built. The current release implements
 Proof-of-Stake 3.1, adding dynamic stake weighting and cold staking support.

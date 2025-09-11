@@ -130,7 +130,6 @@ const std::vector<std::string> RPC_COMMANDS_SAFE_FOR_FUZZING{
     "getdeploymentinfo",
     "getdescriptoractivity",
     "getdescriptorinfo",
-    "getdifficulty",
     "getindexinfo",
     "getmemoryinfo",
     "getmempoolancestors",

@@ -1,8 +1,8 @@
 BitGold Staker
 ==============
 
-BitGold combines proof-of-work with proof-of-stake. The genesis block and its
-immediate successor are mined using proof-of-work. Staking begins
+BitGold uses proof-of-stake. The genesis block and its
+immediate successor are predefined. Staking begins
 automatically at height 2, and every subsequent block must include a valid
 coinstake transaction. The staking engine implements the PoSV3 consensus rules
 described below.

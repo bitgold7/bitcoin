@@ -675,7 +675,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
         {
             std::string reason;
             std::string debug;
-            BOOST_REQUIRE(!mining->checkBlock(block, {.check_pow = false}, reason, debug));
+            BOOST_REQUIRE(!mining->checkBlock(block, {}, reason, debug));
             BOOST_REQUIRE_EQUAL(reason, "bad-txnmrklroot");
             BOOST_REQUIRE_EQUAL(debug, "hashMerkleRoot mismatch");
         }
@@ -685,16 +685,9 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
         {
             std::string reason;
             std::string debug;
-            BOOST_REQUIRE(mining->checkBlock(block, {.check_pow = false}, reason, debug));
+            BOOST_REQUIRE(mining->checkBlock(block, {}, reason, debug));
             BOOST_REQUIRE_EQUAL(reason, "");
             BOOST_REQUIRE_EQUAL(debug, "");
-        }
-
-        {
-            std::string reason;
-            std::string debug;
-            BOOST_REQUIRE(!mining->checkBlock(block, {.check_pow = true}, reason, debug));
-            BOOST_REQUIRE_EQUAL(reason, "high-hash");
         }
     }
 
