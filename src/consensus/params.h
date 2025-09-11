@@ -131,7 +131,7 @@ struct Params {
     // Timestamp mask for staked blocks (seconds)
     uint32_t nStakeTimestampMask{0xF};
     // Minimum coin age required for staking (seconds)
-    int64_t nStakeMinAge{60 * 60};
+    int64_t nStakeMinAge{8 * 60 * 60};
     // Interval between stake modifier recalculations (seconds)
     int64_t nStakeModifierInterval{60 * 60};
     // Version of stake modifier algorithm (0=legacy, 1=interval-based)

@@ -106,7 +106,7 @@ public:
         consensus.posActivationHeight = 2;
         consensus.fEnablePoS = true; // Enable PoS from genesis except premine block
         consensus.nStakeTimestampMask = 0xF;
-        consensus.nStakeMinAge = 60 * 60;
+        consensus.nStakeMinAge = 8 * 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.nStakeModifierVersion = 1;
         consensus.nStakeMinConfirmations = 80;
@@ -246,7 +246,7 @@ public:
         consensus.posActivationHeight = 2;
         consensus.fEnablePoS = true; // Enable PoS in testnet
         consensus.nStakeTimestampMask = 0xF;
-        consensus.nStakeMinAge = 60 * 60;
+        consensus.nStakeMinAge = 8 * 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.nStakeModifierVersion = 1;
         consensus.nStakeMinConfirmations = 80;
@@ -394,7 +394,7 @@ public:
         consensus.posActivationHeight = 2;
         consensus.fEnablePoS = true; // Enable PoS on signet
         consensus.nStakeTimestampMask = 0xF;
-        consensus.nStakeMinAge = 60 * 60;
+        consensus.nStakeMinAge = 8 * 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.nStakeModifierVersion = 1;
         consensus.nStakeMinConfirmations = 80;
@@ -497,7 +497,7 @@ public:
         consensus.posActivationHeight = opts.pos_activation_height;
         consensus.fEnablePoS = true;
         consensus.nStakeTimestampMask = 0xF;
-        consensus.nStakeMinAge = 60 * 60;
+        consensus.nStakeMinAge = 8 * 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.nStakeModifierVersion = 1;
         consensus.nStakeMinConfirmations = 80;
