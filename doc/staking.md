@@ -65,7 +65,7 @@ spending key offline. To create a cold‑stake address:
 2. On either system, call:
 
    ```
-   bitcoin-cli delegatestakeaddress "OWNER_ADDR" "STAKER_ADDR"
+   bitgold-cli delegatestakeaddress "OWNER_ADDR" "STAKER_ADDR"
    ```
 
    This returns a P2SH address and redeem script. Send coins to the returned
@@ -73,7 +73,7 @@ spending key offline. To create a cold‑stake address:
 3. On the staking node, register the address:
 
    ```
-   bitcoin-cli registercoldstakeaddress "DELEGATE_ADDR" "REDEEM_SCRIPT"
+   bitgold-cli registercoldstakeaddress "DELEGATE_ADDR" "REDEEM_SCRIPT"
    ```
 
    The staking thread will now include the delegated coins when attempting to
