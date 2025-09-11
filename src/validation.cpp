@@ -546,7 +546,9 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, TxValidationS
     // Call CheckInputScripts() to cache signature and script validity against current tip consensus rules.
 #ifdef ENABLE_BULLETPROOFS
     // Placeholder: validate any Bulletproof data attached to the transaction
-    if (!VerifyBulletproof(CBulletproof{})) {
+    CBulletproof bp;
+    std::memset(&bp.commitment, 0, sizeof(bp.commitment));
+    if (!VerifyBulletproof(bp)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
     }
 #endif
