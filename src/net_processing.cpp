@@ -660,8 +660,8 @@ private:
                                bool via_compact_block)
         EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex, !m_headers_presync_mutex, g_msgproc_mutex);
     /** Various helpers for headers processing, invoked by ProcessHeadersMessage() */
-    /** Return true if headers are continuous and have valid proof-of-work (DoS points assigned on failure) */
-    bool CheckHeadersPoW(const std::vector<CBlockHeader>& headers, const CChainParams& chainparams, Peer& peer);
+    /** Return true if headers are continuous and have valid work (DoS points assigned on failure) */
+    bool CheckHeadersWork(const std::vector<CBlockHeader>& headers, const CChainParams& chainparams, Peer& peer);
     /** Calculate an anti-DoS work threshold for headers chains */
     arith_uint256 GetAntiDoSWorkThreshold();
     /** Deal with state tracking and headers sync for peers that send
@@ -672,7 +672,7 @@ private:
     bool CheckHeadersAreContinuous(const std::vector<CBlockHeader>& headers) const;
     /** Try to continue a low-work headers sync that has already begun.
      * Assumes the caller has already verified the headers connect, and has
-     * checked that each header satisfies the proof-of-work target included in
+     * checked that each header satisfies the work target included in
      * the header.
      *  @param[in]  peer                            The peer we're syncing with.
      *  @param[in]  pfrom                           CNode of the peer
@@ -2533,7 +2533,7 @@ void PeerManagerImpl::SendBlockTransactions(CNode& pfrom, Peer& peer, const CBlo
     MakeAndPushMessage(pfrom, NetMsgType::BLOCKTXN, resp);
 }
 
-bool PeerManagerImpl::CheckHeadersPoW(const std::vector<CBlockHeader>& headers, const CChainParams& chainparams, Peer& peer)
+bool PeerManagerImpl::CheckHeadersWork(const std::vector<CBlockHeader>& headers, const CChainParams& chainparams, Peer& peer)
 {
     int prev_height{-1};
     {
@@ -2542,9 +2542,9 @@ bool PeerManagerImpl::CheckHeadersPoW(const std::vector<CBlockHeader>& headers, 
         if (prev) prev_height = prev->nHeight;
     }
 
-    // Do these headers have proof-of-work/stake matching what's claimed and match checkpoints?
-    if (!HasValidProofOfWork(headers, chainparams, prev_height)) {
-        Misbehaving(peer, "header with invalid proof of work/stake");
+    // Do these headers have work/stake matching what's claimed and match checkpoints?
+    if (!HasValidWork(headers, chainparams, prev_height)) {
+        Misbehaving(peer, "header with invalid work/stake");
         return false;
     }
 
@@ -2905,11 +2905,11 @@ void PeerManagerImpl::ProcessHeadersMessage(CNode& pfrom, Peer& peer,
     }
 
     // Before we do any processing, make sure these pass basic sanity checks.
-    // We'll rely on headers having valid proof-of-work further down, as an
+    // We'll rely on headers having valid work further down, as an
     // anti-DoS criteria (note: this check is required before passing any
     // headers into HeadersSyncState).
-    if (!CheckHeadersPoW(headers, m_chainparams, peer)) {
-        // Misbehaving() calls are handled within CheckHeadersPoW(), so we can
+    if (!CheckHeadersWork(headers, m_chainparams, peer)) {
+        // Misbehaving() calls are handled within CheckHeadersWork(), so we can
         // just return. (Note that even if a header is announced via compact
         // block, the header itself should be valid, so this type of error can
         // always be punished.)

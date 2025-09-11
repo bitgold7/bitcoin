@@ -429,13 +429,13 @@ inline BlockValidationState TestBlockValidity(
     return TestBlockValidity(chainstate, block, /*check_pow=*/false, check_merkle_root);
 }
 
-/** Check with the proof of work on each blockheader matches the value in nBits */
-bool HasValidProofOfWork(const std::vector<CBlockHeader>& headers, const CChainParams& chainparams, int prev_height);
+/** Check that the work on each blockheader matches the value in nBits */
+bool HasValidWork(const std::vector<CBlockHeader>& headers, const CChainParams& chainparams, int prev_height);
 
 /** Check if a block has been mutated (with respect to its merkle root and witness commitments). */
 bool IsBlockMutated(const CBlock& block, bool check_witness_root);
 
-/** Return the sum of the claimed work on a given set of headers. No verification of PoW is done. */
+/** Return the sum of the claimed work on a given set of headers. No verification of work is done. */
 arith_uint256 CalculateClaimedHeadersWork(std::span<const CBlockHeader> headers);
 
 enum class VerifyDBResult {
