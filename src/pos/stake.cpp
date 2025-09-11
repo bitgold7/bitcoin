@@ -11,6 +11,7 @@
 #include <validation.h>
 
 #include <cassert>
+#include <set>
 
 /**
  * Very early / minimal PoSv3.1 implementation.
@@ -164,13 +165,12 @@ bool ContextualCheckProofOfStake(const CBlock& block,
     const Coin& coin = view.AccessCoin(txin.prevout);
     if (coin.IsSpent()) return false;
 
-    // Depth / confirmations
     int spend_height = pindexPrev->nHeight + 1; // height of the coinstake block
+    int minConf = params.nStakeMinConfirmations > 0 ? params.nStakeMinConfirmations : 80;
+
     int coin_height = coin.nHeight;
     if (coin_height <= 0 || coin_height > spend_height) return false;
     int depth = spend_height - coin_height;
-
-    int minConf = params.nStakeMinConfirmations > 0 ? params.nStakeMinConfirmations : 80;
     if (depth < minConf) return false;
 
     // Minimum age (time based) – approximate using ancestor median time past difference.
@@ -192,11 +192,16 @@ bool ContextualCheckProofOfStake(const CBlock& block,
         return false;
     }
 
-    // Sum all input values of the coinstake transaction
+    // Fakestake mitigation (Blackcoin PoS v3.1 inspired): ensure inputs exist, are unique, and mature
+    std::set<COutPoint> seen_outs;
     CAmount input_value = 0;
     for (const auto& in : coinstake.vin) {
+        if (!seen_outs.insert(in.prevout).second) return false; // duplicate input
         const Coin& incoin = view.AccessCoin(in.prevout);
-        if (incoin.IsSpent()) return false;
+        if (incoin.IsSpent()) return false; // missing or already spent
+        if (incoin.nHeight <= 0 || incoin.nHeight > spend_height) return false;
+        int in_depth = spend_height - incoin.nHeight;
+        if (in_depth < minConf) return false;
         input_value += incoin.out.nValue;
     }
 
