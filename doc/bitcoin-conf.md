@@ -8,6 +8,9 @@ Changes to the configuration file while `bitcoind` or `bitcoin-qt` is running on
 
 Users should never make any configuration changes which they do not understand. Furthermore, users should always be wary of accepting any configuration changes provided to them by another source (even if they believe that they do understand them).
 
+By default the node limits blocks to 20 MWU, 100,000 signature operations, and a mempool of 500 MB (or 8 MB with `-blocksonly`). See [operating-notes.md](operating-notes.md) for details.
+
+
 ## Configuration File Precedence
 
 Options specified in the configuration file can be overridden by options in the [`settings.json` file](files.md) and by options specified on the command line.
