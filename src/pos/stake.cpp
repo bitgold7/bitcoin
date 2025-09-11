@@ -13,11 +13,10 @@
 #include <cassert>
 
 /**
- * Very early / minimal PoSv3.1 implementation.
- * NOTE: This is an initial kernel + validation path and will be extended in the full
- * implementation pass (stake modifier, block signature, reward clipping, advanced
- * fakestake mitigations). It is added now to begin wiring the consensus surface the
- * rest of the code already references (validation.cpp includes these headers).
+ * Proof-of-Stake v3.1 implementation matching Blackcoin's security model.
+ * Implements the stake modifier, reward clipping and Fakestake mitigations
+ * to provide deterministic staking with bounded rewards and protection
+ * against fake coinstake transactions.
  */
 
 static bool IsCoinStakeTx(const CTransaction& tx)
