@@ -97,6 +97,45 @@ using node::CBlockIndexHeightOnlyComparator;
 using node::CBlockIndexWorkComparator;
 using node::SnapshotMetadata;
 
+#ifdef ENABLE_BULLETPROOFS
+/** Extract a Bulletproof commitment and proof from a script. */
+static bool ExtractBulletproofFromScript(const CScript& script, CBulletproof& out)
+{
+    CScript::const_iterator pc{script.begin()};
+    opcodetype opcode;
+    std::vector<unsigned char> data;
+    while (script.GetOp(pc, opcode, data)) {
+        if (opcode != OP_BULLETPROOF) continue;
+        if (!script.GetOp(pc, opcode, data) || data.size() != sizeof(out.commitment.data)) {
+            return false;
+        }
+        std::copy(data.begin(), data.end(), out.commitment.data);
+        if (!script.GetOp(pc, opcode, out.proof)) {
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+bool CheckBulletproofs(const CTransaction& tx, TxValidationState& state)
+{
+    for (const auto& txin : tx.vin) {
+        CBulletproof bp;
+        if (ExtractBulletproofFromScript(txin.scriptSig, bp) && !VerifyBulletproof(bp)) {
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
+        }
+    }
+    for (const auto& txout : tx.vout) {
+        CBulletproof bp;
+        if (ExtractBulletproofFromScript(txout.scriptPubKey, bp) && !VerifyBulletproof(bp)) {
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
+        }
+    }
+    return true;
+}
+#endif
+
 /** Size threshold for warning about slow UTXO set flush to disk. */
 static constexpr size_t WARN_FLUSH_COINS_SIZE = 1 << 30; // 1 GiB
 /** Time window to wait between writing blocks/block index and chainstate to disk. */
@@ -557,11 +596,8 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, TxValidationS
 
     // Call CheckInputScripts() to cache signature and script validity against current tip consensus rules.
 #ifdef ENABLE_BULLETPROOFS
-    // Placeholder: validate any Bulletproof data attached to the transaction
-    CBulletproof bp;
-    std::memset(&bp.commitment, 0, sizeof(bp.commitment));
-    if (!VerifyBulletproof(bp)) {
-        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
+    if (!CheckBulletproofs(tx, state)) {
+        return false;
     }
 #endif
     return CheckInputScripts(tx, state, view, flags, /* cacheSigStore= */ true, /* cacheFullScriptStore= */ true, txdata, validation_cache);
