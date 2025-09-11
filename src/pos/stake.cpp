@@ -5,6 +5,7 @@
 #include <hash.h>
 #include <primitives/transaction.h>
 #include <script/standard.h>
+#include <pubkey.h>
 #include <util/overflow.h>
 #include <logging.h>
 
@@ -33,6 +34,42 @@ bool IsProofOfStake(const CBlock& block)
 {
     if (block.vtx.size() < 2) return false;
     return IsCoinStakeTx(*block.vtx[1]);
+}
+
+bool CheckBlockSignature(const CBlock& block)
+{
+    if (!IsProofOfStake(block)) {
+        return block.vchBlockSig.empty();
+    }
+
+    if (block.vchBlockSig.empty()) {
+        return false;
+    }
+
+    const CTransaction& tx{*block.vtx[1]};
+    if (tx.vin.empty()) {
+        return false;
+    }
+
+    const CScript& scriptSig{tx.vin[0].scriptSig};
+    CScript::const_iterator it = scriptSig.begin();
+    std::vector<unsigned char> vchSigScratch;
+    opcodetype op;
+    // For typical P2PKH scripts: <sig> <pubkey>
+    if (!scriptSig.GetOp(it, op, vchSigScratch)) {
+        return false;
+    }
+    std::vector<unsigned char> vchPubKey;
+    if (!scriptSig.GetOp(it, op, vchPubKey)) {
+        return false;
+    }
+
+    CPubKey pubkey(vchPubKey);
+    if (!pubkey.IsValid()) {
+        return false;
+    }
+
+    return pubkey.Verify(block.GetHash(), block.vchBlockSig);
 }
 
 // Basic stake kernel hash: H( prevout.hash || prevout.n || nTimeBlockFrom || nTimeTx )

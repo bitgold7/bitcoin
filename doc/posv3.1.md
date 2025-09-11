@@ -15,6 +15,10 @@ spacing.
   hour before they can stake.
 - **Block structure** – Each block contains a zero‑value coinbase followed by the
   coinstake transaction, which pays the input amount plus subsidy.
+- **Block signature** – The staking node signs the block header hash with the key
+  controlling the coinstake input. The DER-encoded signature is stored in
+  `vchBlockSig` and verified by peers using the public key revealed in the
+  coinstake.
 
 See the [staking guide](staking.md) for the broader PoS v3 rules and operational
 considerations.
