@@ -78,8 +78,6 @@ Notable changes
 Mining
 ------
 
-- Calls to `getblocktemplate` will fail if the segwit rule is not
-  specified.  Calling `getblocktemplate` without segwit specified is
   almost certainly a misconfiguration since doing so results in lower
   rewards for the miner.  Failed calls will produce an error message
   describing how to enable the segwit rule.
@@ -299,7 +297,6 @@ in the Low-level Changes section below.
   label besides the default when calling `importprivkey`, the new label
   will be applied to the address.
 
-- See the [Mining](#mining) section for changes to `getblocktemplate`.
 
 - `getmininginfo` now omits `currentblockweight` and `currentblocktx`
   when a block was never assembled via RPC on this node.
@@ -1036,7 +1033,6 @@ Changes for particular platforms
 - #14393 Add missing apt-get install (poiuty)
 - #14428 Fix macOS files description in qt/README.md (hebasto)
 - #14390 release process: RPC documentation (karel-3d)
-- #14472 getblocktemplate: use SegWit in example (Sjors)
 - #14497 Add doc/bitcoin-conf.md (hebasto)
 - #14526 Document lint tests (fanquake)
 - #14511 Remove explicit storage requirement from README.md (merland)

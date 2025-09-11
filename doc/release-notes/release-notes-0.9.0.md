@@ -183,7 +183,6 @@ RPC:
 - Reject insanely high fees by default in 'sendrawtransaction'
 - Add RPC call 'decodescript' to decode a hex-encoded transaction script
 - Make 'validateaddress' provide redeemScript
-- Add 'getnetworkhashps' to get the calculated network hashrate
 - New RPC 'ping' command to request ping, new 'pingtime' and 'pingwait' fields
   in 'getpeerinfo' output
 - Adding new 'addrlocal' field to 'getpeerinfo' output
@@ -234,7 +233,6 @@ Wallet:
 Mining:
 
 - Increase default -blockmaxsize/prioritysize to 750K/50K
-- 'getblocktemplate' does not require a key to create a block template
 - Mining code fee policy now matches relay fee policy
 
 Protocol and network:

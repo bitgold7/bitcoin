@@ -64,20 +64,3 @@ When --multiminer is used, if a miner is down and does not mine a block within f
 
 The --standby-delay parameter can be used to make a backup miner that only mines if a block doesn't arrive on time. This can be combined with --multiminer if desired. Setting --standby-delay also prevents the first block from being mined immediately.
 
-Advanced usage
---------------
-
-The process generate follows internally is to get a block template, convert that into a PSBT, sign the PSBT, move the signature from the signed PSBT into the block template's coinbase, grind proof of work for the block, and then submit the block to the network.
-
-These steps can instead be done explicitly:
-
-    $CLI -signet getblocktemplate '{"rules": ["signet","segwit"]}' |
-      $MINER --cli="$CLI" genpsbt --address="$ADDR" |
-      $CLI -signet -stdin walletprocesspsbt |
-      jq -r .psbt |
-      $MINER --cli="$CLI" solvepsbt --grind-cmd="$GRIND" |
-      $CLI -signet -stdin submitblock
-
-This is intended to allow you to replace part of the pipeline for further experimentation (eg, to sign the block with a hardware wallet).
-
-For custom signets with a trivial challenge such as `OP_TRUE` and `OP_2` the walletprocesspsbt step can be skipped.

@@ -1349,8 +1349,7 @@ A few guidelines for introducing and reviewing new RPC interfaces:
     values, resulting in potential loss of precision. This is unacceptable for
     monetary values. **Always** use `AmountFromValue` and `ValueFromAmount` when
     inputting or outputting monetary values. The only exceptions to this are
-    `prioritisetransaction` and `getblocktemplate` because their interface
-    is specified as-is in BIP22.
+    `prioritisetransaction` because its interface is specified as-is.
 
 - Missing arguments and 'null' should be treated the same: as default values. If there is no
   default value, both cases should fail in the same way. The easiest way to follow this

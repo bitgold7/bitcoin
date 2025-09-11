@@ -41,13 +41,11 @@ version will not be able to read the database files and will exit with an error.
 
 Incompatible Changes
 
-* Replaced the 'getmemorypool' RPC command with 'getblocktemplate/submitblock'
   and 'getrawmempool' commands.
 * Remove deprecated RPC 'getblocknumber'
 
 Bitcoin Improvement Proposals implemented
 
-BIP 22 - 'getblocktemplate', 'submitblock' RPCs
 BIP 34 - block version 2, height in coinbase
 BIP 35 - 'mempool' message, extended 'getdata' message behavior
 

@@ -229,8 +229,6 @@ git merge commit are mentioned.
 - #5540 `84eba47` Add unconfirmed and immature balances to getwalletinfo
 - #5599 `40e96a3` Get rid of the internal miner's hashmeter
 - #5711 `87ecfb0` Push down RPC locks
-- #5754 `1c4e3f9` fix getblocktemplate lock issue
-- #5756 `5d901d8` Fix getblocktemplate_proposals test by mining one block
 - #5548 `d48ce48` Add /rest/chaininfos
 - #5992 `4c4f1b4` Push down RPC reqWallet flag
 - #6036 `585b5db` Show zero value txouts in listunspent

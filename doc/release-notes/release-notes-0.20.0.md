@@ -82,7 +82,6 @@ below if you rely on this removed feature:
 
   - `submitblock`
 
-  - `getblocktemplate` with `'mode'` set to `'proposal'` for blocks with
     potentially invalid POW
 
 - Testing the validity of a transaction can be achieved by specific RPCs:

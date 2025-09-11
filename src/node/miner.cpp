@@ -130,8 +130,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     pblocktemplate.reset(new CBlockTemplate());
     CBlock* const pblock = &pblocktemplate->block; // pointer for convenience
 
-    // Add dummy coinbase tx as first transaction. It is skipped by the
-    // getblocktemplate RPC and mining interface consumers must not use it.
+    // Add dummy coinbase tx as first transaction. Mining interface consumers must not use it.
     pblock->vtx.emplace_back();
 
     LOCK(::cs_main);

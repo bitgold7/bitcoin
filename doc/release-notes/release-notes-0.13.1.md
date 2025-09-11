@@ -253,7 +253,6 @@ git merge commit are mentioned.
 - #8832 `83ad563` Throw JSONRPCError when utxo set can not be read (MarcoFalke)
 - #8884 `b987348` getblockchaininfo help: pruneheight is the lowest, not highest, block (luke-jr)
 - #8858 `3f508ed` rpc: Generate auth cookie in hex instead of base64 (laanwj)
-- #8951 `7c2bf4b` RPC/Mining: getblocktemplate: Update and fix formatting of help (luke-jr)
 
 ### Block and transaction handling
 - #8611 `a9429ca` Reduce default number of blocks to check at startup (sipa)

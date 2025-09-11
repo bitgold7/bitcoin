@@ -73,7 +73,6 @@ Command-line options
 
 JSON-RPC API changes
 
-* fixed a getblocktemplate bug that caused excessive CPU creating blocks.
 * listunspent now lists account and address information.
 * getinfo now also returns the time adjustment estimated from your peers.
 * getpeerinfo now returns bytessent, bytesrecv and syncnode.
@@ -97,7 +96,6 @@ Wallet compatibility/rescuing
 
 Known Bugs
 
-* Entering the 'getblocktemplate' or 'getwork' RPC commands into the Bitcoin-Qt debug
 console will cause Bitcoin-Qt to crash. Run Bitcoin-Qt with the -server command-line
 option to workaround.
 

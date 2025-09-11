@@ -52,7 +52,6 @@ Notable changes
 ### RPC
 
 - #29869: rpc, bugfix: Enforce maximum value for setmocktime
-- #28554: bugfix: throw an error if an invalid parameter is passed to getnetworkhashps RPC
 - #30094: rpc: move UniValue in blockToJSON
 - #29870: rpc: Reword SighashFromStr error message
 

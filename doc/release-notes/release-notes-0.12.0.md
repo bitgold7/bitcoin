@@ -474,7 +474,6 @@ git merge commit are mentioned.
 ### RPC and REST
 
 - #6121 `466f0ea` Convert entire source tree from json_spirit to UniValue (Jonas Schnelli)
-- #6234 `d38cd47` fix rpcmining/getblocktemplate univalue transition logic error (Jonas Schnelli)
 - #6239 `643114f` Don't go through double in AmountFromValue and ValueFromAmount (Wladimir J. van der Laan)
 - #6266 `ebab5d3` Fix univalue handling of \u0000 characters. (Daniel Kraft)
 - #6276 `f3d4dbb` Fix getbalance * 0 (Tom Harding)

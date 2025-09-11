@@ -90,7 +90,6 @@ block 709632 is highly recommended to help enforce taproot's new rules
 and to avoid the unlikely case of seeing falsely confirmed transactions.
 
 Miners who want to activate Taproot should preferably use this release
-to control their signaling.  The `getblocktemplate` RPC results will
 automatically be updated to signal once the appropriate start has been
 reached and continue signaling until the timeout occurs or taproot
 activates.  Alternatively, miners may manually start signaling on bit 2
