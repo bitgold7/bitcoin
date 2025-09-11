@@ -163,7 +163,10 @@ public:
         consensus.hashGenesisBlock = genesis.GetHash();
         assert(consensus.hashGenesisBlock == uint256{"c7a6c842f7b1811b4e8ed0964291e9eb91a9ca01bb85256acb2f723f9983424b"});
         assert(genesis.hashMerkleRoot == uint256{"66c868e09d6a774ca6019e4f757f1d4e9aafe9633151111451c8767db6d8dd62"});
+        // Ensure DNS entries are coordinated externally before release.
         vSeeds.emplace_back("seed.bitgold.org");
+        vSeeds.emplace_back("seed.bitgold.net");
+        vSeeds.emplace_back("seed.bitgold.co");
 
         // Note that of those which support the service bits prefix, most only support a subset of
         // possible options.
@@ -208,7 +211,7 @@ public:
 
         checkpointData = {{
             {0, consensus.hashGenesisBlock},
-            {886157, uint256{"00000000000000000001b658dd1120e82e66d2790811f89ede9742ada3ed6d77"}},
+            {914263, uint256{"0000000000000000000123917c1c24e68a0a0bea8122dbb8edfa0019bd0ffd84"}},
         }};
     }
 };
