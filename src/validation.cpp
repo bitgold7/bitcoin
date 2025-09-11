@@ -47,7 +47,7 @@
 #include <script/script.h>
 #include <script/sigcache.h>
 #include <signet.h>
-#include <stake/priority.h>
+#include <policy/priority.h>
 #include <tinyformat.h>
 #include <txdb.h>
 #include <txmempool.h>
@@ -1728,25 +1728,10 @@ MempoolAcceptResult MemPoolAccept::AcceptSingleTransaction(const CTransactionRef
     if (!ConsensusScriptChecks(args, ws)) return MempoolAcceptResult::Failure(ws.m_state);
 
     if (g_enable_priority) {
-        int64_t priority = 0;
-        priority += CalculateStakePriority(ws.m_ptx->GetValueOut());
-        priority += CalculateFeePriority(ws.m_base_fees);
-        int64_t stake_duration = 0;
-        for (const CTxIn& txin : ws.m_ptx->vin) {
-            const Coin& coin = m_view.AccessCoin(txin.prevout);
-            if (!coin.IsSpent()) {
-                int n_blocks = m_active_chainstate.m_chain.Height() - coin.nHeight;
-                if (n_blocks > 0) {
-                    stake_duration = std::max<int64_t>(stake_duration, n_blocks * args.m_chainparams.GetConsensus().nPowTargetSpacing);
-                }
-            }
-        }
-        priority += CalculateStakeDurationPriority(stake_duration);
-        if (m_pool.DynamicMemoryUsage() > m_pool.m_opts.max_size_bytes * 9 / 10) {
-            priority += CONGESTION_PENALTY;
-        }
-        priority += CalculateRbfCfpPriority(SignalsOptInRBF(*ws.m_ptx), !ws.m_ancestors.empty());
-        priority = ApplyPriorityDoSLimit(priority, g_max_priority);
+        int64_t priority = GetBGDPriority(*ws.m_ptx, ws.m_base_fees, m_view, m_pool,
+                                          m_active_chainstate.m_chain.Height(),
+                                          args.m_chainparams.GetConsensus(),
+                                          SignalsOptInRBF(*ws.m_ptx), !ws.m_ancestors.empty());
         const_cast<CTxMemPoolEntry&>(*ws.m_tx_handle).SetPriority(priority);
     }
 
