@@ -71,6 +71,9 @@ public:
     // network and disk
     std::vector<CTransactionRef> vtx;
 
+    // Block signature (persisted on disk and p2p)
+    std::vector<unsigned char> vchBlockSig;
+
     // Memory-only flags for caching expensive checks
     mutable bool fChecked;                            // CheckBlock()
     mutable bool m_checked_witness_commitment{false}; // CheckWitnessCommitment()
@@ -89,13 +92,14 @@ public:
 
     SERIALIZE_METHODS(CBlock, obj)
     {
-        READWRITE(AsBase<CBlockHeader>(obj), obj.vtx);
+        READWRITE(AsBase<CBlockHeader>(obj), obj.vtx, obj.vchBlockSig);
     }
 
     void SetNull()
     {
         CBlockHeader::SetNull();
         vtx.clear();
+        vchBlockSig.clear();
         fChecked = false;
         m_checked_witness_commitment = false;
         m_checked_merkle_root = false;
