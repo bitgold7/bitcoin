@@ -37,6 +37,19 @@ The `bitgold` command supports subcommands like `bitgold gui`, `bitgold node`, a
 
 To enable staking, start `bitgoldd` or `bitgold-qt` with `-staking=1` or add `staking=1` to `bitgold.conf`.
 
+### Bulletproofs
+
+Bulletproof range proofs are compiled into BitGold by default.  The
+consensus rules activate via BIP9 using version bit 3.  Signaling begins on
+January 1st, 2025 and ends on January 1st, 2026.
+
+- Mainnet: 2016-block periods with a 90% threshold (1815 blocks)
+- Testnet: 2016-block periods with a 75% threshold (1512 blocks)
+- Signet and regtest: always active
+
+Bulletproof transactions may be created after activation using RPCs such as
+`createrawbulletprooftransaction` or standard wallet commands.
+
 ### Windows
 
 Unpack the files into a directory, and then run bitgold-qt.exe.

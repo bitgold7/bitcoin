@@ -13,24 +13,22 @@ the `BULLETPROOF_VERSION` bit in its version field.  Nodes that understand
 Bulletproofs verify the range proof and the Pedersen commitment before
 accepting the transaction or block.
 
-## Enabling Bulletproofs
+## Activation and Usage
 
-Bulletproof functionality is disabled by default. To compile BitGold with
-Bulletproof support, configure the build system with the
-`ENABLE_BULLETPROOFS` option:
+Bulletproof support is compiled into BitGold by default.  The feature is
+deployed on mainnet and testnet via BIP9 using version bit 3.  Signaling
+begins on **January 1st, 2025** and, if the threshold is met, enforcement
+begins after a confirmation period.  The deployment times out on
+**January 1st, 2026**.
 
-```bash
-cmake -DENABLE_BULLETPROOFS=ON <path-to-source>
-```
+- **Mainnet**: 2016-block periods with a 90% threshold (1815 blocks)
+- **Testnet**: 2016-block periods with a 75% threshold (1512 blocks)
+- **Signet/Regtest**: always active for testing
 
-If the required dependencies are not available, Bulletproofs will remain
-disabled and the related RPC methods will return an error when called.
-Activation on mainnet and testnet is defined as a BIP9 deployment using
-version bit 3.  At the time of writing the deployment parameters are set
-to `NEVER_ACTIVE` so Bulletproofs are **not** enforced on those networks.
-On signet and regtest the deployment is always active to aid testing.  The
-deployment parameters may be overridden for testing with the `-vbparams`
-command‑line argument (see `-help-debug`).
+Nodes without Bulletproof support will reject transactions that set the
+Bulletproof version bit once the deployment is active.  The deployment
+parameters may be overridden for testing with the `-vbparams`
+command-line argument (see `-help-debug`).
 
 ## Privacy guarantees and limitations
 

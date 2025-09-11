@@ -19,7 +19,7 @@ const std::array<VBDeploymentInfo,Consensus::MAX_VERSION_BITS_DEPLOYMENTS> Versi
     },
     VBDeploymentInfo{
         .name = "bulletproof",
-        .gbt_optional_rule = true,
+        .gbt_optional_rule = false,
     }, // BIP9 deployment for Bulletproof commitments
 };
 
