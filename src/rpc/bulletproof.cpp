@@ -9,10 +9,16 @@
 #include <core_io.h>
 #include <primitives/transaction.h>
 #include <rpc/rawtransaction_util.h>
+#include <tinyformat.h>
 #include <util/strencodings.h>
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
 #include <random.h>
+#include <script/script.h>
+#ifdef ENABLE_WALLET
+#include <wallet/rpc/util.h>
+#include <wallet/wallet.h>
+#endif
 #endif
 
 static RPCHelpMan createrawbulletprooftransaction()
@@ -27,7 +33,11 @@ static RPCHelpMan createrawbulletprooftransaction()
             RPCResult::Type::OBJ, "", "",
             {
                 {RPCResult::Type::STR_HEX, "hex", "The serialized transaction in hex."},
-                {RPCResult::Type::STR_HEX, "proof", "Bulletproof range proof for the first output."},
+                {RPCResult::Type::ARR, "proofs", "Bulletproof range proofs for each output.",
+                    {
+                        {RPCResult::Type::STR_HEX, "proof", "Bulletproof range proof"},
+                    }
+                },
             }
         },
         RPCExamples{
@@ -39,6 +49,11 @@ static RPCHelpMan createrawbulletprooftransaction()
 #ifndef ENABLE_BULLETPROOFS
             throw JSONRPCError(RPC_MISC_ERROR, "Bulletproofs not enabled");
 #else
+#ifdef ENABLE_WALLET
+            std::shared_ptr<wallet::CWallet> wallet = wallet::GetWalletForJSONRPCRequest(request);
+            if (!wallet) return UniValue::VNULL;
+            wallet->BlockUntilSyncedToCurrentChain();
+
             const UniValue& inputs = request.params[0];
             const UniValue& outputs = request.params[1];
 
@@ -57,39 +72,32 @@ static RPCHelpMan createrawbulletprooftransaction()
                 throw JSONRPCError(RPC_INVALID_PARAMETER, std::string("Transaction construction failed: ") + e.what());
             }
 
-            UniValue result(UniValue::VOBJ);
-            result.pushKV("hex", EncodeHexTx(CTransaction(mtx)));
-
-            // Generate a Bulletproof for the first output amount
             if (mtx.vout.empty()) {
                 throw JSONRPCError(RPC_INVALID_PARAMETER, "Transaction must have at least one output");
             }
 
-            CBulletproof bp;
-            CAmount amount = mtx.vout[0].nValue;
-
-            unsigned char blind[32];
-            GetRandBytes({blind, 32});
-
-            static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
-
-            if (secp256k1_pedersen_commit(ctx, &bp.commitment, blind, amount, &secp256k1_generator_h) != 1) {
-                throw JSONRPCError(RPC_MISC_ERROR, "Failed to create commitment");
+            const CTransaction tx{mtx};
+            UniValue proofs(UniValue::VARR);
+            for (size_t i = 0; i < mtx.vout.size(); ++i) {
+                CBulletproof bp;
+                if (!wallet::CreateBulletproofProof(*wallet, tx, bp)) {
+                    throw JSONRPCError(RPC_WALLET_ERROR, strprintf("Failed to create Bulletproof for output %u", i));
+                }
+                mtx.vout[i].scriptPubKey << OP_BULLETPROOF
+                    << std::vector<unsigned char>(bp.commitment.data, bp.commitment.data + sizeof(bp.commitment.data))
+                    << bp.proof;
+                CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+                ss << bp;
+                proofs.push_back(HexStr(ss));
             }
 
-            bp.proof.resize(SECP256K1_RANGE_PROOF_MAX_LENGTH);
-            size_t proof_len = bp.proof.size();
-            if (secp256k1_rangeproof_sign(ctx, bp.proof.data(), &proof_len, 0, &bp.commitment, blind, nullptr, 0, 0, amount, &secp256k1_generator_h) != 1) {
-                throw JSONRPCError(RPC_MISC_ERROR, "Failed to generate Bulletproof");
-            }
-            bp.proof.resize(proof_len);
-            bp.extra.clear();
-
-            CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-            ss << bp;
-            result.pushKV("proof", HexStr(ss));
-
+            UniValue result(UniValue::VOBJ);
+            result.pushKV("hex", EncodeHexTx(CTransaction(mtx)));
+            result.pushKV("proofs", proofs);
             return result;
+#else
+            throw JSONRPCError(RPC_WALLET_ERROR, "Wallet functionality not enabled");
+#endif
 #endif
         }
     };
