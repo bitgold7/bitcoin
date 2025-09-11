@@ -1,23 +1,23 @@
+#include <addresstype.h>
 #include <chrono>
 #include <consensus/amount.h>
 #include <consensus/consensus.h>
 #include <consensus/merkle.h>
 #include <interfaces/chain.h>
+#include <key.h>
 #include <node/context.h>
 #include <pos/stake.h>
+#include <script/standard.h>
 #include <util/time.h>
 #include <validation.h>
 #include <wallet/bitgoldstaker.h>
-#include <wallet/wallet.h>
 #include <wallet/spend.h>
-#include <addresstype.h>
-#include <key.h>
-#include <script/standard.h>
+#include <wallet/wallet.h>
 
 #include <algorithm>
 #include <logging.h>
-#include <vector>
 #include <optional>
+#include <vector>
 
 namespace wallet {
 
@@ -58,7 +58,6 @@ void BitGoldStaker::ThreadStakeMiner()
     const Consensus::Params& consensus = chainman.GetParams().GetConsensus();
     const CAmount MIN_STAKE_AMOUNT{1 * COIN};
     const int MIN_STAKE_DEPTH{COINBASE_MATURITY};
-    const std::chrono::seconds MIN_COIN_AGE{std::chrono::hours(1)};
 
     std::chrono::milliseconds sleep_time{500};
     while (!m_stop) {
@@ -71,15 +70,30 @@ void BitGoldStaker::ThreadStakeMiner()
             }
             const int min_depth = chain_height < MIN_STAKE_DEPTH ? 0 : MIN_STAKE_DEPTH;
             const std::chrono::seconds min_age =
-                chain_height < MIN_STAKE_DEPTH ? std::chrono::seconds{0} : MIN_COIN_AGE;
+                chain_height < MIN_STAKE_DEPTH ? std::chrono::seconds{0} : std::chrono::seconds{consensus.nStakeMinAge};
 
-            std::vector<COutput> candidates = m_wallet.GetStakeableCoins(min_depth, min_age, MIN_STAKE_AMOUNT);
+            std::vector<COutput> candidates =
+                m_wallet.GetStakeableCoins(min_depth, min_age, MIN_STAKE_AMOUNT);
 
             CAmount total_value{0};
-            for (const COutput& o : candidates) total_value += o.txout.nValue;
-            if (total_value <= m_wallet.GetReserveBalance()) {
+            for (const COutput& o : candidates)
+                total_value += o.txout.nValue;
+            const CAmount reserve_balance = m_wallet.GetReserveBalance();
+            CAmount stakeable_balance{0};
+            if (total_value <= reserve_balance) {
                 LogDebug(BCLog::STAKING, "ThreadStakeMiner: balance below reserve\n");
                 candidates.clear();
+            } else {
+                stakeable_balance = total_value - reserve_balance;
+                candidates.erase(std::remove_if(candidates.begin(), candidates.end(),
+                                                [stakeable_balance](const COutput& o) {
+                                                    return o.txout.nValue > stakeable_balance;
+                                                }),
+                                 candidates.end());
+                std::sort(candidates.begin(), candidates.end(),
+                          [](const COutput& a, const COutput& b) {
+                              return a.txout.nValue < b.txout.nValue;
+                          });
             }
 
             if (candidates.empty()) {
@@ -141,9 +155,29 @@ void BitGoldStaker::ThreadStakeMiner()
                         coinstake.vout[0].SetNull();
                         int64_t coin_age_weight = int64_t(nTimeTx) - int64_t(pindexFrom->GetBlockTime());
                         CAmount reward = GetProofOfStakeReward(pindexPrev->nHeight + 1, /*fees=*/0,
-                                                              coin_age_weight, consensus);
-                        coinstake.vout[1].nValue = stake_out.txout.nValue + reward;
-                        coinstake.vout[1].scriptPubKey = stake_out.txout.scriptPubKey;
+                                                               coin_age_weight, consensus);
+                        CAmount input_total = stake_out.txout.nValue;
+                        CAmount total = input_total + reward;
+                        CAmount split_threshold = 2 * MIN_STAKE_AMOUNT;
+                        if (total < split_threshold) {
+                            for (const COutput& merge_out : candidates) {
+                                if (merge_out.outpoint == stake_out.outpoint) continue;
+                                if (input_total + merge_out.txout.nValue > stakeable_balance) break;
+                                coinstake.vin.emplace_back(merge_out.outpoint);
+                                coinstake.vin.back().nSequence = CTxIn::SEQUENCE_FINAL;
+                                input_total += merge_out.txout.nValue;
+                                total = input_total + reward;
+                                if (total >= split_threshold) break;
+                            }
+                        }
+                        if (total > split_threshold * 2) {
+                            CAmount half = total / 2;
+                            coinstake.vout.emplace_back(half, stake_out.txout.scriptPubKey);
+                            coinstake.vout.emplace_back(total - half, stake_out.txout.scriptPubKey);
+                        } else {
+                            coinstake.vout[1].nValue = total;
+                            coinstake.vout[1].scriptPubKey = stake_out.txout.scriptPubKey;
+                        }
                         {
                             LOCK(m_wallet.cs_wallet);
                             if (!m_wallet.SignTransaction(coinstake)) {
@@ -201,8 +235,8 @@ void BitGoldStaker::ThreadStakeMiner()
                         {
                             LOCK(cs_main);
                             if (!ContextualCheckProofOfStake(block, pindexPrev,
-                                                              chainman.ActiveChainstate().CoinsTip(),
-                                                              chainman.ActiveChain(), consensus)) {
+                                                             chainman.ActiveChainstate().CoinsTip(),
+                                                             chainman.ActiveChain(), consensus)) {
                                 LogDebug(BCLog::STAKING, "ThreadStakeMiner: produced block failed CheckProofOfStake\n");
                                 continue;
                             }
@@ -216,8 +250,8 @@ void BitGoldStaker::ThreadStakeMiner()
                             continue;
                         }
                         LogPrintLevel(BCLog::STAKING, BCLog::Level::Info,
-                                       "ThreadStakeMiner: staked block %s\n",
-                                       block.GetHash().ToString());
+                                      "ThreadStakeMiner: staked block %s\n",
+                                      block.GetHash().ToString());
                         RecordSuccess(reward);
                         m_wallet.AddStakingReward(reward);
                         staked = true;
