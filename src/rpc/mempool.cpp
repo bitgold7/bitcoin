@@ -16,6 +16,7 @@
 #include <node/types.h>
 #include <policy/rbf.h>
 #include <policy/settings.h>
+#include <policy/policy.h>
 #include <primitives/transaction.h>
 #include <rpc/server.h>
 #include <rpc/server_util.h>
@@ -258,6 +259,32 @@ static RPCHelpMan testmempoolaccept()
     };
 }
 
+static RPCHelpMan setprioritypolicy()
+{
+    return RPCHelpMan{
+        "setprioritypolicy",
+        "Configure mempool priority behaviour. If no arguments are provided, the current settings are returned.",
+        {
+            {"enable", RPCArg::Type::BOOL, RPCArg::Optional::OMITTED, "Enable or disable priority logic."},
+            {"maxpriority", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "Maximum absolute priority value allowed."},
+        },
+        RPCResult{RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::BOOL, "enabled", "Whether priority logic is enabled."},
+                {RPCResult::Type::NUM, "maxpriority", "Configured priority limit."},
+            }
+        },
+        [&](const RPCHelpMan&, const JSONRPCRequest& request) -> UniValue {
+            if (!request.params[0].isNull()) g_enable_priority = request.params[0].get_bool();
+            if (!request.params[1].isNull()) g_max_priority = request.params[1].get_int64();
+            UniValue obj(UniValue::VOBJ);
+            obj.pushKV("enabled", g_enable_priority);
+            obj.pushKV("maxpriority", g_max_priority);
+            return obj;
+        },
+    };
+}
+
 static std::vector<RPCResult> MempoolEntryDescription()
 {
     return {
@@ -269,6 +296,7 @@ static std::vector<RPCResult> MempoolEntryDescription()
         RPCResult{RPCResult::Type::NUM, "descendantsize", "virtual transaction size of in-mempool descendants (including this one)"},
         RPCResult{RPCResult::Type::NUM, "ancestorcount", "number of in-mempool ancestor transactions (including this one)"},
         RPCResult{RPCResult::Type::NUM, "ancestorsize", "virtual transaction size of in-mempool ancestors (including this one)"},
+        RPCResult{RPCResult::Type::NUM, "priority", "priority score for mining selection"},
         RPCResult{RPCResult::Type::STR_HEX, "wtxid", "hash of serialized transaction, including witness data"},
         RPCResult{RPCResult::Type::OBJ, "fees", "",
             {
@@ -298,6 +326,7 @@ static void entryToJSON(const CTxMemPool& pool, UniValue& info, const CTxMemPool
     info.pushKV("descendantsize", e.GetSizeWithDescendants());
     info.pushKV("ancestorcount", e.GetCountWithAncestors());
     info.pushKV("ancestorsize", e.GetSizeWithAncestors());
+    info.pushKV("priority", e.GetPriority());
     info.pushKV("wtxid", e.GetTx().GetWitnessHash().ToString());
 
     UniValue fees(UniValue::VOBJ);
@@ -1140,6 +1169,7 @@ void RegisterMempoolRPCCommands(CRPCTable& t)
         {"blockchain", &getrawmempool},
         {"blockchain", &importmempool},
         {"blockchain", &savemempool},
+        {"blockchain", &setprioritypolicy},
         {"hidden", &getorphantxs},
         {"rawtransactions", &submitpackage},
     };

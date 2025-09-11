@@ -19,6 +19,10 @@ class CCoinsViewCache;
 class CFeeRate;
 class CScript;
 
+// Global policy switches for mempool priority handling
+extern bool g_enable_priority;
+extern int64_t g_max_priority;
+
 /** Default for -blockmaxweight, which controls the range of block weights the mining code will create **/
 static constexpr unsigned int DEFAULT_BLOCK_MAX_WEIGHT{20000000};
 /** Default for -blockreservedweight **/
