@@ -87,13 +87,18 @@ struct mempoolentry_wtxid
 
 /** \class CompareTxMemPoolEntryByDescendantScore
  *
- *  Sort an entry by max(score/size of entry's tx, score/size with all descendants).
+ *  Sort an entry first by priority (ascending) and then by
+ *  max(score/size of entry's tx, score/size with all descendants).
  */
 class CompareTxMemPoolEntryByDescendantScore
 {
 public:
     bool operator()(const CTxMemPoolEntry& a, const CTxMemPoolEntry& b) const
     {
+        if (a.GetPriority() != b.GetPriority()) {
+            return a.GetPriority() < b.GetPriority();
+        }
+
         FeeFrac f1 = GetModFeeAndSize(a);
         FeeFrac f2 = GetModFeeAndSize(b);
 
@@ -147,7 +152,8 @@ public:
 
 /** \class CompareTxMemPoolEntryByAncestorScore
  *
- *  Sort an entry by min(score/size of entry's tx, score/size with all ancestors).
+ *  Sort an entry first by priority (descending) and then by
+ *  min(score/size of entry's tx, score/size with all ancestors).
  */
 class CompareTxMemPoolEntryByAncestorFee
 {
@@ -155,6 +161,10 @@ public:
     template<typename T>
     bool operator()(const T& a, const T& b) const
     {
+        if (a.GetPriority() != b.GetPriority()) {
+            return a.GetPriority() > b.GetPriority();
+        }
+
         FeeFrac f1 = GetModFeeAndSize(a);
         FeeFrac f2 = GetModFeeAndSize(b);
 
@@ -318,7 +328,7 @@ public:
                 mempoolentry_wtxid,
                 SaltedTxidHasher
             >,
-            // sorted by fee rate
+            // sorted by priority then fee rate
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<descendant_score>,
                 boost::multi_index::identity<CTxMemPoolEntry>,
@@ -330,7 +340,7 @@ public:
                 boost::multi_index::identity<CTxMemPoolEntry>,
                 CompareTxMemPoolEntryByEntryTime
             >,
-            // sorted by fee rate with ancestors
+            // sorted by priority then fee rate with ancestors
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<ancestor_score>,
                 boost::multi_index::identity<CTxMemPoolEntry>,

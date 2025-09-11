@@ -311,8 +311,8 @@ void BlockAssembler::addPackageTxs(int& nPackagesSelected, int& nDescendantsUpda
     const auto& mempool{*Assert(m_mempool)};
     LOCK(mempool.cs);
 
-    // mapModifiedTx will store sorted packages after they are modified
-    // because some of their txs are already in the block
+    // mapModifiedTx will store packages sorted by priority and fee rate after
+    // they are modified because some of their txs are already in the block
     indexed_modified_transaction_set mapModifiedTx;
     // Keep track of entries that failed inclusion, to avoid duplicate work
     std::set<Txid> failedTx;
@@ -364,7 +364,7 @@ void BlockAssembler::addPackageTxs(int& nPackagesSelected, int& nDescendantsUpda
             iter = mempool.mapTx.project<0>(mi);
             if (modit != mapModifiedTx.get<ancestor_score>().end() &&
                     CompareTxMemPoolEntryByAncestorFee()(*modit, CTxMemPoolModifiedEntry(iter))) {
-                // The best entry in mapModifiedTx has higher score
+                // The best entry in mapModifiedTx has higher priority or fee rate
                 // than the one from mapTx.
                 // Switch which transaction (package) to consider
                 iter = modit->iter;
