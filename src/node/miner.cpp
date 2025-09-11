@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <node/miner.h>
+#include <dividend/dividend.h>
 
 #include <chain.h>
 #include <chainparams.h>
@@ -164,13 +165,26 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     coinbaseTx.vin.resize(1);
     coinbaseTx.vin[0].prevout.SetNull();
     coinbaseTx.vin[0].nSequence = CTxIn::MAX_SEQUENCE_NONFINAL; // Make sure timelock is enforced.
-    coinbaseTx.vout.resize(1);
-    coinbaseTx.vout[0].scriptPubKey = m_options.coinbase_output_script;
     CAmount validator_fee = nFees * 9 / 10;
     CAmount dividend_fee = nFees - validator_fee;
-    m_chainstate.AddToDividendPool(dividend_fee, nHeight);
+    static constexpr int QUARTER_BLOCKS{16200};
+    dividend::Payouts payouts;
+    CAmount pool = m_chainstate.GetDividendPool() + dividend_fee;
+    if (nHeight > 0 && nHeight % QUARTER_BLOCKS == 0 && pool > 0) {
+        payouts = dividend::CalculatePayouts(m_chainstate.GetStakeInfo(), nHeight, pool);
+    }
+    coinbaseTx.vout.resize(2 + payouts.size());
+    coinbaseTx.vout[0].scriptPubKey = m_options.coinbase_output_script;
     coinbaseTx.vout[0].nValue = validator_fee + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
-    // Dividend portion is currently unassigned; reserved for future distribution.
+    coinbaseTx.vout[1].scriptPubKey = CScript() << OP_TRUE;
+    coinbaseTx.vout[1].nValue = dividend_fee;
+    size_t idx = 2;
+    for (const auto& [addr, amt] : payouts) {
+        (void)addr; // address handling omitted
+        coinbaseTx.vout[idx].scriptPubKey = CScript() << OP_TRUE;
+        coinbaseTx.vout[idx].nValue = amt;
+        ++idx;
+    }
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     Assert(nHeight > 0);
     coinbaseTx.nLockTime = static_cast<uint32_t>(nHeight - 1);
