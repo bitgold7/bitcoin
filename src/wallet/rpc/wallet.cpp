@@ -955,6 +955,23 @@ static RPCHelpMan getstakingstats()
         }};
 }
 
+static RPCHelpMan getstakingrewards()
+{
+    return RPCHelpMan{
+        "getstakingrewards",
+        "Returns the cumulative staking rewards for this wallet.\n",
+        {},
+        RPCResult{RPCResult::Type::STR_AMOUNT, "", "cumulative rewards"},
+        RPCExamples{HelpExampleCli("getstakingrewards", "") + HelpExampleRpc("getstakingrewards", "")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            const std::shared_ptr<const CWallet> pwallet = GetWalletForJSONRPCRequest(request);
+            if (!pwallet) return UniValue::VNULL;
+            pwallet->BlockUntilSyncedToCurrentChain();
+            return ValueFromAmount(pwallet->GetStakingRewards());
+        }
+    };
+}
+
 static RPCHelpMan walletstaking()
 {
     return RPCHelpMan{
@@ -1187,6 +1204,7 @@ std::span<const CRPCCommand> GetWalletRPCCommands()
         {"wallet", &delegatestakeaddress},
         {"wallet", &registercoldstakeaddress},
         {"wallet", &getstakingstats},
+        {"wallet", &getstakingrewards},
         {"wallet", &walletstaking},
         {"wallet", &startstaking},
         {"wallet", &stopstaking},
