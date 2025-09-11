@@ -93,6 +93,9 @@ The Bitcoin repo's [root README](/README.md) contains relevant information on th
 - [ZMQ](zmq.md)
 - [Staking](staking.md)
 - [Bulletproofs](bulletproofs.md)
+- [Whitepaper Lite](whitepaper-lite.md)
+- [Operator Guide](operator-guide.md)
+- [Wallet Guide](wallet-guide.md)
 
 License
 ---------------------
