@@ -12,7 +12,7 @@ The repository already contains a sizeable PoS implementation:
   * `ContextualCheckProofOfStake` (coinstake structure, coin age, timestamp/slot rules)
   * `CheckStakeTimestamp` helper enforcing the 16‑second mask and tight future drift
   * `IsProofOfStake` utility
-  * constant `MIN_STAKE_AGE` (1h); target spacing is configured via consensus parameter `nStakeTargetSpacing`
+  * constant `MIN_STAKE_AGE` (8h); target spacing is configured via consensus parameter `nStakeTargetSpacing`
   * minimum stake age, coinstake format, difficulty retargeting, and block signature validation are enforced during block checks
 * **Stake modifier handling** – `src/pos/stakemodifier.cpp` and `src/pos/stakemodifier_manager.cpp` provide modifier computation and a manager refreshing it at fixed intervals.
 * **Difficulty retargeting** – `src/pos/difficulty.cpp` supplies a PoS retarget routine used by `GetNextWorkRequired`.
