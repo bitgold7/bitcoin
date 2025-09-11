@@ -196,6 +196,9 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
                 return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "proof of stake check failed");
             }
         }
+        if (!CheckBlockSignature(block)) {
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-signature", "invalid proof of stake block signature");
+        }
     } else {
         if (IsProofOfStake(block)) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-prev", "proof of stake before activation");

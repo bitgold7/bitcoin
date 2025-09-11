@@ -37,6 +37,9 @@ bool ContextualCheckProofOfStake(const CBlock& block, const CBlockIndex* pindexP
 /** Return true if the block appears to be proof-of-stake. */
 bool IsProofOfStake(const CBlock& block);
 
+/** Verify the signature on a proof-of-stake block. */
+bool CheckBlockSignature(const CBlock& block);
+
 inline bool CheckStakeTimestamp(const CBlockHeader& h, const Consensus::Params& p)
 {
     if ((h.nTime & p.nStakeTimestampMask) != 0) return false;

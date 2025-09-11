@@ -10,10 +10,14 @@
 #include <wallet/bitgoldstaker.h>
 #include <wallet/wallet.h>
 #include <wallet/spend.h>
+#include <addresstype.h>
+#include <key.h>
+#include <script/standard.h>
 
 #include <algorithm>
 #include <logging.h>
 #include <vector>
+#include <optional>
 
 namespace wallet {
 
@@ -162,6 +166,25 @@ void BitGoldStaker::ThreadStakeMiner()
                         block.nBits = pindexPrev->nBits;
                         block.nNonce = 0;
                         block.hashMerkleRoot = BlockMerkleRoot(block);
+
+                        // Sign the block with the staking key
+                        {
+                            CTxDestination dest;
+                            if (!ExtractDestination(stake_out.txout.scriptPubKey, dest)) {
+                                LogDebug(BCLog::STAKING, "ThreadStakeMiner: failed to extract destination for signing\n");
+                                continue;
+                            }
+                            const PKHash* keyhash = std::get_if<PKHash>(&dest);
+                            if (!keyhash) {
+                                LogDebug(BCLog::STAKING, "ThreadStakeMiner: unsupported script for signing\n");
+                                continue;
+                            }
+                            std::optional<CKey> key = m_wallet.GetKey(ToKeyID(*keyhash));
+                            if (!key || !key->Sign(block.GetHash(), block.vchBlockSig)) {
+                                LogDebug(BCLog::STAKING, "ThreadStakeMiner: failed to sign block\n");
+                                continue;
+                            }
+                        }
 
                         {
                             LOCK(cs_main);
