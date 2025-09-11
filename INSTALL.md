@@ -1,6 +1,6 @@
 See [doc/build-\*.md](/doc)
 
-Optional Bulletproofs support depends on `libsecp256k1_zkp` version 0.6.1 or
+Optional Bulletproofs support in BitGold depends on `libsecp256k1_zkp` version 0.6.1 or
 newer built with:
 
 ```

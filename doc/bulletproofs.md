@@ -1,6 +1,6 @@
 # Bulletproofs
 
-Bitcoin Core includes experimental support for [Bulletproofs](https://eprint.iacr.org/2017/1066),
+BitGold includes experimental support for [Bulletproofs](https://eprint.iacr.org/2017/1066),
 short zero‑knowledge range proofs that hide transaction amounts while
 allowing anyone to verify that the amounts lie in a valid range.  Each
 output reveals only a Pedersen commitment to the amount together with a
@@ -15,7 +15,7 @@ accepting the transaction or block.
 
 ## Enabling Bulletproofs
 
-Bulletproof functionality is disabled by default. To compile Bitcoin Core with
+Bulletproof functionality is disabled by default. To compile BitGold with
 Bulletproof support, configure the build system with the
 `ENABLE_BULLETPROOFS` option:
 
@@ -56,7 +56,7 @@ Two RPC methods expose the Bulletproof functionality:
 * `verifybulletproof proof`
   – Verifies a Bulletproof and returns whether it is valid.
 
-Both methods are available through `bitcoin-cli` when Bitcoin Core is
+Both methods are available through `bitgold-cli` when BitGold is
 compiled with Bulletproof support.  Wallets can also create Bulletproof
 transactions using standard RPCs such as `sendtoaddress` once the feature
 is activated on the network.
@@ -64,9 +64,9 @@ is activated on the network.
 ### Example usage
 
 ```
-bitcoin-cli createwallet bpwallet
-bitcoin-cli -rpcwallet=bpwallet getnewaddress
-bitcoin-cli createrawbulletprooftransaction "[]" "{\"data\":\"00\"}"
+bitgold-cli createwallet bpwallet
+bitgold-cli -rpcwallet=bpwallet getnewaddress
+bitgold-cli createrawbulletprooftransaction "[]" "{\"data\":\"00\"}"
 ```
 
 The resulting hex string contains the serialized commitment and proof as
