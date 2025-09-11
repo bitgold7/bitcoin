@@ -14,18 +14,20 @@ extern "C" {
 
 struct CBulletproof {
     std::vector<unsigned char> proof;
+    std::vector<unsigned char> commitment; // serialized secp256k1_pedersen_commitment
 };
 
 inline bool VerifyBulletproof(const CBulletproof& proof)
 {
 #ifdef ENABLE_BULLETPROOFS
-    if (proof.proof.empty()) return false;
+    if (proof.proof.empty() || proof.commitment.size() != sizeof(secp256k1_pedersen_commitment)) {
+        return false;
+    }
 
-    static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
+    static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
 
-    // The API requires a commitment, which is not yet wired up. Use a zeroed placeholder.
     secp256k1_pedersen_commitment commit;
-    std::memset(&commit, 0, sizeof(commit));
+    std::memcpy(&commit, proof.commitment.data(), sizeof(commit));
 
     uint64_t min_value = 0, max_value = 0;
     int ret = secp256k1_rangeproof_verify(ctx, &min_value, &max_value, &commit,
