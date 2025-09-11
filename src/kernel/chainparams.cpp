@@ -113,7 +113,7 @@ public:
         consensus.posLimit = consensus.powLimit;
         consensus.posLimitLower = consensus.powLimit;
         consensus.nStakeTargetSpacing = 8 * 60;
-        consensus.nMaximumSupply = 21'000'000 * COIN;
+        consensus.nMaximumSupply = 8'000'000 * COIN;
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.enforce_BIP94 = false;
         consensus.fPowNoRetargeting = false;
@@ -250,7 +250,7 @@ public:
         consensus.posLimit = consensus.powLimit;
         consensus.posLimitLower = consensus.powLimit;
         consensus.nStakeTargetSpacing = 8 * 60;
-        consensus.nMaximumSupply = 21'000'000 * COIN;
+        consensus.nMaximumSupply = 8'000'000 * COIN;
         consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.enforce_BIP94 = false;
         consensus.fPowNoRetargeting = false;
@@ -407,7 +407,7 @@ public:
         consensus.posLimit = consensus.powLimit;
         consensus.posLimitLower = consensus.powLimit;
         consensus.nStakeTargetSpacing = 8 * 60;
-        consensus.nMaximumSupply = 21'000'000 * COIN;
+        consensus.nMaximumSupply = 8'000'000 * COIN;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = Consensus::BIP9Deployment::NEVER_ACTIVE;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
@@ -510,7 +510,7 @@ public:
         consensus.posLimit = consensus.powLimit;
         consensus.posLimitLower = consensus.powLimit;
         consensus.nStakeTargetSpacing = 8 * 60;
-        consensus.nMaximumSupply = 21'000'000 * COIN;
+        consensus.nMaximumSupply = 8'000'000 * COIN;
         consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.enforce_BIP94 = opts.enforce_bip94;
         consensus.fPowNoRetargeting = true;
