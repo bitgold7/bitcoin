@@ -512,6 +512,11 @@ public:
     /** Update staking statistics and persist to disk. */
     void SetStakingStats(const StakingStats& stats);
 
+    /** Record a new staking reward. */
+    void AddStakingReward(CAmount reward);
+    /** Return cumulative staking rewards. */
+    CAmount GetStakingRewards() const;
+
     /** Set the balance to keep reserved from staking. */
     void SetReserveBalance(CAmount amount);
     /** Get the currently reserved balance. */
@@ -551,6 +556,9 @@ public:
 
     /** Cached staking statistics. */
     StakingStats m_staking_stats GUARDED_BY(cs_wallet);
+
+    /** Cumulative amount earned from staking. */
+    CAmount m_cumulative_staking_rewards GUARDED_BY(cs_wallet){0};
 
     /** Amount of balance reserved from staking. */
     CAmount m_reserve_balance GUARDED_BY(cs_wallet){0};

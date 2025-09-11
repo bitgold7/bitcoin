@@ -3296,6 +3296,19 @@ void CWallet::SetStakingStats(const StakingStats& stats)
     batch.WriteStakingStats(m_staking_stats);
 }
 
+void CWallet::AddStakingReward(CAmount reward)
+{
+    LOCK(cs_wallet);
+    m_cumulative_staking_rewards += reward;
+    m_staking_stats.current_reward = reward;
+}
+
+CAmount CWallet::GetStakingRewards() const
+{
+    LOCK(cs_wallet);
+    return m_cumulative_staking_rewards;
+}
+
 void CWallet::SetReserveBalance(CAmount amount)
 {
     LOCK(cs_wallet);

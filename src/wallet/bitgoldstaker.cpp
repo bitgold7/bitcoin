@@ -125,6 +125,7 @@ void BitGoldStaker::ThreadStakeMiner()
                         unsigned int nBits = pindexPrev->nBits;
                         uint256 hash_proof;
                         LogTrace(BCLog::STAKING, "ThreadStakeMiner: checking kernel for %s", stake_out.outpoint.ToString());
+                        RecordAttempt();
                         if (!CheckStakeKernelHash(pindexPrev, nBits, pindexFrom->GetBlockHash(), pindexFrom->nTime,
                                                   stake_out.txout.nValue, stake_out.outpoint, nTimeTx, hash_proof, true,
                                                   consensus)) {
@@ -139,9 +140,9 @@ void BitGoldStaker::ThreadStakeMiner()
                         coinstake.vout.resize(2);
                         coinstake.vout[0].SetNull();
                         int64_t coin_age_weight = int64_t(nTimeTx) - int64_t(pindexFrom->GetBlockTime());
-                        coinstake.vout[1].nValue = stake_out.txout.nValue +
-                                                   GetProofOfStakeReward(pindexPrev->nHeight + 1, /*fees=*/0,
-                                                                        coin_age_weight, consensus);
+                        CAmount reward = GetProofOfStakeReward(pindexPrev->nHeight + 1, /*fees=*/0,
+                                                              coin_age_weight, consensus);
+                        coinstake.vout[1].nValue = stake_out.txout.nValue + reward;
                         coinstake.vout[1].scriptPubKey = stake_out.txout.scriptPubKey;
                         {
                             LOCK(m_wallet.cs_wallet);
@@ -150,6 +151,14 @@ void BitGoldStaker::ThreadStakeMiner()
                                 continue;
                             }
                         }
+
+#ifdef ENABLE_BULLETPROOFS
+                        std::vector<CBulletproof> bp;
+                        if (!CreateBulletproofProof(m_wallet, coinstake, bp)) {
+                            LogDebug(BCLog::STAKING, "ThreadStakeMiner: failed to create bulletproof proof\n");
+                            continue;
+                        }
+#endif
 
                         CMutableTransaction coinbase;
                         coinbase.vin.resize(1);
@@ -209,6 +218,8 @@ void BitGoldStaker::ThreadStakeMiner()
                         LogPrintLevel(BCLog::STAKING, BCLog::Level::Info,
                                        "ThreadStakeMiner: staked block %s\n",
                                        block.GetHash().ToString());
+                        RecordSuccess(reward);
+                        m_wallet.AddStakingReward(reward);
                         staked = true;
                         break;
                     }
@@ -225,6 +236,22 @@ void BitGoldStaker::ThreadStakeMiner()
         }
         std::this_thread::sleep_for(sleep_time);
     }
+}
+
+void BitGoldStaker::RecordAttempt()
+{
+    ++m_attempts;
+}
+
+void BitGoldStaker::RecordSuccess(CAmount reward)
+{
+    ++m_successes;
+    m_rewards += reward;
+}
+
+BitGoldStaker::Stats BitGoldStaker::GetStats() const
+{
+    return Stats{m_attempts.load(), m_successes.load(), m_rewards.load()};
 }
 
 } // namespace wallet

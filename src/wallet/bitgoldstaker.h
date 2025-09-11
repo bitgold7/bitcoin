@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <thread>
+#include <consensus/amount.h>
 
 namespace wallet {
 
@@ -24,6 +25,21 @@ public:
     /** Return true if the staking thread is active. */
     bool IsActive() const;
 
+    /** Record a staking attempt. */
+    void RecordAttempt();
+    /** Record a successful stake with the given reward. */
+    void RecordSuccess(CAmount reward);
+
+    struct Stats
+    {
+        uint64_t attempts{0};
+        uint64_t successes{0};
+        CAmount rewards{0};
+    };
+
+    /** Return current staking statistics. */
+    Stats GetStats() const;
+
 private:
     /** Main staking thread loop. Gathers eligible UTXOs, checks stake kernels,
      *  builds coinstake transactions and blocks, and broadcasts them with
@@ -34,6 +50,10 @@ private:
     CWallet& m_wallet;
     std::thread m_thread;
     std::atomic<bool> m_stop{false};
+
+    std::atomic<uint64_t> m_attempts{0};
+    std::atomic<uint64_t> m_successes{0};
+    std::atomic<CAmount> m_rewards{0};
 };
 
 } // namespace wallet

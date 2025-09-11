@@ -3,6 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/wallet.h>
+#include <wallet/bitgoldstaker.h>
+#include <consensus/amount.h>
 
 #include <cstdint>
 #include <future>
@@ -676,6 +678,19 @@ BOOST_FIXTURE_TEST_CASE(CreateWallet, TestChain100Setup)
 
 
     TestUnloadWallet(std::move(wallet));
+}
+
+BOOST_FIXTURE_TEST_CASE(bitgoldstaker_stats, WalletTestingSetup)
+{
+    CWallet wallet(m_node.chain.get(), "", CreateMockableWalletDatabase());
+    BitGoldStaker staker(wallet);
+    staker.RecordAttempt();
+    staker.RecordSuccess(5 * COIN);
+    auto stats = staker.GetStats();
+    BOOST_CHECK_EQUAL(stats.attempts, 1u);
+    BOOST_CHECK_EQUAL(stats.successes, 1u);
+    BOOST_CHECK_EQUAL(stats.rewards, 5 * COIN);
+    BOOST_CHECK_EQUAL(wallet.GetStakingRewards(), 5 * COIN);
 }
 
 BOOST_FIXTURE_TEST_CASE(CreateWalletWithoutChain, BasicTestingSetup)
