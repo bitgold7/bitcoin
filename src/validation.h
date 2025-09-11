@@ -389,6 +389,11 @@ public:
 /** Context-independent validity checks */
 bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
 
+#ifdef ENABLE_BULLETPROOFS
+/** Validate Bulletproof commitments and proofs in a transaction. */
+bool CheckBulletproofs(const CTransaction& tx, TxValidationState& state);
+#endif
+
 /**
  * Verify a block, including transactions.
  *

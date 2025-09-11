@@ -12,6 +12,7 @@
 #include <uint256.h>
 #include <util/chaintype.h>
 #include <validation.h>
+#include <script/script.h>
 
 #include <string>
 
@@ -359,5 +360,37 @@ BOOST_AUTO_TEST_CASE(block_malleation)
         BOOST_CHECK(is_mutated(block, /*check_witness_root=*/true));
     }
 }
+
+#ifdef ENABLE_BULLETPROOFS
+BOOST_AUTO_TEST_CASE(bulletproof_validation_tests)
+{
+    // Craft transaction with a Bulletproof opcode carrying an empty proof.
+    CMutableTransaction mtx;
+    mtx.version = CTransaction::CURRENT_VERSION | CTransaction::BULLETPROOF_VERSION;
+    mtx.vin.emplace_back();
+    mtx.vout.emplace_back(CAmount{0}, CScript());
+
+    unsigned char commit[33]{};
+    CScript bp_script;
+    bp_script << OP_BULLETPROOF
+              << std::vector<unsigned char>(commit, commit + 33)
+              << std::vector<unsigned char>{};
+    mtx.vout[0].scriptPubKey = bp_script;
+
+    const CTransaction tx{mtx};
+    TxValidationState state;
+    BOOST_CHECK(!CheckBulletproofs(tx, state));
+    BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-bulletproof");
+
+    // Transaction without Bulletproof data should succeed.
+    CMutableTransaction mtx2;
+    mtx2.version = CTransaction::CURRENT_VERSION | CTransaction::BULLETPROOF_VERSION;
+    mtx2.vin.emplace_back();
+    mtx2.vout.emplace_back(CAmount{0}, CScript());
+    const CTransaction tx2{mtx2};
+    TxValidationState state2;
+    BOOST_CHECK(CheckBulletproofs(tx2, state2));
+}
+#endif
 
 BOOST_AUTO_TEST_SUITE_END()
