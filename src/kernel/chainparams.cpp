@@ -106,7 +106,7 @@ public:
         consensus.posActivationHeight = 2;
         consensus.fEnablePoS = true; // Enable PoS from genesis except premine block
         consensus.nStakeTimestampMask = 0xF;
-        consensus.nStakeMinAge = 60 * 60;
+        consensus.nStakeMinAge = 8 * 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.nStakeModifierVersion = 1;
         consensus.nStakeMinConfirmations = 80;
@@ -160,11 +160,12 @@ public:
 
         // To create a new genesis block, modify the timestamp, nonce, and the message in CreateGenesisBlock
         // Then, run the node to get the required hashMerkleRoot and hashGenesisBlock
-        genesis = CreateGenesisBlock(1704067200, 4742768, 0x1e0ffff0, 1, 3000000 * COIN);
+        genesis = CreateGenesisBlock(1704067200, 4857529, 0x1e0ffff0, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-        consensus.defaultAssumeValid = consensus.hashGenesisBlock;
-        assert(consensus.hashGenesisBlock == uint256{"00000babd2ad2c038bb1161bc106e2ea0c0918a52ca462068b9e866ee48c444c"});
-        assert(genesis.hashMerkleRoot == uint256{"66c868e09d6a774ca6019e4f757f1d4e9aafe9633151111451c8767db6d8dd62"});
+        consensus.defaultAssumeValid = uint256{"0000031293ca749250c92965526d047b282f2fb98f9aa48eb82f85a69344dd9e"};
+        consensus.nMinimumChainWork = uint256{"0000000000000000000000000000000000000000000000000000000000200020"};
+        assert(consensus.hashGenesisBlock == uint256{"0000031f6afed9c059b94526653374dcd0132ee556efd074dbda962d04b0a54c"});
+        assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
         // Ensure DNS entries are coordinated externally before release.
         vSeeds.emplace_back("seed.bitgold.org");
         vSeeds.emplace_back("seed.bitgold.net");
@@ -215,6 +216,7 @@ public:
 
         checkpointData = {{
             {0, consensus.hashGenesisBlock},
+            {1, uint256{"0000031293ca749250c92965526d047b282f2fb98f9aa48eb82f85a69344dd9e"}},
         }};
     }
 };
@@ -246,7 +248,7 @@ public:
         consensus.posActivationHeight = 2;
         consensus.fEnablePoS = true; // Enable PoS in testnet
         consensus.nStakeTimestampMask = 0xF;
-        consensus.nStakeMinAge = 60 * 60;
+        consensus.nStakeMinAge = 8 * 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.nStakeModifierVersion = 1;
         consensus.nStakeMinConfirmations = 80;
@@ -293,11 +295,12 @@ public:
         m_assumed_blockchain_size = 200;
         m_assumed_chain_state_size = 19;
 
-        genesis = CreateGenesisBlock(1710000000, 1955521, 0x1e0ffff0, 1, 3000000 * COIN);
+        genesis = CreateGenesisBlock(1710000000, 152916, 0x1e0ffff0, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-        consensus.defaultAssumeValid = consensus.hashGenesisBlock;
-        assert(consensus.hashGenesisBlock == uint256{"000004592798e247e45c04fa8b6352f0ff697b36aea925825a8594720cdcae42"});
-        assert(genesis.hashMerkleRoot == uint256{"66c868e09d6a774ca6019e4f757f1d4e9aafe9633151111451c8767db6d8dd62"});
+        consensus.defaultAssumeValid = uint256{"000004c95338080549b0d383ae10b3435e39db6555a8671cdd24a5b0145ad887"};
+        consensus.nMinimumChainWork = uint256{"0000000000000000000000000000000000000000000000000000000000200020"};
+        assert(consensus.hashGenesisBlock == uint256{"00000487e71e1d6691b5d5c044757bd8d80085dc9faa7d56beca14e308478555"});
+        assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
         vFixedSeeds.clear();
         vSeeds.clear();
         // BitGold-specific testnet seeds
@@ -310,7 +313,7 @@ public:
         base58Prefixes[EXT_PUBLIC_KEY] = {0x02, 0x41, 0xC6, 0x5A}; // bgpub
         base58Prefixes[EXT_SECRET_KEY] = {0x02, 0x41, 0xB2, 0x1B}; // bgprv
 
-        bech32_hrp = "tb";
+        bech32_hrp = "tbg";
 
         vFixedSeeds = std::vector<uint8_t>(std::begin(chainparams_seed_test), std::end(chainparams_seed_test));
 
@@ -334,6 +337,7 @@ public:
 
         checkpointData = {{
             {0, consensus.hashGenesisBlock},
+            {1, uint256{"000004c95338080549b0d383ae10b3435e39db6555a8671cdd24a5b0145ad887"}},
         }};
     }
 };
@@ -394,7 +398,7 @@ public:
         consensus.posActivationHeight = 2;
         consensus.fEnablePoS = true; // Enable PoS on signet
         consensus.nStakeTimestampMask = 0xF;
-        consensus.nStakeMinAge = 60 * 60;
+        consensus.nStakeMinAge = 8 * 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.nStakeModifierVersion = 1;
         consensus.nStakeMinConfirmations = 80;
@@ -460,7 +464,7 @@ public:
         base58Prefixes[EXT_PUBLIC_KEY] = {0x02, 0x41, 0xC6, 0x5A}; // bgpub
         base58Prefixes[EXT_SECRET_KEY] = {0x02, 0x41, 0xB2, 0x1B}; // bgprv
 
-        bech32_hrp = "sb";
+        bech32_hrp = "sbg";
 
         fDefaultConsistencyChecks = false;
         m_is_mockable_chain = false;
@@ -497,7 +501,7 @@ public:
         consensus.posActivationHeight = opts.pos_activation_height;
         consensus.fEnablePoS = true;
         consensus.nStakeTimestampMask = 0xF;
-        consensus.nStakeMinAge = 60 * 60;
+        consensus.nStakeMinAge = 8 * 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.nStakeModifierVersion = 1;
         consensus.nStakeMinConfirmations = 80;
@@ -622,7 +626,7 @@ public:
         base58Prefixes[EXT_PUBLIC_KEY] = {0x02, 0x41, 0xC6, 0x5A}; // bgpub
         base58Prefixes[EXT_SECRET_KEY] = {0x02, 0x41, 0xB2, 0x1B}; // bgprv
 
-        bech32_hrp = "bcrt";
+        bech32_hrp = "rbg";
     }
 };
 

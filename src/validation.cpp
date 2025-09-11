@@ -250,12 +250,66 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
         }
         {
             LOCK(cs_main);
-            CCoinsViewCache view(&g_chainman->ActiveChainstate().CoinsTip());
+            Chainstate& chainstate = g_chainman->ActiveChainstate();
+            CCoinsViewCache view(&chainstate.CoinsTip());
             const CChain& chain{g_chainman->ActiveChain()};
             // ContextualCheckProofOfStake enforces coinstake format, minimum age and difficulty
             if (!ContextualCheckProofOfStake(block, pindexPrev, view, chain, params)) {
                 return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "proof of stake check failed");
             }
+
+            // Verify 90/10 fee split between validator and dividend pool
+            CAmount fees{0};
+            for (size_t i = 2; i < block.vtx.size(); ++i) {
+                const CTransaction& tx{*block.vtx[i]};
+                CAmount in_val{0};
+                for (const auto& in : tx.vin) {
+                    const Coin& coin{view.AccessCoin(in.prevout)};
+                    if (coin.IsSpent()) {
+                        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-inputs-missingorspent");
+                    }
+                    in_val += coin.out.nValue;
+                }
+                CAmount out_val{0};
+                for (const auto& o : tx.vout) out_val += o.nValue;
+                if (in_val < out_val) {
+                    return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-in-belowout");
+                }
+                fees += in_val - out_val;
+            }
+            CAmount validator_fee = fees * 9 / 10;
+            CAmount dividend_fee = fees - validator_fee;
+            const CTransaction& reward_tx{*block.vtx[1]};
+            if (reward_tx.vout.size() < 3) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-missing");
+            }
+            if (reward_tx.vout[2].nValue != dividend_fee) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-amount");
+            }
+
+            static constexpr int QUARTER_BLOCKS{16200};
+            const int height{pindexPrev->nHeight + 1};
+            CAmount pool_before = chainstate.GetDividendPool() + dividend_fee;
+            if (height % QUARTER_BLOCKS == 0) {
+                auto payouts = dividend::CalculatePayouts(chainstate.GetStakeInfo(), height, pool_before);
+                if (reward_tx.vout.size() != 3 + payouts.size()) {
+                    return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-payout-missing");
+                }
+                size_t idx = 3;
+                for (const auto& [addr, amt] : payouts) {
+                    (void)addr; // addresses are not validated here
+                    if (reward_tx.vout[idx].nValue != amt) {
+                        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-payout-amount");
+                    }
+                    ++idx;
+                }
+            } else {
+                if (reward_tx.vout.size() != 3) {
+                    return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-extra");
+                }
+            }
+
+            chainstate.AddToDividendPool(dividend_fee, height);
         }
         // The block must be signed by the coinstake input
         if (!CheckBlockSignature(block)) {
@@ -2176,20 +2230,18 @@ PackageMempoolAcceptResult ProcessNewPackage(Chainstate& active_chainstate, CTxM
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
-    // Genesis premine handled separately
     if (nHeight <= 0) return 0;
+    if (nHeight == 1) return 3'000'000 * COIN;
 
     const CAmount max_subsidy{8'000'000 * COIN - 3'000'000 * COIN};
 
-    // Compute the current block subsidy with Bitcoin-like halving schedule
-    int halvings = (nHeight - 1) / consensusParams.nSubsidyHalvingInterval;
+    int halvings = (nHeight - 2) / consensusParams.nSubsidyHalvingInterval;
     if (halvings >= 64) return 0;
     CAmount subsidy = 50 * COIN;
     subsidy >>= halvings;
 
-    // Calculate cumulative subsidy up to the previous block
     CAmount minted{0};
-    int height = nHeight - 1;
+    int height = nHeight - 2;
     CAmount current_subsidy = 50 * COIN;
     while (height > 0 && current_subsidy > 0) {
         int blocks = std::min(height, consensusParams.nSubsidyHalvingInterval);
@@ -2198,7 +2250,6 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
         current_subsidy >>= 1;
     }
 
-    // Clamp subsidy to remaining supply
     if (minted >= max_subsidy) {
         return 0;
     }
@@ -2335,13 +2386,7 @@ void Chainstate::AddToDividendPool(CAmount amount, int height)
 {
     m_dividend_pool += amount;
     static constexpr int QUARTER_BLOCKS{16200};
-    if (height > 0 && height % QUARTER_BLOCKS == 0 && m_dividend_pool > 0) {
-        auto payouts = dividend::CalculatePayouts(m_stake_info, height, m_dividend_pool);
-        for (const auto& [addr, amt] : payouts) {
-            m_pending_dividends[addr] += amt;
-            m_stake_info[addr].last_payout_height = height;
-        }
-        LogInfo("Distributing %s from dividend pool\n", FormatMoney(m_dividend_pool));
+    if (height > 0 && height % QUARTER_BLOCKS == 0) {
         m_dividend_pool = 0;
     }
     CoinsDB().WriteDividendPool(m_dividend_pool);

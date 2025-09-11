@@ -70,7 +70,8 @@ void BitGoldStaker::ThreadStakeMiner()
             }
             const int min_depth = chain_height < MIN_STAKE_DEPTH ? 0 : MIN_STAKE_DEPTH;
             const std::chrono::seconds min_age =
-                chain_height < MIN_STAKE_DEPTH ? std::chrono::seconds{0} : std::chrono::seconds{consensus.nStakeMinAge};
+                chain_height < MIN_STAKE_DEPTH ? std::chrono::seconds{0}
+                                               : std::chrono::seconds{consensus.nStakeMinAge};
 
             std::vector<COutput> candidates =
                 m_wallet.GetStakeableCoins(min_depth, min_age, MIN_STAKE_AMOUNT);
