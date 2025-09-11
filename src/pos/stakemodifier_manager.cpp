@@ -1,6 +1,7 @@
 #include <pos/stakemodifier_manager.h>
 
 #include <pos/stakemodifier.h>
+#include <chain.h>
 
 // Global instance
 static StakeModifierManager g_manager;

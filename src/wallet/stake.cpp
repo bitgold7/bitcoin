@@ -122,7 +122,9 @@ void Stake::ThreadStakeMiner()
                         coinstake.vout.resize(2);
                         coinstake.vout[0].SetNull();
 
-                        CAmount reward = GetProofOfStakeReward(pindexPrev->nHeight + 1, /*fees=*/0, consensus);
+                        int64_t coin_age_weight = int64_t(nTimeTx) - int64_t(pindexFrom->GetBlockTime());
+                        CAmount reward = GetProofOfStakeReward(pindexPrev->nHeight + 1, /*fees=*/0,
+                                                               coin_age_weight, consensus);
                         CAmount total = stake_out.txout.nValue + reward;
                         CAmount split_threshold = 2 * MIN_STAKE_AMOUNT;
                         if (total > split_threshold * 2) {

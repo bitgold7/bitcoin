@@ -624,7 +624,9 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     coinstake.vin[0].nSequence = CTxIn::SEQUENCE_FINAL;
     coinstake.vout.resize(2);
     coinstake.vout[0].SetNull();
-    coinstake.vout[1].nValue = stake_out->txout.nValue + GetProofOfStakeReward(height, /*fees=*/0, consensus);
+    int64_t coin_age_weight = consensus.nStakeMinAge; // Placeholder until wallet provides age
+    coinstake.vout[1].nValue = stake_out->txout.nValue +
+                               GetProofOfStakeReward(height, /*fees=*/0, coin_age_weight, consensus);
     coinstake.vout[1].scriptPubKey = stake_out->txout.scriptPubKey;
     {
         LOCK(wallet.cs_wallet);
