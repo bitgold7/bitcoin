@@ -2169,21 +2169,33 @@ PackageMempoolAcceptResult ProcessNewPackage(Chainstate& active_chainstate, CTxM
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
-    // Hard cap: 8M BGD total supply with 3M premine in genesis block.
-    // First 90k blocks reward 50, next 20k reward 25, then 0.
-    if (nHeight <= 0) return 0; // genesis handled separately
+    // Genesis premine handled separately
+    if (nHeight <= 0) return 0;
 
-    if (nHeight <= consensusParams.nSubsidyHalvingInterval) {
-        return 50 * COIN;
+    const CAmount max_subsidy{8'000'000 * COIN - 3'000'000 * COIN};
+
+    // Compute the current block subsidy with Bitcoin-like halving schedule
+    int halvings = (nHeight - 1) / consensusParams.nSubsidyHalvingInterval;
+    if (halvings >= 64) return 0;
+    CAmount subsidy = 50 * COIN;
+    subsidy >>= halvings;
+
+    // Calculate cumulative subsidy up to the previous block
+    CAmount minted{0};
+    int height = nHeight - 1;
+    CAmount current_subsidy = 50 * COIN;
+    while (height > 0 && current_subsidy > 0) {
+        int blocks = std::min(height, consensusParams.nSubsidyHalvingInterval);
+        minted += current_subsidy * blocks;
+        height -= blocks;
+        current_subsidy >>= 1;
     }
 
-    // Allow only 20k blocks at the halved reward before hitting the cap
-    const int second_phase = consensusParams.nSubsidyHalvingInterval + 20000;
-    if (nHeight <= second_phase) {
-        return 25 * COIN;
+    // Clamp subsidy to remaining supply
+    if (minted >= max_subsidy) {
+        return 0;
     }
-
-    return 0;
+    return std::min(subsidy, max_subsidy - minted);
 }
 
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast,
