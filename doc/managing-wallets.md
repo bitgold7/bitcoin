@@ -164,3 +164,12 @@ original wallet can be found in the wallet directory with the name `<name>-<time
 
 The backup can be restored using the methods discussed in the
 [Restoring the Wallet From a Backup](#16-restoring-the-wallet-from-a-backup) section.
+
+## Bulletproof Transactions
+
+When Bitcoin Core is compiled with Bulletproof support (see
+`doc/bulletproofs.md`), wallets can create transactions with
+confidential amounts using the `createrawbulletprooftransaction` RPC.
+Bulletproofs hide transferred amounts but do not obscure sender or
+receiver addresses. They are experimental and should be used only on
+test networks or with extreme caution.

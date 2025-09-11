@@ -324,6 +324,7 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   rpc/server.cpp
   rpc/server_util.cpp
   rpc/signmessage.cpp
+  rpc/bulletproof.cpp
   rpc/txoutproof.cpp
   $<$<TARGET_EXISTS:bitcoin_wallet>:rpc/staking.cpp>
   script/sigcache.cpp

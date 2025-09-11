@@ -90,6 +90,7 @@ The Bitcoin repo's [root README](/README.md) contains relevant information on th
 - [Transaction Relay Policy](policy/README.md)
 - [ZMQ](zmq.md)
 - [Staking](staking.md)
+- [Bulletproofs](bulletproofs.md)
 
 License
 ---------------------
