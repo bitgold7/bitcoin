@@ -70,6 +70,7 @@
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
+#include <util/system.h>
 #endif
 
 #include <algorithm>
@@ -509,6 +510,31 @@ void Chainstate::MaybeUpdateMempoolForReorg(
  * signature and script validity results will be reused if we validate this
  * transaction again during block validation.
  * */
+#ifdef ENABLE_BULLETPROOFS
+enum class BulletproofError {
+    OK,
+    MISSING,
+    MALFORMED,
+};
+
+static BulletproofError ExtractBulletproof(const CScript& script, CBulletproof& out)
+{
+    CScript::const_iterator it = script.begin();
+    opcodetype opcode;
+    std::vector<unsigned char> data;
+    std::vector<unsigned char> last_push;
+    while (script.GetOp(it, opcode, data)) {
+        if (opcode == OP_BULLETPROOF) {
+            if (last_push.empty()) return BulletproofError::MALFORMED;
+            out.proof = std::move(last_push);
+            return BulletproofError::OK;
+        }
+        last_push = std::move(data);
+    }
+    return BulletproofError::MISSING;
+}
+#endif
+
 static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, TxValidationState& state,
                                            const CCoinsViewCache& view, const CTxMemPool& pool,
                                            unsigned int flags, PrecomputedTransactionData& txdata, CCoinsViewCache& coins_tip,
@@ -545,9 +571,36 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, TxValidationS
 
     // Call CheckInputScripts() to cache signature and script validity against current tip consensus rules.
 #ifdef ENABLE_BULLETPROOFS
-    // Placeholder: validate any Bulletproof data attached to the transaction
-    if (!VerifyBulletproof(CBulletproof{})) {
-        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
+    if (gArgs.GetBoolArg("-bulletproofs", false)) {
+        auto check_bp = [&](const CScript& script, const char* which, size_t idx) -> bool {
+            CBulletproof bp;
+            BulletproofError err = ExtractBulletproof(script, bp);
+            switch (err) {
+            case BulletproofError::MISSING:
+                return state.Invalid(TxValidationResult::TX_CONSENSUS,
+                                     "bad-bulletproof-missing",
+                                     strprintf("%s %u", which, idx));
+            case BulletproofError::MALFORMED:
+                return state.Invalid(TxValidationResult::TX_CONSENSUS,
+                                     "bad-bulletproof-malformed",
+                                     strprintf("%s %u", which, idx));
+            case BulletproofError::OK:
+                if (!VerifyBulletproof(bp)) {
+                    return state.Invalid(TxValidationResult::TX_CONSENSUS,
+                                         "bad-bulletproof-verify",
+                                         strprintf("%s %u", which, idx));
+                }
+                return true;
+            }
+            return false;
+        };
+
+        for (size_t i = 0; i < tx.vin.size(); ++i) {
+            if (!check_bp(tx.vin[i].scriptSig, "input", i)) return false;
+        }
+        for (size_t i = 0; i < tx.vout.size(); ++i) {
+            if (!check_bp(tx.vout[i].scriptPubKey, "output", i)) return false;
+        }
     }
 #endif
     return CheckInputScripts(tx, state, view, flags, /* cacheSigStore= */ true, /* cacheFullScriptStore= */ true, txdata, validation_cache);
