@@ -155,11 +155,15 @@ BOOST_AUTO_TEST_CASE(bech32_hrp_networks)
 
     SelectParams(ChainType::TESTNET);
     auto dest = WitnessV0KeyHash(key.GetPubKey().GetID());
-    BOOST_CHECK(EncodeDestination(dest).starts_with("tb1"));
+    BOOST_CHECK(EncodeDestination(dest).starts_with("tbg1"));
 
     SelectParams(ChainType::SIGNET);
     dest = WitnessV0KeyHash(key.GetPubKey().GetID());
-    BOOST_CHECK(EncodeDestination(dest).starts_with("sb1"));
+    BOOST_CHECK(EncodeDestination(dest).starts_with("sbg1"));
+
+    SelectParams(ChainType::REGTEST);
+    dest = WitnessV0KeyHash(key.GetPubKey().GetID());
+    BOOST_CHECK(EncodeDestination(dest).starts_with("rbg1"));
 
     SelectParams(ChainType::MAIN);
 }

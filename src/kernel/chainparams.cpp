@@ -310,7 +310,7 @@ public:
         base58Prefixes[EXT_PUBLIC_KEY] = {0x02, 0x41, 0xC6, 0x5A}; // bgpub
         base58Prefixes[EXT_SECRET_KEY] = {0x02, 0x41, 0xB2, 0x1B}; // bgprv
 
-        bech32_hrp = "tb";
+        bech32_hrp = "tbg";
 
         vFixedSeeds = std::vector<uint8_t>(std::begin(chainparams_seed_test), std::end(chainparams_seed_test));
 
@@ -460,7 +460,7 @@ public:
         base58Prefixes[EXT_PUBLIC_KEY] = {0x02, 0x41, 0xC6, 0x5A}; // bgpub
         base58Prefixes[EXT_SECRET_KEY] = {0x02, 0x41, 0xB2, 0x1B}; // bgprv
 
-        bech32_hrp = "sb";
+        bech32_hrp = "sbg";
 
         fDefaultConsistencyChecks = false;
         m_is_mockable_chain = false;
@@ -622,7 +622,7 @@ public:
         base58Prefixes[EXT_PUBLIC_KEY] = {0x02, 0x41, 0xC6, 0x5A}; // bgpub
         base58Prefixes[EXT_SECRET_KEY] = {0x02, 0x41, 0xB2, 0x1B}; // bgprv
 
-        bech32_hrp = "bcrt";
+        bech32_hrp = "rbg";
     }
 };
 

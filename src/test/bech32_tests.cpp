@@ -52,6 +52,20 @@ BOOST_AUTO_TEST_CASE(bech32m_testvectors_valid)
     }
 }
 
+BOOST_AUTO_TEST_CASE(bech32_custom_network_hrps)
+{
+    static const std::pair<std::string, std::string> CASES[] = {
+        {"tbg", "tbg1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqwdlngn"},
+        {"sbg", "sbg1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqm6vq9m"},
+        {"rbg", "rbg1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqquwhmf9"},
+    };
+    for (const auto& [hrp, addr] : CASES) {
+        const auto dec = bech32::Decode(addr);
+        BOOST_CHECK(dec.encoding == bech32::Encoding::BECH32);
+        BOOST_CHECK_EQUAL(dec.hrp, hrp);
+    }
+}
+
 BOOST_AUTO_TEST_CASE(bech32_testvectors_invalid)
 {
     static const std::string CASES[] = {

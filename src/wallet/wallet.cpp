@@ -3324,8 +3324,8 @@ CAmount CWallet::GetReserveBalance() const
 std::string CWallet::GetNewShieldedAddress()
 {
     LOCK(cs_wallet);
-    // Placeholder shielded address generation using random hash with "sb" prefix
-    return std::string("sb") + GetRandHash().ToString();
+    // Placeholder shielded address generation using random hash with "sbg" prefix
+    return std::string("sbg") + GetRandHash().ToString();
 }
 
 void CWallet::SetStakingOnly(bool staking_only)
