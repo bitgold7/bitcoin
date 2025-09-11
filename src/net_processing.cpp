@@ -1865,6 +1865,8 @@ void PeerManagerImpl::MaybePunishNodeForTx(NodeId nodeid, const TxValidationStat
         break;
     // The node is providing invalid data:
     case TxValidationResult::TX_CONSENSUS:
+    case TxValidationResult::TX_BULLETPROOF_MISSING:
+    case TxValidationResult::TX_BULLETPROOF_INVALID:
         if (peer) Misbehaving(*peer, "");
         return;
     // Conflicting (but not necessarily invalid) data or different policy:

@@ -547,7 +547,9 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, TxValidationS
 #ifdef ENABLE_BULLETPROOFS
     // Placeholder: validate any Bulletproof data attached to the transaction
     if (!VerifyBulletproof(CBulletproof{})) {
-        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
+        const std::string reason{"bad-bulletproof"};
+        LogPrint(BCLog::VALIDATION, "Bulletproof verification failed for tx %s: %s\n", tx.GetHash().ToString(), reason);
+        return state.Invalid(TxValidationResult::TX_BULLETPROOF_INVALID, reason);
     }
 #endif
     return CheckInputScripts(tx, state, view, flags, /* cacheSigStore= */ true, /* cacheFullScriptStore= */ true, txdata, validation_cache);

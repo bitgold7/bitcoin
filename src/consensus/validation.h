@@ -27,6 +27,8 @@ enum class TxValidationResult {
     TX_NOT_STANDARD,          //!< otherwise didn't meet our local policy rules
     TX_MISSING_INPUTS,        //!< transaction was missing some of its inputs
     TX_PREMATURE_SPEND,       //!< transaction spends a coinbase too early, or violates locktime/sequence locks
+    TX_BULLETPROOF_MISSING,   //!< bulletproof proof missing
+    TX_BULLETPROOF_INVALID,   //!< bulletproof proof failed verification
     /**
      * Transaction might have a witness prior to SegWit
      * activation, or witness may have been malleated (which includes

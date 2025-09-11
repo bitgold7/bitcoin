@@ -394,6 +394,7 @@ RPCErrorCode RPCErrorFromTransactionError(TransactionError terr)
 {
     switch (terr) {
         case TransactionError::MEMPOOL_REJECTED:
+        case TransactionError::BULLETPROOF_INVALID:
             return RPC_TRANSACTION_REJECTED;
         case TransactionError::ALREADY_IN_UTXO_SET:
             return RPC_VERIFY_ALREADY_IN_UTXO_SET;

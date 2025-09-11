@@ -4577,8 +4577,11 @@ bool CreateBulletproofProof(CWallet& wallet, const CTransaction& tx, CBulletproo
 
 bool VerifyBulletproofProof(const CTransaction& tx, const CBulletproof& proof)
 {
-    (void)tx;
-    return VerifyBulletproof(proof);
+    if (!VerifyBulletproof(proof)) {
+        LogPrint(BCLog::WALLET, "Bulletproof verification failed for wallet tx %s\n", tx.GetHash().ToString());
+        return false;
+    }
+    return true;
 }
 #endif
 } // namespace wallet

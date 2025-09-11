@@ -25,6 +25,10 @@ static TransactionError HandleATMPError(const TxValidationState& state, std::str
         if (state.GetResult() == TxValidationResult::TX_MISSING_INPUTS) {
             return TransactionError::MISSING_INPUTS;
         }
+        if (state.GetResult() == TxValidationResult::TX_BULLETPROOF_MISSING ||
+            state.GetResult() == TxValidationResult::TX_BULLETPROOF_INVALID) {
+            return TransactionError::BULLETPROOF_INVALID;
+        }
         return TransactionError::MEMPOOL_REJECTED;
     } else {
         return TransactionError::MEMPOOL_ERROR;
