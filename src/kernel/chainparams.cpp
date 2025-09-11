@@ -131,10 +131,10 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].threshold = 1815;               // 90%
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].period = 2016;
 
-        // Deployment of Bulletproof commitments (currently disabled)
+        // Deployment of Bulletproof commitments
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].bit = 3;
-        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nStartTime = Consensus::BIP9Deployment::NEVER_ACTIVE;
-        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nStartTime = 1735689600; // Jan 1st, 2025
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nTimeout = 1767225600;   // Jan 1st, 2026
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].min_activation_height = 0; // No activation delay
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].threshold = 1815;          // 90%
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].period = 2016;
@@ -264,10 +264,10 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].threshold = 1512;          // 75%
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].period = 2016;
 
-        // Deployment of Bulletproof commitments (currently disabled)
+        // Deployment of Bulletproof commitments
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].bit = 3;
-        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nStartTime = Consensus::BIP9Deployment::NEVER_ACTIVE;
-        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nStartTime = 1735689600; // Jan 1st, 2025
+        consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].nTimeout = 1767225600;   // Jan 1st, 2026
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].min_activation_height = 0; // No activation delay
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].threshold = 1512;         // 75%
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].period = 2016;
