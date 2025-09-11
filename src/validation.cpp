@@ -35,6 +35,7 @@
 #include <logging/timer.h>
 #include <node/blockstorage.h>
 #include <node/utxo_snapshot.h>
+#include <dividend/dividend.h>
 #include <policy/ephemeral_policy.h>
 #include <policy/policy.h>
 #include <policy/rbf.h>
@@ -2343,14 +2344,31 @@ void Chainstate::LoadDividendPool()
 void Chainstate::AddToDividendPool(CAmount amount, int height)
 {
     m_dividend_pool += amount;
-    // Payout every ~quarter (16200 blocks at 8 min spacing)
     static constexpr int QUARTER_BLOCKS{16200};
     if (height > 0 && height % QUARTER_BLOCKS == 0 && m_dividend_pool > 0) {
-        // Placeholder: dividend distribution logic
+        auto payouts = dividend::CalculatePayouts(m_stake_info, height, m_dividend_pool);
+        for (const auto& [addr, amt] : payouts) {
+            m_pending_dividends[addr] += amt;
+            m_stake_info[addr].last_payout_height = height;
+        }
         LogInfo("Distributing %s from dividend pool\n", FormatMoney(m_dividend_pool));
         m_dividend_pool = 0;
     }
     CoinsDB().WriteDividendPool(m_dividend_pool);
+}
+
+void Chainstate::UpdateStakeWeight(const std::string& addr, CAmount weight)
+{
+    m_stake_info[addr].weight = weight;
+}
+
+CAmount Chainstate::ClaimDividend(const std::string& addr)
+{
+    auto it = m_pending_dividends.find(addr);
+    if (it == m_pending_dividends.end()) return 0;
+    CAmount amount = it->second;
+    m_pending_dividends.erase(it);
+    return amount;
 }
 
 bool IsBlockMutated(const CBlock& block, bool check_witness_root)
