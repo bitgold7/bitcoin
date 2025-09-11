@@ -21,6 +21,7 @@ void RegisterOutputScriptRPCCommands(CRPCTable&);
 void RegisterRawTransactionRPCCommands(CRPCTable &tableRPC);
 void RegisterSignMessageRPCCommands(CRPCTable&);
 void RegisterSignerRPCCommands(CRPCTable &tableRPC);
+void RegisterBulletproofRPCCommands(CRPCTable&);
 void RegisterTxoutProofRPCCommands(CRPCTable&);
 #ifdef ENABLE_WALLET
 void RegisterStakingRPCCommands(CRPCTable&);
@@ -40,6 +41,7 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &t)
 #ifdef ENABLE_EXTERNAL_SIGNER
     RegisterSignerRPCCommands(t);
 #endif // ENABLE_EXTERNAL_SIGNER
+    RegisterBulletproofRPCCommands(t);
     RegisterTxoutProofRPCCommands(t);
 #ifdef ENABLE_WALLET
     RegisterStakingRPCCommands(t);
