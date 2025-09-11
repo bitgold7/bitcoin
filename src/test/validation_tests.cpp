@@ -28,20 +28,16 @@ static void TestBlockSubsidyHalvings(const Consensus::Params& consensusParams)
     int maxHalvings = 64;
     CAmount nInitialSubsidy = 50 * COIN;
 
-    CAmount nPreviousSubsidy = nInitialSubsidy * 2; // for height == 1
+    CAmount nPreviousSubsidy = nInitialSubsidy * 2; // for height == 2
     BOOST_CHECK_EQUAL(nPreviousSubsidy, nInitialSubsidy * 2);
     for (int nHalvings = 0; nHalvings < maxHalvings; nHalvings++) {
-        int nHeight = 1 + nHalvings * consensusParams.nSubsidyHalvingInterval;
+        int nHeight = 2 + nHalvings * consensusParams.nSubsidyHalvingInterval;
         CAmount nSubsidy = GetBlockSubsidy(nHeight, consensusParams);
         BOOST_CHECK(nSubsidy <= nInitialSubsidy);
-        if (nHalvings < 2) {
-            BOOST_CHECK_EQUAL(nSubsidy, nPreviousSubsidy / 2);
-        } else {
-            BOOST_CHECK_EQUAL(nSubsidy, 0);
-        }
+        BOOST_CHECK_EQUAL(nSubsidy, nPreviousSubsidy / 2);
         nPreviousSubsidy = nSubsidy;
     }
-    BOOST_CHECK_EQUAL(GetBlockSubsidy(1 + maxHalvings * consensusParams.nSubsidyHalvingInterval, consensusParams), 0);
+    BOOST_CHECK_EQUAL(GetBlockSubsidy(2 + maxHalvings * consensusParams.nSubsidyHalvingInterval, consensusParams), 0);
 }
 
 static void TestBlockSubsidyHalvings(int nSubsidyHalvingInterval)
@@ -62,14 +58,15 @@ BOOST_AUTO_TEST_CASE(block_subsidy_test)
 BOOST_AUTO_TEST_CASE(subsidy_limit_test)
 {
     const auto chainParams = CreateChainParams(*m_node.args, ChainType::MAIN);
-    CAmount nSum = 0;
-    for (int nHeight = 1; nHeight < 14000000; nHeight += 1000) {
-        CAmount nSubsidy = GetBlockSubsidy(nHeight, chainParams->GetConsensus());
-        BOOST_CHECK(nSubsidy <= 50 * COIN);
-        nSum += nSubsidy * 1000;
+    const auto& consensus = chainParams->GetConsensus();
+    CAmount nSum = 50 * COIN; // genesis
+    for (int nHeight = 1;; ++nHeight) {
+        CAmount nSubsidy = GetBlockSubsidy(nHeight, consensus);
+        nSum += nSubsidy;
+        if (nSubsidy == 0) break;
         BOOST_CHECK(MoneyRange(nSum));
     }
-    BOOST_CHECK_EQUAL(nSum, CAmount{500'000'000'000'000});
+    BOOST_CHECK_EQUAL(nSum, CAmount{8'000'000 * COIN});
 }
 
 BOOST_AUTO_TEST_CASE(signet_parse_tests)

@@ -2178,18 +2178,20 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
     // Genesis premine handled separately
     if (nHeight <= 0) return 0;
+    if (nHeight == 1) return 3'000'000 * COIN;
 
-    const CAmount max_subsidy{8'000'000 * COIN - 3'000'000 * COIN};
+    constexpr CAmount GENESIS_REWARD{50 * COIN};
+    const CAmount max_subsidy{consensusParams.nMaximumSupply - 3'000'000 * COIN - GENESIS_REWARD};
 
     // Compute the current block subsidy with Bitcoin-like halving schedule
-    int halvings = (nHeight - 1) / consensusParams.nSubsidyHalvingInterval;
+    int halvings = (nHeight - 2) / consensusParams.nSubsidyHalvingInterval;
     if (halvings >= 64) return 0;
     CAmount subsidy = 50 * COIN;
     subsidy >>= halvings;
 
     // Calculate cumulative subsidy up to the previous block
     CAmount minted{0};
-    int height = nHeight - 1;
+    int height = nHeight - 2;
     CAmount current_subsidy = 50 * COIN;
     while (height > 0 && current_subsidy > 0) {
         int blocks = std::min(height, consensusParams.nSubsidyHalvingInterval);

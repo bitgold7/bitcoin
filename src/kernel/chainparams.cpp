@@ -88,7 +88,7 @@ public:
         m_chain_type = ChainType::MAIN;
         consensus.signet_blocks = false;
         consensus.signet_challenge.clear();
-        consensus.nSubsidyHalvingInterval = 90000;
+        consensus.nSubsidyHalvingInterval = 50'000;
         consensus.script_flag_exceptions.emplace( // BIP16 exception
             uint256{"00000000000002dc756eebf4f49723ed8d30cc28a5f108eb94b1ba88ac4f9c22"}, SCRIPT_VERIFY_NONE);
         consensus.script_flag_exceptions.emplace( // Taproot exception
@@ -160,11 +160,11 @@ public:
 
         // To create a new genesis block, modify the timestamp, nonce, and the message in CreateGenesisBlock
         // Then, run the node to get the required hashMerkleRoot and hashGenesisBlock
-        genesis = CreateGenesisBlock(1704067200, 4742768, 0x1e0ffff0, 1, 3000000 * COIN);
+        genesis = CreateGenesisBlock(1704067200, 320202, 0x1e0ffff0, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.defaultAssumeValid = consensus.hashGenesisBlock;
-        assert(consensus.hashGenesisBlock == uint256{"00000babd2ad2c038bb1161bc106e2ea0c0918a52ca462068b9e866ee48c444c"});
-        assert(genesis.hashMerkleRoot == uint256{"66c868e09d6a774ca6019e4f757f1d4e9aafe9633151111451c8767db6d8dd62"});
+        assert(consensus.hashGenesisBlock == uint256{"000009b10e84a9c8fa7a950efe4a88149fbcac5d2d37e799b3db0761570bd037"});
+        assert(genesis.hashMerkleRoot == uint256{"f663ee06e2ef826962257ea7ffe14a0ecb9b30c323eca11d14001f7d6d66d329"});
         // Ensure DNS entries are coordinated externally before release.
         vSeeds.emplace_back("seed.bitgold.org");
         vSeeds.emplace_back("seed.bitgold.net");
@@ -230,7 +230,7 @@ public:
         m_chain_type = ChainType::TESTNET;
         consensus.signet_blocks = false;
         consensus.signet_challenge.clear();
-        consensus.nSubsidyHalvingInterval = 90000;
+        consensus.nSubsidyHalvingInterval = 50'000;
         consensus.script_flag_exceptions.emplace( // BIP16 exception
             uint256{"00000000dd30457c001f4095d208cc1296b0eed002427aa599874af7a432b105"}, SCRIPT_VERIFY_NONE);
         consensus.BIP34Height = 21111;
@@ -293,11 +293,11 @@ public:
         m_assumed_blockchain_size = 200;
         m_assumed_chain_state_size = 19;
 
-        genesis = CreateGenesisBlock(1710000000, 1955521, 0x1e0ffff0, 1, 3000000 * COIN);
+        genesis = CreateGenesisBlock(1710000000, 2583410, 0x1e0ffff0, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.defaultAssumeValid = consensus.hashGenesisBlock;
-        assert(consensus.hashGenesisBlock == uint256{"000004592798e247e45c04fa8b6352f0ff697b36aea925825a8594720cdcae42"});
-        assert(genesis.hashMerkleRoot == uint256{"66c868e09d6a774ca6019e4f757f1d4e9aafe9633151111451c8767db6d8dd62"});
+        assert(consensus.hashGenesisBlock == uint256{"000008f1f654a7125467a1f6db1652dcc736756fa558f198a58bf46777db6b78"});
+        assert(genesis.hashMerkleRoot == uint256{"f663ee06e2ef826962257ea7ffe14a0ecb9b30c323eca11d14001f7d6d66d329"});
         vFixedSeeds.clear();
         vSeeds.clear();
         // BitGold-specific testnet seeds
@@ -382,7 +382,7 @@ public:
         m_chain_type = ChainType::SIGNET;
         consensus.signet_blocks = true;
         consensus.signet_challenge.assign(bin.begin(), bin.end());
-        consensus.nSubsidyHalvingInterval = 90000;
+        consensus.nSubsidyHalvingInterval = 50'000;
         consensus.BIP34Height = 1;
         consensus.BIP34Hash = uint256{};
         consensus.BIP65Height = 1;
