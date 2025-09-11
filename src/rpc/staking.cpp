@@ -10,6 +10,7 @@
 #include <rpc/util.h>
 #include <univalue.h>
 #include <util/translation.h>
+#include <stake/priority.h>
 #include <wallet/rpc/util.h>
 #include <wallet/wallet.h>
 
@@ -102,10 +103,64 @@ static RPCHelpMan getstakinginfo()
     };
 }
 
+static RPCHelpMan startstaking()
+{
+    return RPCHelpMan{
+        "startstaking",
+        "Start the staking thread for this wallet.",
+        {},
+        RPCResult{RPCResult::Type::BOOL, "", "true if staking is active"},
+        RPCExamples{HelpExampleCli("startstaking", "") + HelpExampleRpc("startstaking", "")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            std::shared_ptr<CWallet> pwallet = GetWalletForJSONRPCRequest(request);
+            if (!pwallet) return UniValue::VNULL;
+            pwallet->BlockUntilSyncedToCurrentChain();
+            pwallet->StartStakeMiner();
+            return UniValue(pwallet->IsStaking());
+        }};
+}
+
+static RPCHelpMan stopstaking()
+{
+    return RPCHelpMan{
+        "stopstaking",
+        "Stop the staking thread for this wallet.",
+        {},
+        RPCResult{RPCResult::Type::BOOL, "", "false if staking stopped"},
+        RPCExamples{HelpExampleCli("stopstaking", "") + HelpExampleRpc("stopstaking", "")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            std::shared_ptr<CWallet> pwallet = GetWalletForJSONRPCRequest(request);
+            if (!pwallet) return UniValue::VNULL;
+            pwallet->BlockUntilSyncedToCurrentChain();
+            pwallet->StopStakeMiner();
+            return UniValue(pwallet->IsStaking());
+        }};
+}
+
+static RPCHelpMan priorityengine()
+{
+    return RPCHelpMan{
+        "priorityengine",
+        "Enable or disable the staking priority engine. Returns the current state.",
+        {{"enable", RPCArg::Type::BOOL, RPCArg::Optional::OMITTED, "true to enable, false to disable"}},
+        RPCResult{RPCResult::Type::BOOL, "", "true if priority engine is enabled"},
+        RPCExamples{HelpExampleCli("priorityengine", "false") + HelpExampleRpc("priorityengine", "true")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            if (!request.params.empty()) {
+                bool enable = request.params[0].get_bool();
+                SetPriorityEngineEnabled(enable);
+            }
+            return UniValue(IsPriorityEngineEnabled());
+        }};
+}
+
 static const CRPCCommand commands[] = {
     {"wallet", &getstakingstatus},
     {"wallet", &reservebalance},
     {"wallet", &getstakinginfo},
+    {"wallet", &startstaking},
+    {"wallet", &stopstaking},
+    {"wallet", &priorityengine},
 };
 
 } // namespace wallet
