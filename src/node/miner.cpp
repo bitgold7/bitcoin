@@ -3,8 +3,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <node/miner.h>
 #include <dividend/dividend.h>
+#include <node/miner.h>
 
 #include <chain.h>
 #include <chainparams.h>
@@ -21,15 +21,15 @@
 #include <node/kernel_notifications.h>
 #include <policy/feerate.h>
 #include <policy/policy.h>
-#include <primitives/transaction.h>
 #include <pos/stake.h>
+#include <primitives/transaction.h>
 #include <util/moneystr.h>
 #include <util/signalinterrupt.h>
 #include <util/time.h>
 #include <validation.h>
 #ifdef ENABLE_WALLET
-#include <wallet/wallet.h>
 #include <wallet/spend.h>
+#include <wallet/wallet.h>
 #endif
 
 #include <algorithm>
@@ -170,7 +170,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     static constexpr int QUARTER_BLOCKS{16200};
     dividend::Payouts payouts;
     CAmount pool = m_chainstate.GetDividendPool() + dividend_fee;
-    if (nHeight > 0 && nHeight % QUARTER_BLOCKS == 0 && pool > 0) {
+    const bool payouts_enabled = gArgs.GetBoolArg("-dividendpayouts", false);
+    if (payouts_enabled && nHeight > 0 && nHeight % QUARTER_BLOCKS == 0 && pool > 0) {
         payouts = dividend::CalculatePayouts(m_chainstate.GetStakeInfo(), nHeight, pool);
     }
     coinbaseTx.vout.resize(2 + payouts.size());
@@ -194,10 +195,10 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);
 
     // Fill in header
-    pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
+    pblock->hashPrevBlock = pindexPrev->GetBlockHash();
     UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
-    pblock->nBits          = pindexPrev->nBits;
-    pblock->nNonce         = 0;
+    pblock->nBits = pindexPrev->nBits;
+    pblock->nNonce = 0;
     pblock->vchBlockSig.clear();
 
     if (m_options.test_block_validity) {
@@ -217,7 +218,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
 
 void BlockAssembler::onlyUnconfirmed(CTxMemPool::setEntries& testSet)
 {
-    for (CTxMemPool::setEntries::iterator iit = testSet.begin(); iit != testSet.end(); ) {
+    for (CTxMemPool::setEntries::iterator iit = testSet.begin(); iit != testSet.end();) {
         // Only test txs not already in the block
         if (inBlock.count((*iit)->GetSharedTx()->GetHash())) {
             testSet.erase(iit++);
@@ -377,7 +378,7 @@ void BlockAssembler::addPackageTxs(int& nPackagesSelected, int& nDescendantsUpda
             // Try to compare the mapTx entry to the mapModifiedTx entry
             iter = mempool.mapTx.project<0>(mi);
             if (modit != mapModifiedTx.get<ancestor_score>().end() &&
-                    CompareTxMemPoolEntryByAncestorFee()(*modit, CTxMemPoolModifiedEntry(iter))) {
+                CompareTxMemPoolEntryByAncestorFee()(*modit, CTxMemPoolModifiedEntry(iter))) {
                 // The best entry in mapModifiedTx has higher priority or fee rate
                 // than the one from mapTx.
                 // Switch which transaction (package) to consider
@@ -420,7 +421,7 @@ void BlockAssembler::addPackageTxs(int& nPackagesSelected, int& nDescendantsUpda
             ++nConsecutiveFailed;
 
             if (nConsecutiveFailed > MAX_CONSECUTIVE_FAILURES && nBlockWeight >
-                    m_options.nBlockMaxWeight - BLOCK_FULL_ENOUGH_WEIGHT_DELTA) {
+                                                                     m_options.nBlockMaxWeight - BLOCK_FULL_ENOUGH_WEIGHT_DELTA) {
                 // Give up if we're close to full and haven't succeeded in a while
                 break;
             }

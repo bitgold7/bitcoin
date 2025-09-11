@@ -21,6 +21,8 @@ Unlock the wallet for staking only using `walletpassphrase <pass> 0 true`. The w
 
 Dividends mature into claimable outputs. Use `claimdividends` (GUI: **Claim** button) to sweep matured dividends into your balance.
 
+Dividend payouts are disabled by default. Enable them by launching the node with `-dividendpayouts`. When disabled, the `claimdividends` RPC will return an error.
+
 ## Security Best Practices
 
 - Encrypt your wallet with a strong passphrase.
