@@ -1,5 +1,6 @@
 #include <pos/stake.h>
 #include <pos/difficulty.h>
+#include <pos/stakemodifier_manager.h>
 
 #include <arith_uint256.h>
 #include <hash.h>
@@ -72,13 +73,15 @@ bool CheckBlockSignature(const CBlock& block)
     return pubkey.Verify(block.GetHash(), block.vchBlockSig);
 }
 
-// Basic stake kernel hash: H( prevout.hash || prevout.n || nTimeBlockFrom || nTimeTx )
-// Later iterations will introduce a proper stake modifier and possibly richer entropy.
-static uint256 ComputeKernelHash(const COutPoint& prevout,
+// Basic stake kernel hash now incorporates the current stake modifier:
+// H( stake_modifier || prevout.hash || prevout.n || nTimeBlockFrom || nTimeTx )
+static uint256 ComputeKernelHash(const uint256& stake_modifier,
+                                 const COutPoint& prevout,
                                  unsigned int nTimeBlockFrom,
                                  unsigned int nTimeTx)
 {
     CHashWriter ss(SER_GETHASH, 0);
+    ss << stake_modifier;
     ss << prevout.hash;
     ss << prevout.n;
     ss << nTimeBlockFrom;
@@ -115,7 +118,8 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
     arith_uint256 bnTargetWeight = bnTarget;
     bnTargetWeight *= bnWeight;
 
-    hashProofOfStake = ComputeKernelHash(prevout, nTimeBlockFrom, nTimeTx);
+    const uint256 stake_modifier{GetStakeModifierManager().GetCurrentModifier()};
+    hashProofOfStake = ComputeKernelHash(stake_modifier, prevout, nTimeBlockFrom, nTimeTx);
     arith_uint256 bnHash = UintToArith256(hashProofOfStake);
 
     if (fPrintProofOfStake) {

@@ -1,5 +1,6 @@
 #include <pos/stake.h>
 #include <pos/stakemodifier.h>
+#include <pos/stakemodifier_manager.h>
 #include <chain.h>
 #include <consensus/amount.h>
 #include <consensus/merkle.h>
@@ -34,6 +35,10 @@ BOOST_AUTO_TEST_CASE(valid_kernel)
     unsigned int nTimeTx = nTimeBlockFrom + MIN_STAKE_AGE; // exactly minimum age
     Consensus::Params params;
 
+    StakeModifierManager& man = GetStakeModifierManager();
+    man = StakeModifierManager();
+    man.UpdateOnConnect(&prev_index, params);
+
     BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
                                      amount, prevout, nTimeTx, hash_proof, false, params));
 }
@@ -55,6 +60,10 @@ BOOST_AUTO_TEST_CASE(invalid_kernel_time)
     unsigned int nBits = 0x207fffff;
     unsigned int nTimeTx = MIN_STAKE_AGE - 16; // not old enough and masked
     Consensus::Params params;
+
+    StakeModifierManager& man = GetStakeModifierManager();
+    man = StakeModifierManager();
+    man.UpdateOnConnect(&prev_index, params);
 
     BOOST_CHECK(!CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
                                       amount, prevout, nTimeTx, hash_proof, false, params));
@@ -78,6 +87,10 @@ BOOST_AUTO_TEST_CASE(invalid_kernel_target)
     unsigned int nTimeTx = MIN_STAKE_AGE;    // minimal age
     Consensus::Params params;
 
+    StakeModifierManager& man = GetStakeModifierManager();
+    man = StakeModifierManager();
+    man.UpdateOnConnect(&prev_index, params);
+
     BOOST_CHECK(!CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
                                       amount, prevout, nTimeTx, hash_proof, false, params));
 }
@@ -98,23 +111,20 @@ BOOST_AUTO_TEST_CASE(kernel_hash_matches_expectation)
     unsigned int nBits = 0x207fffff;
     unsigned int nTimeTx = MIN_STAKE_AGE;
 
-    uint256 expected_modifier;
-    {
-        HashWriter ss_mod;
-        ss_mod << prev_index.GetBlockHash() << prevout.hash << prevout.n;
-        expected_modifier = ss_mod.GetHash();
-    }
+    Consensus::Params params;
+    StakeModifierManager& man = GetStakeModifierManager();
+    man = StakeModifierManager();
+    man.UpdateOnConnect(&prev_index, params);
+    uint256 stake_mod = man.GetCurrentModifier();
 
     uint256 expected_hash;
     {
         HashWriter ss_kernel;
-        ss_kernel << expected_modifier << nTimeBlockFrom << prevout.hash << prevout.n
-                  << nTimeTx;
+        ss_kernel << stake_mod << prevout.hash << prevout.n << nTimeBlockFrom << nTimeTx;
         expected_hash = ss_kernel.GetHash();
     }
 
     uint256 hash_proof;
-    Consensus::Params params;
     BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
                                      amount, prevout, nTimeTx, hash_proof, false, params));
     BOOST_CHECK_EQUAL(hash_proof, expected_hash);
@@ -136,8 +146,12 @@ BOOST_AUTO_TEST_CASE(stake_modifier_differs_per_input)
     COutPoint prevout1{Txid::FromUint256(uint256{3}), 0};
     COutPoint prevout2{Txid::FromUint256(uint256{4}), 1};
 
-    uint256 proof1;
     Consensus::Params params;
+    StakeModifierManager& man = GetStakeModifierManager();
+    man = StakeModifierManager();
+    man.UpdateOnConnect(&prev_index, params);
+
+    uint256 proof1;
     BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
                                      100 * COIN, prevout1, nTimeTx, proof1, false, params));
     uint256 proof2;
@@ -157,23 +171,65 @@ BOOST_AUTO_TEST_CASE(stake_modifier_refresh)
     Consensus::Params params;
     params.nStakeModifierInterval = 60; // short interval for test
 
-    // First retrieval computes from null modifier
-    uint256 mod1 = GetStakeModifier(&prev_index, 1000, params);
-    uint256 exp1 = ComputeStakeModifier(&prev_index, uint256{});
+    StakeModifierManager& man = GetStakeModifierManager();
+    man = StakeModifierManager();
+
+    // Connect initial block and compute modifier
+    man.UpdateOnConnect(&prev_index, params);
+    uint256 mod1 = man.GetCurrentModifier();
+    uint256 exp1 = ComputeStakeModifier(prev_index.pprev, uint256{});
     BOOST_CHECK_EQUAL(mod1, exp1);
 
-    // Within interval, modifier should not update even if previous block changes
-    CBlockIndex next_index = prev_index;
+    // Within interval, connecting next block should not change modifier
+    CBlockIndex next_index;
+    uint256 next_hash{2};
     next_index.nHeight = 11;
     next_index.nTime = 1016;
-    uint256 mod2 = GetStakeModifier(&next_index, 1030, params);
+    next_index.pprev = &prev_index;
+    next_index.phashBlock = &next_hash;
+    man.UpdateOnConnect(&next_index, params);
+    uint256 mod2 = man.GetCurrentModifier();
     BOOST_CHECK_EQUAL(mod1, mod2);
 
-    // After interval passes, modifier updates using previous value
-    uint256 mod3 = GetStakeModifier(&next_index, 1061, params);
-    uint256 exp3 = ComputeStakeModifier(&next_index, mod1);
+    // After interval passes, connecting another block updates modifier
+    CBlockIndex next_index2;
+    uint256 next_hash2{3};
+    next_index2.nHeight = 12;
+    next_index2.nTime = 1061;
+    next_index2.pprev = &next_index;
+    next_index2.phashBlock = &next_hash2;
+    man.UpdateOnConnect(&next_index2, params);
+    uint256 mod3 = man.GetCurrentModifier();
+    uint256 exp3 = ComputeStakeModifier(&next_index2, mod1);
     BOOST_CHECK_EQUAL(mod3, exp3);
     BOOST_CHECK(mod3 != mod1);
+}
+
+BOOST_AUTO_TEST_CASE(stake_modifier_reorg)
+{
+    // Verify modifier rolls back correctly on reorg
+    uint256 h1{1}, h2{2}, h3{3};
+    CBlockIndex b1; b1.nHeight = 1; b1.nTime = 1000; b1.phashBlock = &h1;
+    CBlockIndex b2; b2.nHeight = 2; b2.nTime = 1020; b2.pprev = &b1; b2.phashBlock = &h2;
+    CBlockIndex b3; b3.nHeight = 3; b3.nTime = 1100; b3.pprev = &b2; b3.phashBlock = &h3;
+
+    Consensus::Params params; params.nStakeModifierInterval = 60;
+    StakeModifierManager& man = GetStakeModifierManager();
+    man = StakeModifierManager();
+
+    man.UpdateOnConnect(&b1, params);
+    uint256 mod1 = man.GetCurrentModifier();
+    man.UpdateOnConnect(&b2, params);
+    uint256 mod2 = man.GetCurrentModifier();
+    BOOST_CHECK_EQUAL(mod1, mod2); // interval not passed
+    man.UpdateOnConnect(&b3, params);
+    uint256 mod3 = man.GetCurrentModifier();
+    BOOST_CHECK(mod3 != mod2);
+
+    man.RemoveOnDisconnect(&b3);
+    BOOST_CHECK_EQUAL(man.GetCurrentModifier(), mod2);
+    man.RemoveOnDisconnect(&b2);
+    BOOST_CHECK_EQUAL(man.GetCurrentModifier(), mod1);
 }
 
 BOOST_AUTO_TEST_CASE(coinstake_structure)
