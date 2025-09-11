@@ -122,6 +122,7 @@ FUZZ_TARGET(utxo_total_supply)
     current_block->hashMerkleRoot = BlockMerkleRoot(*current_block);
     assert(!MineBlock(node, current_block).IsNull());
     circulation += GetBlockSubsidy(ActiveHeight(), Params().GetConsensus());
+    assert(circulation <= (8'000'000 * COIN - 3'000'000 * COIN));
 
     assert(ActiveHeight() == 1);
     UpdateUtxoStats();
@@ -161,6 +162,7 @@ FUZZ_TARGET(utxo_total_supply)
                     }
 
                     circulation += GetBlockSubsidy(ActiveHeight(), Params().GetConsensus());
+                    assert(circulation <= (8'000'000 * COIN - 3'000'000 * COIN));
                 }
 
                 UpdateUtxoStats();
