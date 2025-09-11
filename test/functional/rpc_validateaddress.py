@@ -37,8 +37,8 @@ INVALID_DATA = [
         [],
     ),
     (
-        "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7",
-        "Invalid or unsupported Segwit (Bech32) or Base58 encoding.",  # tb1, Mixed case
+        "tbg1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7",
+        "Invalid or unsupported Segwit (Bech32) or Base58 encoding.",  # tbg1, Mixed case
         [],
     ),
     (
@@ -52,8 +52,8 @@ INVALID_DATA = [
         [],
     ),
     (
-        "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv",
-        "Invalid or unsupported Segwit (Bech32) or Base58 encoding.",  # tb1, Non-zero padding in 8-to-5 conversion
+        "tbg1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv",
+        "Invalid or unsupported Segwit (Bech32) or Base58 encoding.",  # tbg1, Non-zero padding in 8-to-5 conversion
         [],
     ),
     ("bc1gmk9yu", "Empty Bech32 data section", []),
@@ -69,8 +69,8 @@ INVALID_DATA = [
         [],
     ),
     (
-        "tb1z0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqglt7rf",
-        "Invalid or unsupported Segwit (Bech32) or Base58 encoding.",  # tb1, Invalid checksum (Bech32 instead of Bech32m)
+        "tbg1z0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqglt7rf",
+        "Invalid or unsupported Segwit (Bech32) or Base58 encoding.",  # tbg1, Invalid checksum (Bech32 instead of Bech32m)
         [],
     ),
     (
@@ -84,8 +84,8 @@ INVALID_DATA = [
         [],
     ),
     (
-        "tb1q0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq24jc47",
-        "Invalid or unsupported Segwit (Bech32) or Base58 encoding.",  # tb1, Invalid checksum (Bech32m instead of Bech32)
+        "tbg1q0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq24jc47",
+        "Invalid or unsupported Segwit (Bech32) or Base58 encoding.",  # tbg1, Invalid checksum (Bech32m instead of Bech32)
         [],
     ),
     (
@@ -110,8 +110,8 @@ INVALID_DATA = [
         [],
     ),
     (
-        "tb1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq47Zagq",
-        "Invalid or unsupported Segwit (Bech32) or Base58 encoding.",  # tb1, Mixed case
+        "tbg1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq47Zagq",
+        "Invalid or unsupported Segwit (Bech32) or Base58 encoding.",  # tbg1, Mixed case
         [],
     ),
     (
@@ -120,8 +120,8 @@ INVALID_DATA = [
         [],
     ),
     (
-        "tb1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vpggkg4j",
-        "Invalid or unsupported Segwit (Bech32) or Base58 encoding.",  # tb1, Non-zero padding in 8-to-5 conversion
+        "tbg1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vpggkg4j",
+        "Invalid or unsupported Segwit (Bech32) or Base58 encoding.",  # tbg1, Non-zero padding in 8-to-5 conversion
         [],
     ),
     ("bc1gmk9yu", "Empty Bech32 data section", []),
@@ -133,7 +133,7 @@ VALID_DATA = [
         "0014751e76e8199196d454941c45d1b3a323f1433bd6",
     ),
     # (
-    #   "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7",
+    #   "tbg1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7",
     #   "00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262",
     # ),
     (
@@ -147,7 +147,7 @@ VALID_DATA = [
     ("BC1SW50QGDZ25J", "6002751e"),
     ("bc1zw508d6qejxtdg4y5r3zarvaryvaxxpcs", "5210751e76e8199196d454941c45d1b3a323"),
     # (
-    #   "tb1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesrxh6hy",
+    #   "tbg1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesrxh6hy",
     #   "0020000000c4a5cad46221b2a187905e5266362b99d5e91c6ce24d165dab93e86433",
     # ),
     (
@@ -155,7 +155,7 @@ VALID_DATA = [
         "0020000000c4a5cad46221b2a187905e5266362b99d5e91c6ce24d165dab93e86433",
     ),
     # (
-    #   "tb1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesf3hn0c",
+    #   "tbg1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesf3hn0c",
     #   "5120000000c4a5cad46221b2a187905e5266362b99d5e91c6ce24d165dab93e86433",
     # ),
     (
