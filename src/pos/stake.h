@@ -34,6 +34,13 @@ bool ContextualCheckProofOfStake(const CBlock& block, const CBlockIndex* pindexP
                                  const CCoinsViewCache& view, const CChain& chain,
                                  const Consensus::Params& params);
 
+/**
+ * Compute the proof-of-stake reward for a block at a given height. The reward
+ * consists of the per-block subsidy (inflation) plus the validator's portion
+ * of transaction fees (currently 90%).
+ */
+CAmount GetProofOfStakeReward(int nHeight, CAmount nFees, const Consensus::Params& params);
+
 /** Return true if the block appears to be proof-of-stake. */
 bool IsProofOfStake(const CBlock& block);
 

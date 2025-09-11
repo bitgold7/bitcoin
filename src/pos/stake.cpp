@@ -4,10 +4,10 @@
 #include <arith_uint256.h>
 #include <hash.h>
 #include <primitives/transaction.h>
-#include <script/standard.h>
 #include <pubkey.h>
 #include <util/overflow.h>
 #include <logging.h>
+#include <validation.h>
 
 #include <cassert>
 
@@ -127,6 +127,13 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
     return true;
 }
 
+CAmount GetProofOfStakeReward(int nHeight, CAmount nFees, const Consensus::Params& params)
+{
+    CAmount subsidy = GetBlockSubsidy(nHeight, params);
+    CAmount validator_fee = nFees * 9 / 10;
+    return subsidy + validator_fee;
+}
+
 bool ContextualCheckProofOfStake(const CBlock& block,
                                  const CBlockIndex* pindexPrev,
                                  const CCoinsViewCache& view,
@@ -181,12 +188,39 @@ bool ContextualCheckProofOfStake(const CBlock& block,
         return false;
     }
 
-    // Basic sanity on coinstake value: must not create more than inputs + reward (reward logic TBD)
-    CAmount input_value = coin.out.nValue;
+    // Sum all input values of the coinstake transaction
+    CAmount input_value = 0;
+    for (const auto& in : coinstake.vin) {
+        const Coin& incoin = view.AccessCoin(in.prevout);
+        if (incoin.IsSpent()) return false;
+        input_value += incoin.out.nValue;
+    }
+
+    // Calculate total transaction fees from the rest of the block
+    CAmount fees = 0;
+    for (size_t i = 2; i < block.vtx.size(); ++i) {
+        const CTransaction& tx = *block.vtx[i];
+        CAmount in_val = 0;
+        for (const auto& in : tx.vin) {
+            const Coin& incoin = view.AccessCoin(in.prevout);
+            if (incoin.IsSpent()) return false;
+            in_val += incoin.out.nValue;
+        }
+        CAmount out_val = 0;
+        for (const auto& o : tx.vout) out_val += o.nValue;
+        if (in_val < out_val) return false;
+        fees += in_val - out_val;
+    }
+
+    // Determine maximum allowed coinstake output value
     CAmount output_value = 0;
     for (const auto& o : coinstake.vout) output_value += o.nValue;
-    if (output_value < input_value) return false; // must not burn value in kernel input
-    // (Excess is assumed to be stake reward + fees; capped later once reward code lands.)
+
+    CAmount reward = GetProofOfStakeReward(spend_height, fees, params);
+    CAmount max_allowed = input_value + reward;
+
+    if (output_value < input_value) return false; // must not burn value
+    if (output_value > max_allowed) return false; // cannot exceed allowed reward
 
     return true;
 }
