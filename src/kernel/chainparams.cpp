@@ -160,12 +160,12 @@ public:
 
         // To create a new genesis block, modify the timestamp, nonce, and the message in CreateGenesisBlock
         // Then, run the node to get the required hashMerkleRoot and hashGenesisBlock
-        genesis = CreateGenesisBlock(1704067200, 4857529, 0x1e0ffff0, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(1704067200, 1475287, 0x1e0ffff0, 1, 3'000'000 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-        consensus.defaultAssumeValid = uint256{"0000031293ca749250c92965526d047b282f2fb98f9aa48eb82f85a69344dd9e"};
+        consensus.defaultAssumeValid = uint256{"00000a43320aba706548e7babb8ab22d73fb89ad5777a5e57e3ca62324e66ff8"};
         consensus.nMinimumChainWork = uint256{"0000000000000000000000000000000000000000000000000000000000200020"};
-        assert(consensus.hashGenesisBlock == uint256{"0000031f6afed9c059b94526653374dcd0132ee556efd074dbda962d04b0a54c"});
-        assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
+        assert(consensus.hashGenesisBlock == uint256{"00000fa682dacac2311173aa140199f3039f118539ba4bb1403900d05a99bfe9"});
+        assert(genesis.hashMerkleRoot == uint256{"66c868e09d6a774ca6019e4f757f1d4e9aafe9633151111451c8767db6d8dd62"});
         // Ensure DNS entries are coordinated externally before release.
         vSeeds.emplace_back("seed.bitgold.org");
         vSeeds.emplace_back("seed.bitgold.net");
@@ -216,7 +216,7 @@ public:
 
         checkpointData = {{
             {0, consensus.hashGenesisBlock},
-            {1, uint256{"0000031293ca749250c92965526d047b282f2fb98f9aa48eb82f85a69344dd9e"}},
+            {1, uint256{"00000a43320aba706548e7babb8ab22d73fb89ad5777a5e57e3ca62324e66ff8"}},
         }};
     }
 };
