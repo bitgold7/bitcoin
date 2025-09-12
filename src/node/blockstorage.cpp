@@ -44,6 +44,8 @@
 #include <unordered_map>
 
 namespace {
+/** Height threshold before block file pruning is permitted. */
+[[maybe_unused]] static constexpr int64_t N_PRUNE_AFTER_HEIGHT{100'000};
 uint64_t NetworkDefaultPruneTarget(ChainType chain)
 {
     switch (chain) {
