@@ -130,6 +130,8 @@ struct Params {
     bool fEnablePoS{false};
     // Timestamp mask for staked blocks (seconds)
     uint32_t nStakeTimestampMask{0xF};
+    // Enforce even stake intervals beyond the mask when true
+    bool fEnforceStakeTimeInterval{false};
     // Minimum coin age required for staking (seconds)
     int64_t nStakeMinAge{8 * 60 * 60};
     // Interval between stake modifier recalculations (seconds)

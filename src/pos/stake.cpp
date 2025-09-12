@@ -75,15 +75,17 @@ bool CheckBlockSignature(const CBlock& block)
     return pubkey.Verify(block.GetHash(), block.vchBlockSig);
 }
 
-// Basic stake kernel hash now incorporates the current stake modifier:
-// H( stake_modifier || prevout.hash || prevout.n || nTimeBlockFrom || nTimeTx )
+// Stake kernel hash with additional entropy from the originating block:
+// H( stake_modifier || hashBlockFrom || prevout.hash || prevout.n || nTimeBlockFrom || nTimeTx )
 static uint256 ComputeKernelHash(const uint256& stake_modifier,
+                                 const uint256& hashBlockFrom,
                                  const COutPoint& prevout,
                                  unsigned int nTimeBlockFrom,
                                  unsigned int nTimeTx)
 {
     HashWriter ss;
     ss << stake_modifier;
+    ss << hashBlockFrom;
     ss << prevout.hash;
     ss << prevout.n;
     ss << nTimeBlockFrom;
@@ -117,8 +119,12 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
                           const Consensus::Params& params)
 {
     if (!pindexPrev) return false;
-    if (nTimeTx <= nTimeBlockFrom) return false; // must move forward in time
+    if (nTimeTx < nTimeBlockFrom) return false; // must not be earlier than source
     if ((nTimeTx & params.nStakeTimestampMask) != 0) return false; // enforce mask alignment
+    if (params.fEnforceStakeTimeInterval) {
+        unsigned int step = (params.nStakeTimestampMask + 1) * 2;
+        if ((nTimeTx - nTimeBlockFrom) % step != 0) return false;
+    }
 
     // Derive target from nBits
     bool fNegative = false;
@@ -130,6 +136,7 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
     // Amount scaling: target * amount (bounded to prevent overflow)
     arith_uint256 bnTargetWeight = MultiplyStakeTarget(bnTarget, amount);
 
+    uint256 prev_modifier = stake_modman.GetCurrentModifier();
     uint256 stake_modifier;
     if (params.nStakeModifierVersion >= 3) {
         stake_modifier = stake_modman.GetDynamicModifier(pindexPrev, nTimeTx, params);
@@ -138,7 +145,10 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
     } else {
         stake_modifier = GetStakeModifier(pindexPrev, nTimeTx, params);
     }
-    hashProofOfStake = ComputeKernelHash(stake_modifier, prevout, nTimeBlockFrom, nTimeTx);
+    HashWriter ss_mod;
+    ss_mod << prev_modifier << stake_modifier;
+    uint256 modifier_entropy = ss_mod.GetHash();
+    hashProofOfStake = ComputeKernelHash(modifier_entropy, hashBlockFrom, prevout, nTimeBlockFrom, nTimeTx);
     arith_uint256 bnHash = UintToArith256(hashProofOfStake);
 
     if (fPrintProofOfStake) {
