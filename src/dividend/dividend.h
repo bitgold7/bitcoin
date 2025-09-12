@@ -3,6 +3,7 @@
 
 #include <consensus/amount.h>
 #include <map>
+#include <script/script.h>
 #include <string>
 
 struct StakeInfo {
@@ -32,6 +33,13 @@ double CalculateApr(CAmount amount, int blocks_held);
  * @return map of address to payout amount
  */
 Payouts CalculatePayouts(const std::map<std::string, StakeInfo>& stakes, int height, CAmount pool);
+
+//! Constant script used for dividend pool outputs
+inline const CScript& GetDividendScript()
+{
+    static const CScript script{CScript() << OP_TRUE};
+    return script;
+}
 
 } // namespace dividend
 

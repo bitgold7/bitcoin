@@ -6,9 +6,9 @@
 #include <bitcoin-build-config.h> // IWYU pragma: keep
 
 #include <common/args.h>
-#include <pow.h>
 #include <kernel/stake.h>
 #include <pos/slashing.h>
+#include <pow.h>
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -89,13 +89,13 @@
 #include <utility>
 
 using kernel::CCoinsStats;
+using kernel::CheckBlockSignature;
+using kernel::CheckStakeTimestamp;
 using kernel::CoinStatsHashType;
 using kernel::ComputeUTXOStats;
-using kernel::Notifications;
-using kernel::CheckBlockSignature;
 using kernel::ContextualCheckProofOfStake;
 using kernel::IsProofOfStake;
-using kernel::CheckStakeTimestamp;
+using kernel::Notifications;
 
 using fsbridge::FopenFn;
 using node::BlockManager;
@@ -137,7 +137,7 @@ bool CheckBulletproofs(const CTransaction& tx, TxValidationState& state)
     std::vector<secp256k1_pedersen_commitment> input_comms;
     std::vector<secp256k1_pedersen_commitment> output_comms;
     auto check_script = [&](const CScript& script,
-                           std::vector<secp256k1_pedersen_commitment>& commits) -> bool {
+                            std::vector<secp256k1_pedersen_commitment>& commits) -> bool {
         CBulletproof bp;
         bool malformed{false};
         bool present = ExtractBulletproofFromScript(script, bp, malformed);
@@ -312,6 +312,9 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
             }
             if (reward_tx.vout[2].nValue != dividend_reward) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-amount");
+            }
+            if (reward_tx.vout[2].scriptPubKey != dividend::GetDividendScript()) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-script");
             }
 
             static constexpr int QUARTER_BLOCKS{16200};
