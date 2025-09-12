@@ -57,6 +57,15 @@ Two RPC methods expose the Bulletproof functionality:
     returned from `createrawbulletprooftransaction` can be checked
     individually with this RPC.
 
+Additional wallet RPCs simplify using confidential transactions:
+
+* `getnewshieldedaddress`
+  – Returns a new shielded address that commits to amounts with Bulletproofs.
+* `sendshielded address amount`
+  – Sends funds to a shielded address using confidential commitments.
+  Wallets restoring from backup must run `rescanblockchain` to reveal
+  balances for blinded outputs.
+
 Both methods are available through `bitgold-cli` when BitGold is
 compiled with Bulletproof support.  Wallets can also create Bulletproof
 transactions using standard RPCs such as `sendtoaddress` once the feature
