@@ -123,6 +123,7 @@ add_executable(test_bitcoin
   util_tests.cpp
   util_threadnames_tests.cpp
   util_trace_tests.cpp
+  validation/reward_schedule_tests.cpp
   validation_block_tests.cpp
   validation_chainstate_tests.cpp
   validation_chainstatemanager_tests.cpp
