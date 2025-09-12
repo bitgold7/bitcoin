@@ -8,7 +8,7 @@ all participants are encouraged to keep their nodes online to maximise network s
 
 - Dynamic stake modifier refreshes periodically to resist grinding attacks.
 - Staking rewards scale with coin age up to a configurable maximum.
-- Cold staking lets a hot node stake using coins held in an offline wallet.
+- Cold staking support has been deferred and is currently inactive.
 
 ## Deployment
 

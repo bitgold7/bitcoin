@@ -43,8 +43,9 @@ considerations.
    The `getstakinginfo` result shows whether the wallet is currently trying to
    stake and reports the expected time to find a block.
 
-For advanced scenarios such as cold staking, refer to [staking.md](staking.md)
- and the [PoS 3.1 overview](pos3.1-overview.md).
+Cold staking has been deferred and is currently inactive; the related RPC
+interfaces are disabled. See [staking.md](staking.md) and the
+[PoS 3.1 overview](pos3.1-overview.md) for background information.
 
 ## Testing on regtest
 
