@@ -8,6 +8,7 @@
 #include <common/args.h>
 #include <kernel/stake.h>
 #include <pos/slashing.h>
+#include <dividend/dividend.h>
 #include <pow.h>
 #include <validation.h>
 
@@ -22,7 +23,6 @@
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
 #include <cuckoocache.h>
-#include <dividend/dividend.h>
 #include <flatfile.h>
 #include <hash.h>
 #include <kernel/chain.h>
@@ -493,8 +493,11 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
 {
     (void)state;
     (void)view;
-    if (!fJustCheck && pindex != nullptr && block.vtx.size() > 1 && block.vtx[1]->vout.size() > 2) {
-        AddToDividendPool(block.vtx[1]->vout[2].nValue, pindex->nHeight);
+    if (!fJustCheck && pindex != nullptr && block.vtx.size() > 1) {
+        const auto& stake_tx = *block.vtx[1];
+        if (stake_tx.vout.size() > 2 && stake_tx.vout[2].scriptPubKey == dividend::GetDividendScript()) {
+            AddToDividendPool(stake_tx.vout[2].nValue, pindex->nHeight);
+        }
     }
     return true;
 }
