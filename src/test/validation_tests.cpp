@@ -21,6 +21,7 @@
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
 #include <random.h>
+#include <util/secp256k1_context.h>
 #endif
 
 #include <string>
@@ -394,16 +395,16 @@ BOOST_AUTO_TEST_CASE(block_malleation)
 #ifdef ENABLE_BULLETPROOFS
 static CBulletproof MakeBulletproof(CAmount value)
 {
-    static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
+static const secp256k1_context_holder ctx(SECP256K1_CONTEXT_SIGN);
     CBulletproof bp;
     unsigned char blind[32];
     GetRandBytes({blind, 32});
 
-    BOOST_REQUIRE(secp256k1_pedersen_commit(ctx, &bp.commitment, blind, value, &secp256k1_generator_h) == 1);
+    BOOST_REQUIRE(secp256k1_pedersen_commit(ctx.get(), &bp.commitment, blind, value, &secp256k1_generator_h) == 1);
 
     bp.proof.resize(SECP256K1_RANGE_PROOF_MAX_LENGTH);
     size_t proof_len = bp.proof.size();
-    BOOST_REQUIRE(secp256k1_rangeproof_sign(ctx, bp.proof.data(), &proof_len, 0, &bp.commitment, blind,
+    BOOST_REQUIRE(secp256k1_rangeproof_sign(ctx.get(), bp.proof.data(), &proof_len, 0, &bp.commitment, blind,
                                            nullptr, 0, 0, value, &secp256k1_generator_h) == 1);
     bp.proof.resize(proof_len);
     bp.extra.assign(blind, blind + 32);

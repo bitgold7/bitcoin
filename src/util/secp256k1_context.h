@@ -1,5 +1,5 @@
-#ifndef BITCOIN_WALLET_SECP256K1_CONTEXT_H
-#define BITCOIN_WALLET_SECP256K1_CONTEXT_H
+#ifndef BITCOIN_UTIL_SECP256K1_CONTEXT_H
+#define BITCOIN_UTIL_SECP256K1_CONTEXT_H
 
 #include <secp256k1.h>
 
@@ -17,4 +17,4 @@ public:
     secp256k1_context* get() const { return m_ctx; }
 };
 
-#endif // BITCOIN_WALLET_SECP256K1_CONTEXT_H
+#endif // BITCOIN_UTIL_SECP256K1_CONTEXT_H
