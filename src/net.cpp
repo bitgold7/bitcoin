@@ -3826,7 +3826,7 @@ void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)
 
     // PoS-specific inventory and relay policy: only relay PoS messages to peers
     // that have explicitly enabled PoS relay support.
-    if ((msg.m_type == NetMsgType::COINSTAKE || msg.m_type == NetMsgType::STAKEMODIFIER) && !pnode->m_pos_enabled) {
+    if (msg.m_type == NetMsgType::STAKEMODIFIER && !pnode->m_pos_enabled) {
         return;
     }
     if (gArgs.GetBoolArg("-capturemessages", false)) {

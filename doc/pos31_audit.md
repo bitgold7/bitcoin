@@ -17,7 +17,7 @@ The repository already contains a sizeable PoS implementation:
 * **Stake modifier handling** – `src/pos/stakemodifier.cpp` provides modifier computation and `src/node/stake_modifier_manager.cpp` tracks and caches modifiers for validation and P2P.
 * **Difficulty retargeting** – `src/pos/difficulty.cpp` supplies a PoS retarget routine used by `GetNextWorkRequired`.
 * **Wallet staking** – `src/wallet/bitgoldstaker.cpp` contains a staking loop that constructs and signs coinstakes and submits PoS blocks.
-* **Network protocol support** – new P2P message types (`COINSTAKE`, `STAKEMODIFIER`) are declared in `src/protocol.h` and handled throughout `net.cpp`, `protocol.cpp`, and `net_processing.cpp`.
+* **Network protocol support** – a new P2P message type (`STAKEMODIFIER`) is declared in `src/protocol.h` and handled throughout `net.cpp`, `protocol.cpp`, and `net_processing.cpp`.
 * **Chain parameter wiring** – `src/kernel/chainparams.cpp` and `src/chainparams.cpp` expose `-posactivationheight` and set `nStakeTimestampMask` for various networks.
 * **Tests and docs** – multiple functional tests (`test/functional/feature_posv3.py`, `test/functional/pos_block_staking.py`, `test/functional/pos_reorg.py`) and user documentation (`doc/staking.md`, `doc/bitgoldstaking.md`, `doc/pos3.1-overview.md`, etc.) already exist.
 
