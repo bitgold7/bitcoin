@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <uint256.h>
+#include <consensus/params.h>
 
 class CBlockIndex;
 
@@ -14,10 +15,10 @@ public:
     explicit Validator(uint64_t stake_amount);
 
     // Attempt to activate the validator if stake and time requirements are met.
-    void Activate(int64_t current_time);
+    void Activate(int64_t current_time, const Consensus::Params& params);
 
     // Schedule an unstake request; validator becomes inactive until time passes.
-    void ScheduleUnstake(int64_t current_time);
+    void ScheduleUnstake(int64_t current_time, const Consensus::Params& params);
 
     bool IsActive() const { return m_active; }
 
