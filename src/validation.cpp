@@ -221,7 +221,7 @@ static bool CheckCoinstakeRewards(const CBlock& block, const CBlockIndex* pindex
                                   const Consensus::Params& params,
                                   BlockValidationState& state)
 {
-    // Verify 90/10 fee split between validator and dividend pool
+    // Verify 90/10 split of subsidy and fees between staker and dividend pool
     CAmount fees{0};
     for (size_t i = 2; i < block.vtx.size(); ++i) {
         const CTransaction& tx{*block.vtx[i]};
@@ -247,7 +247,7 @@ static bool CheckCoinstakeRewards(const CBlock& block, const CBlockIndex* pindex
     CAmount block_subsidy{GetBlockSubsidy(height, params)};
     CAmount total_reward{fees + block_subsidy};
     CAmount dividend_reward{total_reward / 10};
-    CAmount validator_reward{total_reward - dividend_reward};
+    CAmount staker_reward{total_reward - dividend_reward};
 
     const CTransaction& reward_tx{*block.vtx[1]};
     CAmount stake_input_total{0};
@@ -261,7 +261,7 @@ static bool CheckCoinstakeRewards(const CBlock& block, const CBlockIndex* pindex
     }
 
     if (reward_tx.vout.size() < 2 ||
-        reward_tx.vout[1].nValue != stake_input_total + validator_reward) {
+        reward_tx.vout[1].nValue != stake_input_total + staker_reward) {
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
                              "bad-validator-amount");
     }
