@@ -82,8 +82,12 @@ util::Result<void> ApplyArgsManOptions(const ArgsManager& argsman, const CChainP
     // disabled by passing -bgdpriority=0 at startup.
     g_enable_priority = argsman.GetBoolArg("-bgdpriority", true);
 
-    // Enable hybrid mempool scoring when requested
-    g_hybrid_mempool = argsman.GetBoolArg("-hybridmempool", false);
+    // Transaction policy: choose hybrid or feerate scoring
+    const std::string txpolicy{argsman.GetArg("-txpolicy", "feerate")};
+    if (txpolicy != "feerate" && txpolicy != "hybrid") {
+        return util::Error{Untranslated("Invalid value for -txpolicy (expected 'feerate' or 'hybrid')")};
+    }
+    g_hybrid_mempool = (txpolicy == "hybrid");
 
     // Feerate used to define dust.  Shouldn't be changed lightly as old
     // implementations may inadvertently create non-standard transactions

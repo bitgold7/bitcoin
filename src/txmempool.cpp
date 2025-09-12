@@ -422,23 +422,28 @@ void CTxMemPoolEntry::UpdateAncestorState(int32_t modifySize, CAmount modifyFee,
 
 HybridScore CTxMemPoolEntry::GetHybridScore() const
 {
+    static constexpr uint8_t MAX_BAND{255};
+
     // Fee band is the truncated satoshi-per-vbyte feerate capped at 255
     const CAmount fee_per_k = GetFee() * 1000 / GetTxSize();
-    const int fee_band = std::min<int>(fee_per_k / 1000, 255);
+    const uint8_t fee_band{static_cast<uint8_t>(std::min<CAmount>(fee_per_k / 1000, MAX_BAND))};
 
-    // Stake weight is approximated by the total output value
+    // Stake weight is approximated by total output value and capped
     uint64_t stake_weight{0};
     for (const CTxOut& out : GetTx().vout) {
         stake_weight += out.nValue;
     }
+    const uint8_t stake_band{static_cast<uint8_t>(std::min<uint64_t>(stake_weight / COIN, MAX_BAND))};
 
-    // Elapsed time since the transaction entered the mempool
-    const int64_t time_in_mempool = ::GetTime() - nTime;
+    // Elapsed time since the transaction entered the mempool, capped in seconds
+    const int64_t time_elapsed{::GetTime() - nTime};
+    const uint8_t time_band{static_cast<uint8_t>(std::min<int64_t>(time_elapsed, MAX_BAND))};
 
-    // Congestion metric is derived from the number of ancestors and descendants
-    const size_t congestion = static_cast<size_t>(GetCountWithAncestors() + GetCountWithDescendants());
+    // Congestion metric is the number of ancestors and descendants, capped
+    const size_t congestion_count{GetCountWithAncestors() + GetCountWithDescendants()};
+    const uint8_t congestion_band{static_cast<uint8_t>(std::min<size_t>(congestion_count, MAX_BAND))};
 
-    return {fee_band, stake_weight, time_in_mempool, congestion};
+    return {fee_band, stake_band, time_band, congestion_band};
 }
 
 //! Clamp option values and populate the error if options are not valid.
