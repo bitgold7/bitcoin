@@ -3468,6 +3468,38 @@ static RPCHelpMan claimdividends()
     };
 }
 
+static RPCHelpMan printparams()
+{
+    return RPCHelpMan{
+        "printparams",
+        "Return active consensus and policy parameters.",
+        {},
+        RPCResult{
+            RPCResult::Type::OBJ, "", "", {
+                {RPCResult::Type::STR, "chain", "Selected chain"},
+                {RPCResult::Type::NUM, "default_port", "P2P port"},
+                {RPCResult::Type::NUM, "rpc_port", "RPC port"},
+                {RPCResult::Type::STR, "bech32_hrp", "Bech32 human-readable part"},
+            }
+        },
+        RPCExamples{
+            HelpExampleCli("printparams", "") +
+            HelpExampleRpc("printparams", "")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            if (!request.params.empty()) {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "printparams takes no arguments");
+            }
+            UniValue obj(UniValue::VOBJ);
+            const CChainParams& params{Params()};
+            obj.pushKV("chain", params.GetChainTypeString());
+            obj.pushKV("default_port", params.GetDefaultPort());
+            obj.pushKV("rpc_port", BaseParams().RPCPort());
+            obj.pushKV("bech32_hrp", params.Bech32HRP());
+            return obj;
+        }
+    };
+}
 
 void RegisterBlockchainRPCCommands(CRPCTable& t)
 {
@@ -3498,6 +3530,7 @@ void RegisterBlockchainRPCCommands(CRPCTable& t)
         {"blockchain", &getchainstates},
         {"blockchain", &getdividendinfo},
         {"blockchain", &claimdividends},
+        {"util", &printparams},
         {"hidden", &invalidateblock},
         {"hidden", &reconsiderblock},
         {"hidden", &waitfornewblock},
