@@ -8,6 +8,7 @@
 #include <common/args.h>
 #include <pow.h>
 #include <kernel/stake.h>
+#include <pos/slashing.h>
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -101,6 +102,28 @@ using node::BlockMap;
 using node::CBlockIndexHeightOnlyComparator;
 using node::CBlockIndexWorkComparator;
 using node::SnapshotMetadata;
+
+namespace {
+
+pos::SlashingTracker g_slashing_tracker;
+
+bool GetValidatorID(const CBlock& block, std::string& out)
+{
+    if (!IsProofOfStake(block)) return false;
+    const CTransaction& tx{*block.vtx[1]};
+    if (tx.vin.empty()) return false;
+    const CScript& scriptSig{tx.vin[0].scriptSig};
+    CScript::const_iterator it = scriptSig.begin();
+    opcodetype op;
+    std::vector<unsigned char> vchSig;
+    std::vector<unsigned char> vchPub;
+    if (!scriptSig.GetOp(it, op, vchSig)) return false;
+    if (!scriptSig.GetOp(it, op, vchPub)) return false;
+    out = HexStr(vchPub);
+    return true;
+}
+
+} // namespace
 
 #ifdef ENABLE_BULLETPROOFS
 /** Extract a Bulletproof commitment and proof from a script.
@@ -270,6 +293,17 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
         }
         {
             LOCK(cs_main);
+            if (!CheckBlockSignature(block)) {
+                return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-signature", "invalid proof of stake block signature");
+            }
+            std::string validator_id;
+            if (!GetValidatorID(block, validator_id)) {
+                return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-signature", "invalid proof of stake block signature");
+            }
+            const std::string key = validator_id + ":" + std::to_string(next_height);
+            if (g_slashing_tracker.DetectDoubleSign(key)) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-pos-doublesign", "validator double signed");
+            }
             Chainstate& chainstate = g_chainman->ActiveChainstate();
             CCoinsViewCache view(&chainstate.CoinsTip());
             const CChain& chain{g_chainman->ActiveChain()};
@@ -333,10 +367,6 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
             }
 
             chainstate.AddToDividendPool(dividend_reward, height);
-        }
-        // The block must be signed by the coinstake input
-        if (!CheckBlockSignature(block)) {
-            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-signature", "invalid proof of stake block signature");
         }
     } else {
         if (IsProofOfStake(block)) {

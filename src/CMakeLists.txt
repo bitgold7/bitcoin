@@ -307,6 +307,7 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   pos/stake.cpp
   pos/stakemodifier.cpp
   pos/difficulty.cpp
+  pos/slashing.cpp
   rest.cpp
   rpc/blockchain.cpp
   rpc/external_signer.cpp
