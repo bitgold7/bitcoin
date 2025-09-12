@@ -5,6 +5,10 @@
 #include <pubkey.h>
 #include <script/descriptor.h>
 #include <script/sign.h>
+#include <base58.h>
+#include <chainparams.h>
+#include <crypto/common.h>
+#include <wallet/walletutil.h>
 #include <test/util/setup_common.h>
 #include <util/check.h>
 #include <util/strencodings.h>
@@ -12,6 +16,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <array>
 #include <optional>
 #include <string>
 #include <vector>
@@ -514,6 +519,22 @@ void CheckInferDescriptor(const std::string& script_hex, const std::string& expe
 }
 
 BOOST_FIXTURE_TEST_SUITE(descriptor_tests, BasicTestingSetup)
+
+BOOST_AUTO_TEST_CASE(descriptor_ext_prefix)
+{
+    std::array<std::byte, 32> seed{};
+    CExtKey master;
+    master.SetSeed(seed);
+    WalletDescriptor w_desc = wallet::GenerateWalletDescriptor(master.Neuter(), OutputType::BECH32, /*internal=*/false);
+    std::string desc = w_desc.descriptor->ToString();
+    const auto start = desc.find('(');
+    const auto slash = desc.find('/', start);
+    std::string xpub = desc.substr(start + 1, slash - start - 1);
+    std::vector<unsigned char> data;
+    BOOST_CHECK(DecodeBase58Check(xpub, data, BIP32_EXTKEY_WITH_VERSION_SIZE));
+    uint32_t prefix = ReadBE32(data.data());
+    BOOST_CHECK_EQUAL(prefix, Params().BIP32PubKeyPrefix());
+}
 
 BOOST_AUTO_TEST_CASE(descriptor_test)
 {
