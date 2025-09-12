@@ -159,14 +159,25 @@ public:
         m_assumed_blockchain_size = 720;
         m_assumed_chain_state_size = 14;
 
-        // To create a new genesis block, modify the timestamp, nonce, and the message in CreateGenesisBlock
-        // Then, run the node to get the required hashMerkleRoot and hashGenesisBlock
-        genesis = CreateGenesisBlock(1704067200, 1475287, 0x1e0ffff0, 1, 3'000'000 * COIN);
+        // BitGold genesis block
+        const char* genesis_timestamp =
+            "The Times 01/Jan/2024 BitGold unveils the digital gold standard";
+        const CScript genesis_script =
+            CScript() <<
+            "04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f"_hex
+            << OP_CHECKSIG;
+        genesis = CreateGenesisBlock(genesis_timestamp, genesis_script,
+                                     1704067200, 206523, 0x1e0ffff0, 1,
+                                     3'000'000 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-        consensus.defaultAssumeValid = uint256{"00000a43320aba706548e7babb8ab22d73fb89ad5777a5e57e3ca62324e66ff8"};
-        consensus.nMinimumChainWork = uint256{"0000000000000000000000000000000000000000000000000000000000200020"};
-        assert(consensus.hashGenesisBlock == uint256{"00000fa682dacac2311173aa140199f3039f118539ba4bb1403900d05a99bfe9"});
-        assert(genesis.hashMerkleRoot == uint256{"66c868e09d6a774ca6019e4f757f1d4e9aafe9633151111451c8767db6d8dd62"});
+        consensus.defaultAssumeValid =
+            uint256{"0000030e31ae394ca69551a5ed5a321d1175e043efae4afacdf09351a0b8a83c"};
+        consensus.nMinimumChainWork =
+            uint256{"0000000000000000000000000000000000000000000000000000000000200020"};
+        assert(consensus.hashGenesisBlock ==
+               uint256{"00000e0d7a3cf8b8575c119de4e59064a8feecb36a38f1b64f64533f969a4a6b"});
+        assert(genesis.hashMerkleRoot ==
+               uint256{"fda596d1084a6101c2901ca6737eeebf91f726ea9517c2be5968e834601e4c11"});
         // Ensure DNS entries are coordinated externally before release.
         vSeeds.emplace_back("seed.bitgold.org");
         vSeeds.emplace_back("seed.bitgold.net");
@@ -217,7 +228,7 @@ public:
 
         checkpointData = {{
             {0, consensus.hashGenesisBlock},
-            {1, uint256{"00000a43320aba706548e7babb8ab22d73fb89ad5777a5e57e3ca62324e66ff8"}},
+            {1, uint256{"0000030e31ae394ca69551a5ed5a321d1175e043efae4afacdf09351a0b8a83c"}},
         }};
     }
 };
@@ -488,8 +499,8 @@ public:
         vSeeds.clear();
 
         if (!options.challenge) {
-            // Default signet challenge as defined in BIP325
-            bin = "512103ad5e0edad18cb1f0fc0d28a3d4f1f3e445640337489abb10404f2d1e086be430210359ef5021964fe22d6f8e05b2463c9540ce96883fe3b278760f048f5189f2e6c452ae"_hex_v_u8;
+            // BitGold signet challenge (1-of-1 multisig)
+            bin = "512102ba5df89c7e3ccfc4f092612e1f9598eafbcf5a1a1638ceb8b316ec176b6f922451ae"_hex_v_u8;
             vFixedSeeds = std::vector<uint8_t>(std::begin(chainparams_seed_signet), std::end(chainparams_seed_signet));
 
             consensus.nMinimumChainWork = uint256{"0000000000000000000000000000000000000000000000000000012f0987b7a0"};
