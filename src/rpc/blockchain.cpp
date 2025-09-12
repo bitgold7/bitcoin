@@ -436,7 +436,7 @@ static RPCHelpMan getdividendpool()
         "getdividendpool",
         "Returns the current dividend pool balance.\n",
         {},
-        RPCResult{RPCResult::Type::NUM, "", "dividend pool balance in BTC"},
+        RPCResult{RPCResult::Type::NUM, "", "dividend pool balance in BGD"},
         RPCExamples{
             HelpExampleCli("getdividendpool", "") +
             HelpExampleRpc("getdividendpool", "")
