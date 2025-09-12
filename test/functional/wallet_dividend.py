@@ -16,6 +16,8 @@ from test_framework.messages import (
 from test_framework.script import CScript, OP_TRUE
 from test_framework.util import assert_equal
 
+QUARTER_BLOCKS = 16200
+
 
 STAKE_TIMESTAMP_MASK = None
 MIN_STAKE_AGE = 60 * 60
@@ -49,6 +51,7 @@ class WalletDividendTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 1
         self.setup_clean_chain = True
+        self.extra_args = [["-dividendpayouts=1"]]
 
     def run_test(self):
         node = self.nodes[0]
@@ -122,6 +125,25 @@ class WalletDividendTest(BitcoinTestFramework):
         assert_equal(node.getdividendpool()["amount"], pool_before)
 
         node.setmocktime(0)
+
+        # Stake a valid block to fund the dividend pool
+        node.startstaking()
+        node.sendtoaddress(addr, 1)
+        node.waitforblockheight(prev_height + 1)
+
+        # Mine up to the payout height to mature dividends
+        remaining = QUARTER_BLOCKS - node.getblockcount()
+        node.generatetoaddress(remaining, addr)
+
+        # Dividends should now be pending for our address
+        pend = node.getwalletdividends()
+        assert addr in pend and pend[addr] > 0
+
+        # Claim dividends and ensure they cannot be claimed twice
+        first_claim = node.claimwalletdividends()
+        assert_equal(first_claim[addr], pend[addr])
+        second_claim = node.claimwalletdividends()
+        assert_equal(second_claim, {})
 
 if __name__ == '__main__':
     WalletDividendTest(__file__).main()
