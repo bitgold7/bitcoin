@@ -93,7 +93,6 @@ public:
         consensus.CSVHeight = 419328;            // 000000000000000004a1b34462cb8aeebd5799177f7a29cf28f2d1961716b5b5
         consensus.SegwitHeight = 481824;         // 0000000000000000001c8018d9cb3b742ef25114f27563e3fc4a1902167f9893
         consensus.MinBIP9WarningHeight = 483840; // segwit activation height + miner confirmation window
-        consensus.powLimit = uint256{"00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"};
         consensus.nPowTargetTimespan = 1 * 24 * 60 * 60; // one day
         consensus.nPowTargetSpacing = 8 * 60;
         consensus.posActivationHeight = 2;
@@ -104,8 +103,8 @@ public:
         consensus.nStakeModifierVersion = 3;
         consensus.nStakeMinConfirmations = 80;
         consensus.nStakeMaxAgeWeight = 60 * 60 * 24 * 30;
-        consensus.posLimit = consensus.powLimit;
-        consensus.posLimitLower = consensus.powLimit;
+        consensus.posLimit = uint256{"00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"};
+        consensus.posLimitLower = consensus.posLimit;
         consensus.nStakeTargetSpacing = 8 * 60;
         consensus.nMaximumSupply = 8'000'000 * COIN;
         consensus.genesis_reward = 3'000'000 * COIN;
@@ -250,7 +249,6 @@ public:
         consensus.CSVHeight = 770112;            // 00000000025e930139bac5c6c31a403776da130831ab85be56578f3fa75369bb
         consensus.SegwitHeight = 834624;         // 00000000002b980fcd729daaa248fd9316a5200e9b367f4ff2c42453e84201ca
         consensus.MinBIP9WarningHeight = 836640; // segwit activation height + miner confirmation window
-        consensus.powLimit = uint256{"00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"};
         consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
         consensus.nPowTargetSpacing = 8 * 60;
         consensus.posActivationHeight = 2;
@@ -261,8 +259,8 @@ public:
         consensus.nStakeModifierVersion = 3;
         consensus.nStakeMinConfirmations = 80;
         consensus.nStakeMaxAgeWeight = 60 * 60 * 24 * 30;
-        consensus.posLimit = consensus.powLimit;
-        consensus.posLimitLower = consensus.powLimit;
+        consensus.posLimit = uint256{"00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"};
+        consensus.posLimitLower = consensus.posLimit;
         consensus.nStakeTargetSpacing = 8 * 60;
         consensus.nMaximumSupply = 8'000'000 * COIN;
         consensus.genesis_reward = 3'000'000 * COIN;
@@ -370,7 +368,6 @@ public:
         consensus.CSVHeight = 770112;            // 00000000025e930139bac5c6c31a403776da130831ab85be56578f3fa75369bb
         consensus.SegwitHeight = 834624;         // 00000000002b980fcd729daaa248fd9316a5200e9b367f4ff2c42453e84201ca
         consensus.MinBIP9WarningHeight = 836640; // segwit activation height + miner confirmation window
-        consensus.powLimit = uint256{"00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"};
         consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
         consensus.nPowTargetSpacing = 8 * 60;
         consensus.posActivationHeight = 2;
@@ -381,8 +378,8 @@ public:
         consensus.nStakeModifierVersion = 3;
         consensus.nStakeMinConfirmations = 80;
         consensus.nStakeMaxAgeWeight = 60 * 60 * 24 * 30;
-        consensus.posLimit = consensus.powLimit;
-        consensus.posLimitLower = consensus.powLimit;
+        consensus.posLimit = uint256{"00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"};
+        consensus.posLimitLower = consensus.posLimit;
         consensus.nStakeTargetSpacing = 8 * 60;
         consensus.nMaximumSupply = 8'000'000 * COIN;
         consensus.genesis_reward = 3'000'000 * COIN;
@@ -538,9 +535,8 @@ public:
         consensus.enforce_BIP94 = false;
         consensus.fPowNoRetargeting = false;
         consensus.MinBIP9WarningHeight = 0;
-        consensus.powLimit = uint256{"00000377ae000000000000000000000000000000000000000000000000000000"};
-        consensus.posLimit = consensus.powLimit;
-        consensus.posLimitLower = consensus.powLimit;
+        consensus.posLimit = uint256{"00000377ae000000000000000000000000000000000000000000000000000000"};
+        consensus.posLimitLower = consensus.posLimit;
         consensus.nStakeTargetSpacing = 8 * 60;
         consensus.nMaximumSupply = 8'000'000 * COIN;
         consensus.genesis_reward = 3'000'000 * COIN;
@@ -627,7 +623,6 @@ public:
         consensus.CSVHeight = 1;    // Always active unless overridden
         consensus.SegwitHeight = 0; // Always active unless overridden
         consensus.MinBIP9WarningHeight = 0;
-        consensus.powLimit = uint256{"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"};
         consensus.nPowTargetTimespan = 24 * 60 * 60; // one day
         consensus.nPowTargetSpacing = 8 * 60;
         consensus.posActivationHeight = opts.pos_activation_height;
@@ -638,8 +633,8 @@ public:
         consensus.nStakeModifierVersion = 3;
         consensus.nStakeMinConfirmations = 80;
         consensus.nStakeMaxAgeWeight = 60 * 60 * 24 * 30;
-        consensus.posLimit = consensus.powLimit;
-        consensus.posLimitLower = consensus.powLimit;
+        consensus.posLimit = uint256{"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"};
+        consensus.posLimitLower = consensus.posLimit;
         consensus.nStakeTargetSpacing = 8 * 60;
         consensus.nMaximumSupply = 8'000'000 * COIN;
         consensus.genesis_reward = 3'000'000 * COIN;

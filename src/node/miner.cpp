@@ -714,7 +714,7 @@ bool CreatePosBlock(wallet::CWallet& wallet)
 
     bool new_block{false};
     return chainman.ProcessNewBlock(std::make_shared<const CBlock>(std::move(block)),
-                                    /*force_processing=*/true, /*min_pow_checked=*/true,
+                                    /*force_processing=*/true,
                                     &new_block);
 }
 #endif // ENABLE_WALLET

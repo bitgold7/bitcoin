@@ -583,7 +583,7 @@ BOOST_FIXTURE_TEST_CASE(process_new_block_rejects_pow_height2, ChainTestingSetup
 
     bool new_block{false};
     BOOST_CHECK(!g_chainman->ProcessNewBlock(std::make_shared<const CBlock>(block),
-                                             /*force_processing=*/true, /*min_pow_checked=*/true, &new_block));
+                                             /*force_processing=*/true, &new_block));
 
     {
         LOCK(cs_main);

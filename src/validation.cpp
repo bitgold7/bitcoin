@@ -2323,7 +2323,7 @@ bool HasValidWork(const std::vector<CBlockHeader>& headers,
 {
     const auto& checkpoints{chainparams.Checkpoints().checkpoints};
     const auto& consensus{chainparams.GetConsensus()};
-    const arith_uint256 work_limit{std::max(UintToArith256(consensus.powLimit), UintToArith256(consensus.posLimit))};
+    const arith_uint256 work_limit{UintToArith256(consensus.posLimit)};
     for (const CBlockHeader& header : headers) {
         bool fNegative{false};
         bool fOverflow{false};
