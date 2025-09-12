@@ -24,6 +24,7 @@ private:
     WalletModel* walletModel{nullptr};
     QLabel* poolLabel;
     QLabel* nextLabel;
+    QLabel* payoutsLabel;
     const PlatformStyle* m_platform_style;
 };
 
