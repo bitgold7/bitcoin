@@ -6,8 +6,8 @@
 #include <bitcoin-build-config.h> // IWYU pragma: keep
 
 #include <common/args.h>
-#include <pow.h>
 #include <kernel/stake.h>
+#include <pos/difficulty.h>
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -2271,7 +2271,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast,
     assert(pindexLast);
 
     if (params.fEnablePoS && pindexLast->nHeight + 1 >= params.posActivationHeight) {
-        return GetPoSNextWorkRequired(pindexLast, pblock->GetBlockTime(), params);
+        return GetPoSNextTargetRequired(pindexLast, pblock->GetBlockTime(), params);
     }
 
     // With proof-of-work removed, keep the previous difficulty for premine blocks.
