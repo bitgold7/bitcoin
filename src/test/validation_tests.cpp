@@ -6,6 +6,7 @@
 #include <consensus/amount.h>
 #include <consensus/merkle.h>
 #include <core_io.h>
+#include <dividend/dividend.h>
 #include <hash.h>
 #include <net.h>
 #include <signet.h>
@@ -438,5 +439,26 @@ BOOST_FIXTURE_TEST_CASE(bulletproof_activation_tests, TestChain100Setup)
     dep.nStartTime = old_start;
 }
 #endif
+
+BOOST_AUTO_TEST_CASE(calculate_payouts_corner_cases)
+{
+    using dividend::StakeInfo;
+    using dividend::CalculatePayouts;
+    using dividend::QUARTER_BLOCKS;
+
+    std::map<std::string, StakeInfo> stakes;
+    stakes.emplace("addr1", StakeInfo{10 * COIN, 0});
+    auto payouts = CalculatePayouts(stakes, QUARTER_BLOCKS, /*pool=*/0);
+    BOOST_CHECK(payouts.empty());
+
+    stakes.clear();
+    stakes.emplace("A", StakeInfo{10 * COIN, 0});
+    stakes.emplace("B", StakeInfo{30 * COIN, 0});
+    CAmount pool{30 * COIN / 100};
+    payouts = CalculatePayouts(stakes, QUARTER_BLOCKS, pool);
+    BOOST_CHECK_EQUAL(payouts.size(), 2);
+    BOOST_CHECK_EQUAL(payouts["A"] + payouts["B"], pool);
+    BOOST_CHECK(payouts["B"] > payouts["A"]);
+}
 
 BOOST_AUTO_TEST_SUITE_END()
