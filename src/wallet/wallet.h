@@ -831,6 +831,13 @@ public:
      */
     CFeeRate m_consolidate_feerate{DEFAULT_CONSOLIDATE_FEERATE};
 
+    /**
+     * Minimum transaction feerate required for ResubmitWalletTransactions to
+     * rebroadcast an unconfirmed transaction. If unset, a feerate estimate for
+     * the next block will be used. A value of 0 disables filtering.
+     */
+    std::optional<CFeeRate> m_resend_feerate_filter{};
+
     /** The maximum fee amount we're willing to pay to prioritize partial spend avoidance. */
     CAmount m_max_aps_fee{DEFAULT_MAX_AVOIDPARTIALSPEND_FEE}; //!< note: this is absolute fee, not fee rate
     OutputType m_default_address_type{DEFAULT_ADDRESS_TYPE};
