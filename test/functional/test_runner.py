@@ -117,6 +117,7 @@ BASE_SCRIPTS = [
     'wallet_basic.py',
     'address_prefixes.py',
     'feature_maxtipage.py',
+    'feature_prune_height.py',
     'wallet_multiwallet.py',
     'wallet_multiwallet.py --usecli',
     'p2p_dns_seeds.py',
