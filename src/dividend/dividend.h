@@ -3,6 +3,7 @@
 
 #include <consensus/amount.h>
 #include <serialize.h>
+#include <primitives/transaction.h>
 #include <map>
 #include <script/script.h>
 #include <string>
@@ -39,6 +40,12 @@ double CalculateApr(CAmount amount, int blocks_held);
  * @return map of address to payout amount
  */
 Payouts CalculatePayouts(const std::map<std::string, StakeInfo>& stakes, int height, CAmount pool);
+
+/** Build a deterministic payout transaction.
+ * Recipients are sorted by address and a final change output returns
+ * any remaining balance to the dividend pool script.
+ */
+CMutableTransaction BuildPayoutTx(const std::map<std::string, StakeInfo>& stakes, int height, CAmount pool);
 
 //! Constant script used for dividend pool outputs
 inline const CScript& GetDividendScript()
