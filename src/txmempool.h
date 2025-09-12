@@ -41,6 +41,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <cstdint>
 
 class CChain;
 class ValidationSignals;
@@ -86,10 +87,10 @@ struct mempoolentry_wtxid
 };
 
 struct HybridScore {
-    int fee_band;
-    uint64_t stake_weight;
-    int64_t time_in_mempool;
-    size_t congestion;
+    uint8_t fee_band;
+    uint8_t stake_weight;
+    uint8_t time_in_mempool;
+    uint8_t congestion;
 };
 
 class CompareTxMemPoolEntryByHybridScore

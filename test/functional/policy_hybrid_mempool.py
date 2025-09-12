@@ -10,7 +10,7 @@ import time
 class HybridMempoolPolicyTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 1
-        self.extra_args = [['-hybridmempool']]
+        self.extra_args = [['-txpolicy=hybrid']]
 
     def run_test(self):
         node = self.nodes[0]
