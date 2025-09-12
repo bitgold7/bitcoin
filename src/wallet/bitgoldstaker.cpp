@@ -239,7 +239,7 @@ void BitGoldStaker::ThreadStakeMiner()
                             LOCK(cs_main);
                             if (!ContextualCheckProofOfStake(block, pindexPrev,
                                                              chainman.ActiveChainstate().CoinsTip(),
-                                                             chainman.ActiveChain(), consensus)) {
+                                                             chainman.ActiveChain(), man, consensus)) {
                                 LogDebug(BCLog::STAKING, "ThreadStakeMiner: produced block failed CheckProofOfStake\n");
                                 continue;
                             }

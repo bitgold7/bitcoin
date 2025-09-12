@@ -182,7 +182,7 @@ void Stake::ThreadStakeMiner()
                             LOCK(cs_main);
                             if (!ContextualCheckProofOfStake(block, pindexPrev,
                                                               chainman.ActiveChainstate().CoinsTip(),
-                                                              chainman.ActiveChain(), consensus)) {
+                                                              chainman.ActiveChain(), man, consensus)) {
                                 continue;
                             }
                         }
