@@ -64,6 +64,20 @@ following from the top of a clean repository:
 ./contrib/guix/guix-build
 ```
 
+### Building BitGold
+
+Projects based on Bitcoin Core can leverage these scripts as well.  To build
+the BitGold variant, enable the `BITGOLD` environment variable prior to
+invoking the build script:
+
+```sh
+export BITGOLD=1
+./contrib/guix/guix-build
+```
+
+The resulting artifacts will be tagged with the BitGold name while retaining
+the same reproducible Guix toolchain.
+
 ## Codesigning build outputs
 
 The `guix-codesign` command attaches codesignatures (produced by codesigners) to
