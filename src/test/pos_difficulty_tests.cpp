@@ -4,9 +4,8 @@
 #include <chainparams.h>
 #include <consensus/amount.h>
 #include <consensus/params.h>
-#include <kernel/stake.h>
-#include <pos/difficulty.h>
-#include <pos/stake.h>
+#include <consensus/pos/stake.h>
+#include <consensus/pos/difficulty.h>
 #include <primitives/transaction.h>
 #include <primitives/block.h>
 #include <random>

@@ -36,7 +36,7 @@
 #include <util/syserror.h>
 #include <util/translation.h>
 #include <validation.h>
-#include <pos/stake.h>
+#include <consensus/pos/stake.h>
 
 #include <cstddef>
 #include <map>

@@ -34,7 +34,7 @@
 #include <util/time.h>
 #include <util/translation.h>
 #include <versionbits.h>
-#include <dividend/dividend.h>
+#include <consensus/dividends/dividend.h>
 
 #include <atomic>
 #include <cstdint>

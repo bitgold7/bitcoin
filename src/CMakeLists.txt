@@ -304,10 +304,9 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   policy/priority.cpp
   policy/truc_policy.cpp
   pow.cpp
-  kernel/stake.cpp
-  pos/stake.cpp
-  pos/stakemodifier.cpp
-  pos/difficulty.cpp
+  consensus/pos/stake.cpp
+  consensus/pos/stakemodifier.cpp
+  consensus/pos/difficulty.cpp
   rest.cpp
   rpc/blockchain.cpp
   rpc/external_signer.cpp
@@ -324,7 +323,7 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   rpc/bulletproof.cpp
   rpc/txoutproof.cpp
   rpc/dividend.cpp
-  dividend/dividend.cpp
+  consensus/dividends/dividend.cpp
   $<$<TARGET_EXISTS:bitcoin_wallet>:rpc/staking.cpp>
   script/sigcache.cpp
   signet.cpp

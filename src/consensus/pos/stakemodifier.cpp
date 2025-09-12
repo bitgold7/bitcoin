@@ -1,4 +1,4 @@
-#include <pos/stakemodifier.h>
+#include <consensus/pos/stakemodifier.h>
 
 #include <chain.h>
 #include <hash.h>
@@ -9,6 +9,8 @@ uint256 g_stake_modifier;
 int64_t g_modifier_time{0};
 std::mutex g_mutex;
 }
+
+namespace kernel {
 
 uint256 ComputeStakeModifier(const CBlockIndex* pindexPrev, const uint256& prev_modifier)
 {
@@ -29,3 +31,5 @@ uint256 GetStakeModifier(const CBlockIndex* pindexPrev, unsigned int nTime, cons
     }
     return g_stake_modifier;
 }
+
+} // namespace kernel

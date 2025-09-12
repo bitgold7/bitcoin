@@ -1,17 +1,17 @@
-#ifndef BITCOIN_POS_STAKE_H
-#define BITCOIN_POS_STAKE_H
+#ifndef BITCOIN_CONSENSUS_POS_STAKE_H
+#define BITCOIN_CONSENSUS_POS_STAKE_H
 
 #include <consensus/amount.h>
 #include <chain.h>
 #include <coins.h>
 #include <consensus/params.h>
-#include <node/stake_modifier_manager.h>
 #include <primitives/block.h>
 #include <uint256.h>
 #include <arith_uint256.h>
 #include <util/time.h>
 
 class CBlockIndex;
+namespace node { class StakeModifierManager; }
 
 // Default minimum coin age for staking (8 hours, PoSV3.1)
 // Network-specific values are provided via consensus parameters
@@ -65,4 +65,10 @@ inline StakeTimeValidationResult CheckStakeTimestamp(const CBlockHeader& h, unsi
     return StakeTimeValidationResult::OK;
 }
 
-#endif // BITCOIN_POS_STAKE_H
+namespace kernel {
+using ::StakeTimeValidationResult;
+using ::CheckStakeTimestamp;
+} // namespace kernel
+
+#endif // BITCOIN_CONSENSUS_POS_STAKE_H
+

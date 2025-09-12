@@ -3,14 +3,14 @@
 #include <consensus/amount.h>
 #include <consensus/consensus.h>
 #include <consensus/merkle.h>
-#include <dividend/dividend.h>
+#include <consensus/dividends/dividend.h>
 #include <interfaces/chain.h>
 #include <key.h>
 #include <node/context.h>
 #include <node/miner.h>
 #include <node/stake_modifier_manager.h>
-#include <pos/difficulty.h>
-#include <pos/stake.h>
+#include <consensus/pos/difficulty.h>
+#include <consensus/pos/stake.h>
 #include <script/standard.h>
 #include <util/time.h>
 #include <validation.h>

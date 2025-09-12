@@ -1,5 +1,5 @@
-#ifndef BITCOIN_POS_DIFFICULTY_H
-#define BITCOIN_POS_DIFFICULTY_H
+#ifndef BITCOIN_CONSENSUS_POS_DIFFICULTY_H
+#define BITCOIN_CONSENSUS_POS_DIFFICULTY_H
 
 #include <arith_uint256.h>
 #include <consensus/params.h>
@@ -12,4 +12,4 @@ unsigned int GetPoSNextTargetRequired(const CBlockIndex* pindexLast,
                                       int64_t nBlockTime,
                                       const Consensus::Params& params);
 
-#endif // BITCOIN_POS_DIFFICULTY_H
+#endif // BITCOIN_CONSENSUS_POS_DIFFICULTY_H

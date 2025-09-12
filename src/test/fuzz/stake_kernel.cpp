@@ -1,4 +1,4 @@
-#include <pos/stake.h>
+#include <consensus/pos/stake.h>
 #include <node/stake_modifier_manager.h>
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>

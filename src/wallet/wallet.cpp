@@ -7,7 +7,7 @@
 #include <wallet/spend.h>
 #include <wallet/blinding.h>
 
-#include <dividend/dividend.h>
+#include <consensus/dividends/dividend.h>
 #include <wallet/receive.h>
 #include <policy/policy.h>
 #ifdef ENABLE_BULLETPROOFS

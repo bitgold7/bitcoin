@@ -1,5 +1,5 @@
-#ifndef BITCOIN_DIVIDEND_DIVIDEND_H
-#define BITCOIN_DIVIDEND_DIVIDEND_H
+#ifndef BITCOIN_CONSENSUS_DIVIDENDS_DIVIDEND_H
+#define BITCOIN_CONSENSUS_DIVIDENDS_DIVIDEND_H
 
 #include <consensus/amount.h>
 #include <serialize.h>
@@ -58,4 +58,4 @@ inline const CScript& GetDividendScript()
 
 } // namespace dividend
 
-#endif // BITCOIN_DIVIDEND_DIVIDEND_H
+#endif // BITCOIN_CONSENSUS_DIVIDENDS_DIVIDEND_H

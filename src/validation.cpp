@@ -6,9 +6,9 @@
 #include <bitgold-build-config.h> // IWYU pragma: keep
 
 #include <common/args.h>
-#include <kernel/stake.h>
+#include <consensus/pos/stake.h>
 #include <pos/slashing.h>
-#include <dividend/dividend.h>
+#include <consensus/dividends/dividend.h>
 #include <pow.h>
 #include <validation.h>
 

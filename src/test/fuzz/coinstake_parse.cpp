@@ -1,4 +1,4 @@
-#include <pos/stake.h>
+#include <consensus/pos/stake.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <streams.h>

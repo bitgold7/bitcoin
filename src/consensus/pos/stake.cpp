@@ -1,6 +1,6 @@
-#include <pos/stake.h>
-#include <pos/difficulty.h>
-#include <pos/stakemodifier.h>
+#include <consensus/pos/stake.h>
+#include <consensus/pos/difficulty.h>
+#include <consensus/pos/stakemodifier.h>
 #include <node/stake_modifier_manager.h>
 
 #include <arith_uint256.h>

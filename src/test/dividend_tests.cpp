@@ -1,5 +1,5 @@
 #include <boost/test/unit_test.hpp>
-#include <dividend/dividend.h>
+#include <consensus/dividends/dividend.h>
 #include <primitives/transaction.h>
 #include <test/util/setup_common.h>
 #include <vector>
