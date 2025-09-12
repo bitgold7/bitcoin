@@ -29,7 +29,7 @@ const CChainParams &Params();
  */
 void SelectParams(const ChainType chain);
 
-/** Provisional BIP44 coin type. */
-static constexpr uint32_t BIP44_COIN_TYPE{999};
+/** SLIP-44 coin type for BitGold (BGD). */
+extern const uint32_t BIP44_COIN_TYPE;
 
 #endif // BITCOIN_CHAINPARAMS_H

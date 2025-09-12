@@ -190,10 +190,10 @@ public:
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,40);
         base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,153);
 
-        m_bip32_pubkey_prefix = 0x0241C65A;
-        m_bip32_privkey_prefix = 0x0241B21B;
-        base58Prefixes[EXT_PUBLIC_KEY] = {0x02, 0x41, 0xC6, 0x5A};
-        base58Prefixes[EXT_SECRET_KEY] = {0x02, 0x41, 0xB2, 0x1B};
+        m_bip32_pubkey_prefix = 0x3252ED54;
+        m_bip32_privkey_prefix = 0x3252F54B;
+        base58Prefixes[EXT_PUBLIC_KEY] = {0x32, 0x52, 0xED, 0x54};
+        base58Prefixes[EXT_SECRET_KEY] = {0x32, 0x52, 0xF5, 0x4B};
 
         bech32_hrp = "bg";
 
@@ -319,10 +319,10 @@ public:
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 65);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 78);
         base58Prefixes[SECRET_KEY] = std::vector<unsigned char>(1, 193);
-        m_bip32_pubkey_prefix = 0x0242C65A;
-        m_bip32_privkey_prefix = 0x0242B21B;
-        base58Prefixes[EXT_PUBLIC_KEY] = {0x02, 0x42, 0xC6, 0x5A};
-        base58Prefixes[EXT_SECRET_KEY] = {0x02, 0x42, 0xB2, 0x1B};
+        m_bip32_pubkey_prefix = 0x3352ED54;
+        m_bip32_privkey_prefix = 0x3352F54B;
+        base58Prefixes[EXT_PUBLIC_KEY] = {0x33, 0x52, 0xED, 0x54};
+        base58Prefixes[EXT_SECRET_KEY] = {0x33, 0x52, 0xF5, 0x4B};
 
         bech32_hrp = "tbg";
 
@@ -441,10 +441,10 @@ public:
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 65);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 78);
         base58Prefixes[SECRET_KEY] = std::vector<unsigned char>(1, 193);
-        m_bip32_pubkey_prefix = 0x0243C65A;
-        m_bip32_privkey_prefix = 0x0243B21B;
-        base58Prefixes[EXT_PUBLIC_KEY] = {0x02, 0x43, 0xC6, 0x5A};
-        base58Prefixes[EXT_SECRET_KEY] = {0x02, 0x43, 0xB2, 0x1B};
+        m_bip32_pubkey_prefix = 0x3452ED54;
+        m_bip32_privkey_prefix = 0x3452F54B;
+        base58Prefixes[EXT_PUBLIC_KEY] = {0x34, 0x52, 0xED, 0x54};
+        base58Prefixes[EXT_SECRET_KEY] = {0x34, 0x52, 0xF5, 0x4B};
 
         bech32_hrp = "tbg";
 
@@ -594,10 +594,10 @@ public:
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 111);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 196);
         base58Prefixes[SECRET_KEY] = std::vector<unsigned char>(1, 239);
-        m_bip32_pubkey_prefix = 0x0244C65A;
-        m_bip32_privkey_prefix = 0x0244B21B;
-        base58Prefixes[EXT_PUBLIC_KEY] = {0x02, 0x44, 0xC6, 0x5A};
-        base58Prefixes[EXT_SECRET_KEY] = {0x02, 0x44, 0xB2, 0x1B};
+        m_bip32_pubkey_prefix = 0x3552ED54;
+        m_bip32_privkey_prefix = 0x3552F54B;
+        base58Prefixes[EXT_PUBLIC_KEY] = {0x35, 0x52, 0xED, 0x54};
+        base58Prefixes[EXT_SECRET_KEY] = {0x35, 0x52, 0xF5, 0x4B};
 
         bech32_hrp = "sbg";
 
@@ -758,10 +758,10 @@ public:
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 111);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 196);
         base58Prefixes[SECRET_KEY] = std::vector<unsigned char>(1, 239);
-        m_bip32_pubkey_prefix = 0x0245C65A;
-        m_bip32_privkey_prefix = 0x0245B21B;
-        base58Prefixes[EXT_PUBLIC_KEY] = {0x02, 0x45, 0xC6, 0x5A};
-        base58Prefixes[EXT_SECRET_KEY] = {0x02, 0x45, 0xB2, 0x1B};
+        m_bip32_pubkey_prefix = 0x3652ED54;
+        m_bip32_privkey_prefix = 0x3652F54B;
+        base58Prefixes[EXT_PUBLIC_KEY] = {0x36, 0x52, 0xED, 0x54};
+        base58Prefixes[EXT_SECRET_KEY] = {0x36, 0x52, 0xF5, 0x4B};
 
         bech32_hrp = "rbg";
     }
