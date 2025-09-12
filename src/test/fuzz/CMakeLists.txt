@@ -17,11 +17,13 @@ add_executable(fuzz
   bitdeque.cpp
   bitset.cpp
   block.cpp
+  block_deserialize.cpp
   block_header.cpp
   block_index.cpp
   blockfilter.cpp
   bloom_filter.cpp
   buffered_file.cpp
+  bulletproof_decode_verify.cpp
   bulletproof_parse.cpp
   chain.cpp
   checkqueue.cpp
@@ -110,6 +112,7 @@ add_executable(fuzz
   script_parsing.cpp
   script_sigcache.cpp
   script_sign.cpp
+  script_verify.cpp
   scriptnum_ops.cpp
   secp256k1_ec_seckey_import_export_der.cpp
   secp256k1_ecdsa_signature_parse_der_lax.cpp
@@ -124,6 +127,7 @@ add_executable(fuzz
   timeoffsets.cpp
   torcontrol.cpp
   transaction.cpp
+  tx_deserialize.cpp
   txdownloadman.cpp
   tx_in.cpp
   tx_out.cpp
