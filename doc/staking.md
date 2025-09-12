@@ -36,8 +36,9 @@ PoSV3 introduces stricter requirements for proof-of-stake validation:
 * Each staked input must be at least 1 BG and must have aged for one hour or
   more before being eligible.
 * Blocks contain a zero-value coinbase transaction followed by the coinstake.
-* The coinstake output pays back the original amount plus the current block
-  subsidy.
+* The coinstake output pays back the original amount plus a reward proportional
+  to the staking coin's age:
+  `reward = subsidy × min(nTimeTx − stake_time, nStakeMaxAgeWeight) / nStakeMinAge`.
 
 These parameters are fixed by consensus and cannot be changed via configuration.
 

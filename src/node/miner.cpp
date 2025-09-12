@@ -21,6 +21,7 @@
 #include <node/kernel_notifications.h>
 #include <policy/feerate.h>
 #include <policy/policy.h>
+#include <pos/difficulty.h>
 #include <pos/stake.h>
 #include <primitives/transaction.h>
 #include <util/moneystr.h>
@@ -633,12 +634,25 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     }
     if (!stake_out) return false;
 
+    // Determine block time and difficulty
+    unsigned int nTimeTx = std::max<int64_t>(
+        GetMinimumTime(pindexPrev, consensus.DifficultyAdjustmentInterval()),
+        TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()));
+    nTimeTx &= ~consensus.nStakeTimestampMask;
+    unsigned int nBits = GetPoSNextTargetRequired(pindexPrev, nTimeTx, consensus);
+
+    // Look up the block time of the staking UTXO
+    int coin_height = pindexPrev->nHeight - stake_out->depth + 1;
+    const CBlockIndex* pindexFrom = chainstate.m_chain[coin_height];
+    if (!pindexFrom) return false;
+    int64_t stake_time = pindexFrom->GetBlockTime();
+
     // Construct coinstake transaction
     CMutableTransaction coinstake;
-    coinstake.nLockTime = height;
+    coinstake.nLockTime = nTimeTx;
     coinstake.vin.emplace_back(stake_out->outpoint);
     coinstake.vin[0].nSequence = CTxIn::SEQUENCE_FINAL;
-    int64_t coin_age_weight = consensus.nStakeMinAge; // Placeholder until wallet provides age
+    int64_t coin_age_weight = int64_t(nTimeTx) - stake_time;
     CAmount reward = GetProofOfStakeReward(height, /*fees=*/0, coin_age_weight, consensus);
     CAmount validator_reward = reward * 9 / 10;
     CAmount dividend_reward = reward - validator_reward;
@@ -683,12 +697,8 @@ bool CreatePosBlock(wallet::CWallet& wallet)
 
     block.hashPrevBlock = pindexPrev->GetBlockHash();
     block.nVersion = chainman.m_versionbitscache.ComputeBlockVersion(pindexPrev, consensus);
-    unsigned int nTime = std::max<int64_t>(
-        GetMinimumTime(pindexPrev, consensus.DifficultyAdjustmentInterval()),
-        TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()));
-    nTime &= ~consensus.nStakeTimestampMask;
-    block.nTime = nTime;
-    block.nBits = pindexPrev->nBits;
+    block.nTime = nTimeTx;
+    block.nBits = nBits;
     block.nNonce = 0;
     block.hashMerkleRoot = BlockMerkleRoot(block);
 
