@@ -15,6 +15,7 @@
 #include <kernel/mempool_options.h>        // IWYU pragma: export
 #include <kernel/mempool_removal_reason.h> // IWYU pragma: export
 #include <policy/feerate.h>
+#include <policy/policy.h>
 #include <policy/packages.h>
 #include <primitives/transaction.h>
 #include <sync.h>
@@ -84,6 +85,31 @@ struct mempoolentry_wtxid
     }
 };
 
+struct HybridScore {
+    FeeFrac fee_rate;
+    uint64_t stake_weight;
+    int64_t time_in_mempool;
+    size_t congestion;
+};
+
+class CompareTxMemPoolEntryByHybridScore
+{
+public:
+    template <typename T>
+    bool operator()(const T& a, const T& b) const
+    {
+        const CTxMemPoolEntry& x = a;
+        const CTxMemPoolEntry& y = b;
+        HybridScore h1 = x.GetHybridScore();
+        HybridScore h2 = y.GetHybridScore();
+        int cmp = FeeRateCompare(h1.fee_rate, h2.fee_rate);
+        if (cmp != 0) return cmp > 0;
+        if (h1.stake_weight != h2.stake_weight) return h1.stake_weight > h2.stake_weight;
+        if (h1.time_in_mempool != h2.time_in_mempool) return h1.time_in_mempool > h2.time_in_mempool;
+        return h1.congestion > h2.congestion;
+    }
+};
+
 
 /** \class CompareTxMemPoolEntryByDescendantScore
  *
@@ -95,6 +121,9 @@ class CompareTxMemPoolEntryByDescendantScore
 public:
     bool operator()(const CTxMemPoolEntry& a, const CTxMemPoolEntry& b) const
     {
+        if (g_hybrid_mempool) {
+            return CompareTxMemPoolEntryByHybridScore()(a, b);
+        }
         if (a.GetPriority() != b.GetPriority()) {
             return a.GetPriority() < b.GetPriority();
         }
@@ -132,6 +161,9 @@ class CompareTxMemPoolEntryByScore
 public:
     bool operator()(const CTxMemPoolEntry& a, const CTxMemPoolEntry& b) const
     {
+        if (g_hybrid_mempool) {
+            return CompareTxMemPoolEntryByHybridScore()(a, b);
+        }
         FeeFrac f1(a.GetFee(), a.GetTxSize());
         FeeFrac f2(b.GetFee(), b.GetTxSize());
         if (FeeRateCompare(f1, f2) == 0) {
@@ -161,6 +193,9 @@ public:
     template<typename T>
     bool operator()(const T& a, const T& b) const
     {
+        if (g_hybrid_mempool) {
+            return CompareTxMemPoolEntryByHybridScore()(a, b);
+        }
         if (a.GetPriority() != b.GetPriority()) {
             return a.GetPriority() > b.GetPriority();
         }

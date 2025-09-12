@@ -23,6 +23,8 @@
 
 class CBlockIndex;
 
+struct HybridScore;
+
 struct LockPoints {
     // Will be set to the blockchain height and median time past
     // values that would be necessary to satisfy all relative locktime
@@ -153,6 +155,7 @@ public:
     CAmount GetModifiedFee() const { return m_modified_fee; }
     size_t DynamicMemoryUsage() const { return nUsageSize; }
     const LockPoints& GetLockPoints() const { return lockPoints; }
+    HybridScore GetHybridScore() const;
 
     // Adjusts the descendant state.
     void UpdateDescendantState(int32_t modifySize, CAmount modifyFee, int64_t modifyCount);

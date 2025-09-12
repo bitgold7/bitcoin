@@ -82,6 +82,9 @@ util::Result<void> ApplyArgsManOptions(const ArgsManager& argsman, const CChainP
     // disabled by passing -bgdpriority=0 at startup.
     g_enable_priority = argsman.GetBoolArg("-bgdpriority", true);
 
+    // Enable hybrid mempool scoring when requested
+    g_hybrid_mempool = argsman.GetBoolArg("-hybridmempool", false);
+
     // Feerate used to define dust.  Shouldn't be changed lightly as old
     // implementations may inadvertently create non-standard transactions
     if (const auto arg{argsman.GetArg("-dustrelayfee")}) {
