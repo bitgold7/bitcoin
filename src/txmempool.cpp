@@ -39,14 +39,17 @@ TRACEPOINT_SEMAPHORE(mempool, removed);
 
 namespace {
 // Compare two mempool entries using the priority point system. If priorities
-// are equal, fall back to feerate ordering for tie-breaking.
+// are equal, fall back to feerate ordering (using modified fees) for
+// tie-breaking.
 bool CompareTxByPoints(const CTxMemPoolEntry& a, const CTxMemPoolEntry& b)
 {
     if (a.GetPriority() != b.GetPriority()) {
         return a.GetPriority() > b.GetPriority();
     }
-    FeeFrac f1(a.GetFee(), a.GetTxSize());
-    FeeFrac f2(b.GetFee(), b.GetTxSize());
+    // Use modified fees so that fee deltas applied via policy are respected
+    // when comparing transactions with the same priority points.
+    FeeFrac f1(a.GetModifiedFee(), a.GetTxSize());
+    FeeFrac f2(b.GetModifiedFee(), b.GetTxSize());
     if (FeeRateCompare(f1, f2) == 0) {
         return b.GetTx().GetHash() < a.GetTx().GetHash();
     }
