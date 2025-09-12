@@ -144,8 +144,8 @@ options, as all its configuration is set at the top of the file. It runs many ti
 pypy3 contrib/devtools/headerssync-params.py
 ```
 
-gen-bitcoin-conf.sh
-===================
+gen-bitgold-conf.sh
+====================
 
 Generates a bitcoin.conf file in `share/examples/` by parsing the output from `bitgoldd --help`. This script is run during the
 release process to include a bitcoin.conf with the release binaries and can also be run by users to generate a file locally.
@@ -156,7 +156,7 @@ To use it with a different build directory, set `BUILDDIR`.
 For example:
 
 ```bash
-BUILDDIR=$PWD/my-build-dir contrib/devtools/gen-bitcoin-conf.sh
+BUILDDIR=$PWD/my-build-dir contrib/devtools/gen-bitgold-conf.sh
 ```
 
 circular-dependencies.py
