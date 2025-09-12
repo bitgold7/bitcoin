@@ -23,6 +23,8 @@
 #include <QStatusTipEvent>
 #include <QCheckBox>
 #include <QProgressBar>
+#include <QClipboard>
+#include <QPushButton>
 
 
 #include <algorithm>
@@ -148,6 +150,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     ui->progressStake->setRange(0, 100);
 
     connect(ui->checkAutoStake, &QCheckBox::toggled, this, &OverviewPage::toggleAutoStake);
+    connect(ui->buttonCopyStakeRemedy, &QPushButton::clicked, this, &OverviewPage::copyStakeRemedy);
 
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);
@@ -217,6 +220,7 @@ void OverviewPage::setStakingStats(const wallet::StakingStats& stats)
         ui->labelNextReward->setText(QString("--"));
     }
     ui->progressStake->setValue(static_cast<int>(stats.progress * 100));
+    updateStakeStatus();
 }
 
 void OverviewPage::setClientModel(ClientModel *model)
@@ -256,9 +260,11 @@ void OverviewPage::setWalletModel(WalletModel *model)
         setBalance(model->getCachedBalance());
         setStakingStats(model->getStakingStats());
         ui->checkAutoStake->setChecked(model->isStaking());
+        connect(model, &WalletModel::encryptionStatusChanged, this, &OverviewPage::updateStakeStatus);
         connect(model, &WalletModel::balanceChanged, this, &OverviewPage::setBalance);
 
         connect(model->getOptionsModel(), &OptionsModel::displayUnitChanged, this, &OverviewPage::updateDisplayUnit);
+        updateStakeStatus();
     }
 
     // update the display unit, to not use the default ("BGD")
@@ -329,4 +335,42 @@ void OverviewPage::toggleAutoStake(bool checked)
     } else {
         walletModel->stopStaking();
     }
+    updateStakeStatus();
+}
+
+void OverviewPage::updateStakeStatus()
+{
+    if (!walletModel) return;
+    QString status;
+    QString remedy;
+    if (walletModel->getEncryptionStatus() == WalletModel::Locked) {
+        status = tr("Wallet locked");
+        remedy = tr("walletpassphrase &lt;pass&gt; &lt;timeout&gt;");
+    } else if (!walletModel->isStaking()) {
+        status = tr("Not staking");
+        remedy = tr("startstaking");
+    } else if (walletModel->getStakingStats().staked_balance == 0) {
+        status = tr("Low weight");
+        remedy = tr("add coins to stake");
+    } else {
+        status = tr("Staking");
+    }
+    ui->labelStakeStatus->setText(status);
+    m_stake_remedy = remedy;
+    ui->buttonCopyStakeRemedy->setEnabled(!remedy.isEmpty());
+    ui->buttonCopyStakeRemedy->setToolTip(remedy);
+}
+
+void OverviewPage::copyStakeRemedy()
+{
+    if (m_stake_remedy.isEmpty()) return;
+    QGuiApplication::clipboard()->setText(m_stake_remedy);
+}
+
+void OverviewPage::setTestStakeState(const QString& status, const QString& remedy)
+{
+    ui->labelStakeStatus->setText(status);
+    m_stake_remedy = remedy;
+    ui->buttonCopyStakeRemedy->setEnabled(!remedy.isEmpty());
+    ui->buttonCopyStakeRemedy->setToolTip(remedy);
 }

@@ -304,6 +304,13 @@ void TestGUI(interfaces::Node& node, const std::shared_ptr<CWallet>& wallet)
     walletModel.pollBalanceChanged(); // Manual balance polling update
     CompareBalance(walletModel, walletModel.wallet().getBalance(), overviewPage.findChild<QLabel*>("labelBalance"));
 
+    // Test stake status copy remedy
+    overviewPage.setTestStakeState("Wallet locked", "walletpassphrase dummy 60");
+    QPushButton* copyStake = overviewPage.findChild<QPushButton*>("buttonCopyStakeRemedy");
+    QVERIFY(copyStake->isEnabled());
+    copyStake->click();
+    QCOMPARE(QApplication::clipboard()->text(), QString("walletpassphrase dummy 60"));
+
     // Check Request Payment button
     ReceiveCoinsDialog receiveCoinsDialog(platformStyle.get());
     receiveCoinsDialog.setModel(&walletModel);
