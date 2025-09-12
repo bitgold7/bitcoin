@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(block_subsidy_test)
 {
     const auto chainParams = CreateChainParams(*m_node.args, ChainType::MAIN);
     TestBlockSubsidyHalvings(chainParams->GetConsensus()); // As in main
-    TestBlockSubsidyHalvings(150); // As in regtest
+    TestBlockSubsidyHalvings(150); // Test a shorter interval
     TestBlockSubsidyHalvings(1000); // Just another interval
 }
 
@@ -83,6 +83,18 @@ BOOST_AUTO_TEST_CASE(subsidy_limit_test)
         BOOST_CHECK(MoneyRange(nSum));
     }
     BOOST_CHECK_EQUAL(nSum, CAmount{8'000'000 * COIN});
+}
+
+BOOST_AUTO_TEST_CASE(cumulative_subsidy_never_exceeds_limit)
+{
+    const auto chainParams = CreateChainParams(*m_node.args, ChainType::MAIN);
+    const auto& consensus{chainParams->GetConsensus()};
+    const CAmount genesis_reward{GetBlockSubsidy(1, consensus)};
+    CAmount cumulative{0};
+    for (CAmount subsidy{GetBlockSubsidy(2, consensus)}; subsidy > 0; subsidy >>= 1) {
+        cumulative += subsidy * consensus.nSubsidyHalvingInterval;
+        BOOST_CHECK_LE(cumulative + genesis_reward, CAmount{8'000'000 * COIN});
+    }
 }
 
 BOOST_AUTO_TEST_CASE(signet_parse_tests)
