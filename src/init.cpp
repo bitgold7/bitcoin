@@ -104,6 +104,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <utility>
 
 #ifndef WIN32
 #include <csignal>
@@ -1338,6 +1339,51 @@ static ChainstateLoadResult InitAndLoadChainstate(
     return {status, error};
 };
 
+static void ValidateConfig(const ArgsManager& args)
+{
+    const ChainType chain = args.GetChainType();
+    const uint16_t port = static_cast<uint16_t>(args.GetIntArg("-port", Params().GetDefaultPort()));
+    const uint16_t rpc_port = static_cast<uint16_t>(args.GetIntArg("-rpcport", BaseParams().RPCPort()));
+
+    const std::vector<std::pair<ChainType, std::unique_ptr<const CChainParams>>> nets{
+        {ChainType::MAIN, CreateChainParams(args, ChainType::MAIN)},
+        {ChainType::TESTNET, CreateChainParams(args, ChainType::TESTNET)},
+        {ChainType::TESTNET4, CreateChainParams(args, ChainType::TESTNET4)},
+        {ChainType::SIGNET, CreateChainParams(args, ChainType::SIGNET)},
+        {ChainType::REGTEST, CreateChainParams(args, ChainType::REGTEST)},
+    };
+    for (const auto& [other, params] : nets) {
+        if (other != chain && port == params->GetDefaultPort()) {
+            InitWarning(strprintf("P2P port %u matches %s network default", port, ChainTypeToString(other)));
+        }
+    }
+
+    const std::vector<std::pair<ChainType, std::unique_ptr<CBaseChainParams>>> rpc_nets{
+        {ChainType::MAIN, CreateBaseChainParams(ChainType::MAIN)},
+        {ChainType::TESTNET, CreateBaseChainParams(ChainType::TESTNET)},
+        {ChainType::TESTNET4, CreateBaseChainParams(ChainType::TESTNET4)},
+        {ChainType::SIGNET, CreateBaseChainParams(ChainType::SIGNET)},
+        {ChainType::REGTEST, CreateBaseChainParams(ChainType::REGTEST)},
+    };
+    for (const auto& [other, params] : rpc_nets) {
+        if (other != chain && rpc_port == params->RPCPort()) {
+            InitWarning(strprintf("RPC port %u matches %s network default", rpc_port, ChainTypeToString(other)));
+        }
+    }
+
+    for (const std::string& ip : args.GetArgs("-rpcallowip")) {
+        const CSubNet subnet{LookupSubNet(ip)};
+        if (!subnet.IsValid()) {
+            InitWarning(strprintf("Invalid rpcallowip subnet %s", ip));
+        } else {
+            const std::string subnet_str{subnet.ToString()};
+            if (subnet_str == "0.0.0.0/0" || subnet_str == "::/0") {
+                InitWarning(strprintf("RPC allow IP %s is overly permissive", ip));
+            }
+        }
+    }
+}
+
 bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
 {
     const ArgsManager& args = *Assert(node.args);
@@ -1347,6 +1393,8 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     if (!opt_max_upload) {
         return InitError(strprintf(_("Unable to parse -maxuploadtarget: '%s'"), args.GetArg("-maxuploadtarget", "")));
     }
+
+    ValidateConfig(args);
 
     // ********************************************************* Step 4a: application initialization
     if (!CreatePidFile(args)) {
