@@ -334,7 +334,6 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-extra");
             }
 
-            chainstate.AddToDividendPool(dividend_reward, height);
         }
         // The block must be signed by the coinstake input
         if (!CheckBlockSignature(block)) {
@@ -408,6 +407,17 @@ const CBlockIndex* Chainstate::FindForkInGlobalIndex(const CBlockLocator& locato
         }
     }
     return m_chain.Genesis();
+}
+
+bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, CBlockIndex* pindex,
+                              CCoinsViewCache& view, bool fJustCheck)
+{
+    (void)state;
+    (void)view;
+    if (!fJustCheck && pindex != nullptr && block.vtx.size() > 1 && block.vtx[1]->vout.size() > 2) {
+        AddToDividendPool(block.vtx[1]->vout[2].nValue, pindex->nHeight);
+    }
+    return true;
 }
 
 bool CheckInputScripts(const CTransaction& tx, TxValidationState& state,
