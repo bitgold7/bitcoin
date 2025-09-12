@@ -1139,6 +1139,8 @@ RPCHelpMan abortrescan();
 // dividend
 RPCHelpMan getwalletdividends();
 RPCHelpMan claimwalletdividends();
+RPCHelpMan getwalletdividendhistory();
+RPCHelpMan getwalletnextdividend();
 
 std::span<const CRPCCommand> GetWalletRPCCommands()
 {
@@ -1213,6 +1215,8 @@ std::span<const CRPCCommand> GetWalletRPCCommands()
         {"wallet", &getstakestat},
         {"wallet", &getwalletdividends},
         {"wallet", &claimwalletdividends},
+        {"wallet", &getwalletdividendhistory},
+        {"wallet", &getwalletnextdividend},
     };
     return commands;
 }

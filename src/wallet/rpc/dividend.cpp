@@ -68,4 +68,58 @@ RPCHelpMan claimwalletdividends()
     };
 }
 
+RPCHelpMan getwalletdividendhistory()
+{
+    return RPCHelpMan{
+        "getwalletdividendhistory",
+        "Return historical dividend payouts for wallet addresses.",
+        {},
+        RPCResult{RPCResult::Type::OBJ, "", "", {{RPCResult::Type::OBJ, "<height>", "payouts", {{RPCResult::Type::AMOUNT, "<address>", "payout"}}}}},
+        RPCExamples{HelpExampleCli("getwalletdividendhistory", "") + HelpExampleRpc("getwalletdividendhistory", "")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
+            if (!pwallet) return UniValue::VNULL;
+            Chainstate& chainstate = EnsureAnyChainman(request.context).ActiveChainstate();
+            LOCK(cs_main);
+            pwallet->UpdateDividendHistory(chainstate);
+            UniValue ret(UniValue::VOBJ);
+            for (const auto& [height, payouts] : pwallet->GetDividendHistory()) {
+                UniValue inner(UniValue::VOBJ);
+                for (const auto& [addr, amt] : payouts) {
+                    inner.pushKV(addr, ValueFromAmount(amt));
+                }
+                ret.pushKV(std::to_string(height), inner);
+            }
+            return ret;
+        }
+    };
+}
+
+RPCHelpMan getwalletnextdividend()
+{
+    return RPCHelpMan{
+        "getwalletnextdividend",
+        "Estimate next dividend payout for wallet addresses.",
+        {},
+        RPCResult{RPCResult::Type::OBJ, "", "", {
+            {RPCResult::Type::NUM, "height", "next payout height"},
+            {RPCResult::Type::OBJ, "payouts", "payouts", {{RPCResult::Type::AMOUNT, "<address>", "payout"}}}
+        }},
+        RPCExamples{HelpExampleCli("getwalletnextdividend", "") + HelpExampleRpc("getwalletnextdividend", "")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
+            if (!pwallet) return UniValue::VNULL;
+            auto res = pwallet->GetNextDividend();
+            UniValue ret(UniValue::VOBJ);
+            ret.pushKV("height", res.first);
+            UniValue pobj(UniValue::VOBJ);
+            for (const auto& [addr, amt] : res.second) {
+                pobj.pushKV(addr, ValueFromAmount(amt));
+            }
+            ret.pushKV("payouts", pobj);
+            return ret;
+        }
+    };
+}
+
 } // namespace wallet

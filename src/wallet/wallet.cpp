@@ -7,6 +7,8 @@
 #include <wallet/spend.h>
 #include <wallet/blinding.h>
 
+#include <dividend/dividend.h>
+#include <wallet/receive.h>
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
 #include <util/secp256k1_context.h>
@@ -3332,6 +3334,56 @@ CAmount CWallet::GetDividendBalance() const
         return context->chainman->ActiveChainstate().GetDividendPool();
     }
     return 0;
+}
+
+void CWallet::UpdateDividendHistory(const Chainstate& chainstate)
+{
+    AssertLockHeld(::cs_main);
+    std::set<std::string> addrs;
+    auto balances = GetAddressBalances(*this);
+    for (const auto& [dest, bal] : balances) {
+        addrs.insert(EncodeDestination(dest));
+    }
+    std::map<int, std::map<std::string, CAmount>> hist_filtered;
+    const auto& hist = chainstate.GetDividendHistory();
+    for (const auto& [height, payouts] : hist) {
+        std::map<std::string, CAmount> inner;
+        for (const auto& [addr, amt] : payouts) {
+            if (addrs.count(addr)) inner.emplace(addr, amt);
+        }
+        if (!inner.empty()) hist_filtered.emplace(height, std::move(inner));
+    }
+    LOCK(cs_wallet);
+    m_dividend_history = std::move(hist_filtered);
+}
+
+std::map<int, std::map<std::string, CAmount>> CWallet::GetDividendHistory() const
+{
+    LOCK(cs_wallet);
+    return m_dividend_history;
+}
+
+std::pair<int, std::map<std::string, CAmount>> CWallet::GetNextDividend() const
+{
+    interfaces::Chain* chain = m_chain;
+    if (!chain) return {0, {}};
+    node::NodeContext* context = chain->context();
+    if (context && context->chainman) {
+        LOCK(::cs_main);
+        Chainstate& chainstate = context->chainman->ActiveChainstate();
+        int height = context->chainman->ActiveChain().Height();
+        int next_height = ((height / dividend::QUARTER_BLOCKS) + 1) * dividend::QUARTER_BLOCKS;
+        dividend::Payouts payouts = dividend::CalculatePayouts(chainstate.GetStakeInfo(), next_height, chainstate.GetDividendPool());
+        auto balances = GetAddressBalances(*this);
+        std::map<std::string, CAmount> ret;
+        for (const auto& [dest, bal] : balances) {
+            std::string addr = EncodeDestination(dest);
+            auto it = payouts.find(addr);
+            if (it != payouts.end()) ret.emplace(addr, it->second);
+        }
+        return {next_height, ret};
+    }
+    return {0, {}};
 }
 
 void CWallet::SetReserveBalance(CAmount amount)
