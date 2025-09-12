@@ -10,6 +10,7 @@
 #include <script/script.h>
 #include <script/solver.h>
 #include <util/bip32.h>
+#include <key/confidentialaddress.h>
 #include <util/translation.h>
 #include <wallet/receive.h>
 #include <wallet/rpc/util.h>
@@ -111,6 +112,74 @@ RPCHelpMan getrawchangeaddress()
     }
     return EncodeDestination(*op_dest);
 },
+    };
+}
+
+RPCHelpMan getnewconfidentialaddress()
+{
+    return RPCHelpMan{
+        "getnewconfidentialaddress",
+        "Returns a new confidential address with blinding key metadata.",
+        {
+            {"label", RPCArg::Type::STR, RPCArg::Default{""}, "Label for the new address"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "address", "The base address"},
+                {RPCResult::Type::STR, "blinding_key", "The blinding key"},
+                {RPCResult::Type::STR, "confidential_address", "The combined confidential address"},
+            }
+        },
+        RPCExamples{HelpExampleCli("getnewconfidentialaddress", "") + HelpExampleRpc("getnewconfidentialaddress", "")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
+            if (!pwallet) return UniValue::VNULL;
+
+            LOCK(pwallet->cs_wallet);
+            ConfidentialAddress caddr = pwallet->GetNewConfidentialAddress(LabelFromValue(request.params[0]));
+            UniValue result(UniValue::VOBJ);
+            result.pushKV("address", caddr.address);
+            result.pushKV("blinding_key", caddr.blinding_key);
+            result.pushKV("confidential_address", caddr.ToString());
+            return result;
+        }
+    };
+}
+
+RPCHelpMan validateconfidentialaddress()
+{
+    return RPCHelpMan{
+        "validateconfidentialaddress",
+        "Check validity of a confidential address and return metadata.",
+        {
+            {"confidential_address", RPCArg::Type::STR, RPCArg::Optional::NO, "The confidential address"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::BOOL, "isvalid", "If the address is valid"},
+                {RPCResult::Type::STR, "address", /*optional=*/true, "The base address"},
+                {RPCResult::Type::STR, "blinding_key", /*optional=*/true, "The blinding key"},
+            }
+        },
+        RPCExamples{HelpExampleCli("validateconfidentialaddress", "<address>") + HelpExampleRpc("validateconfidentialaddress", "<address>")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+        {
+            std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
+            if (!pwallet) return UniValue::VNULL;
+
+            ConfidentialAddress caddr;
+            bool valid = pwallet->ValidateConfidentialAddress(request.params[0].get_str(), caddr);
+            UniValue result(UniValue::VOBJ);
+            result.pushKV("isvalid", valid);
+            if (valid) {
+                result.pushKV("address", caddr.address);
+                result.pushKV("blinding_key", caddr.blinding_key);
+            }
+            return result;
+        }
     };
 }
 

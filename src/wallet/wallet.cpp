@@ -37,6 +37,7 @@
 #include <kernel/mempool_removal_reason.h>
 #include <key.h>
 #include <key_io.h>
+#include <key/confidentialaddress.h>
 #include <logging.h>
 #include <validation.h>
 #include <random.h>
@@ -2502,6 +2503,23 @@ util::Result<CTxDestination> CWallet::GetNewChangeDestination(const OutputType t
     if (op_dest) reservedest.KeepDestination();
 
     return op_dest;
+}
+
+ConfidentialAddress CWallet::GetNewConfidentialAddress(const std::string& label)
+{
+    LOCK(cs_wallet);
+    auto op_dest = GetNewDestination(m_default_address_type, label);
+    if (!op_dest) {
+        throw std::runtime_error(util::ErrorString(op_dest).original);
+    }
+    std::string blind = GetRandHash().ToString();
+    return ConfidentialAddress{EncodeDestination(*op_dest), blind};
+}
+
+bool CWallet::ValidateConfidentialAddress(const std::string& input, ConfidentialAddress& out) const
+{
+    out = ConfidentialAddress::FromString(input);
+    return out.IsValid();
 }
 
 void CWallet::MarkDestinationsDirty(const std::set<CTxDestination>& destinations)
