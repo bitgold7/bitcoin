@@ -5792,34 +5792,35 @@ bool PeerManagerImpl::SendMessages(CNode* pto)
             peer->m_blocks_for_inv_relay.clear();
         }
 
-        if (auto tx_relay = peer->GetTxRelay(); tx_relay != nullptr) {
-            LOCK(tx_relay->m_tx_inventory_mutex);
-            // Check whether periodic sends should happen
-            bool fSendTrickle = pto->HasPermission(NetPermissionFlags::NoBan);
-            if (tx_relay->m_next_inv_send_time < current_time) {
-                fSendTrickle = true;
-                if (pto->IsInboundConn()) {
-                    tx_relay->m_next_inv_send_time = NextInvToInbounds(current_time, INBOUND_INVENTORY_BROADCAST_INTERVAL);
-                } else {
-                    tx_relay->m_next_inv_send_time = current_time + m_rng.rand_exp_duration(OUTBOUND_INVENTORY_BROADCAST_INTERVAL);
+        if (!pto->IsBlockOnlyConn()) {
+            if (auto tx_relay = peer->GetTxRelay(); tx_relay != nullptr) {
+                LOCK(tx_relay->m_tx_inventory_mutex);
+                // Check whether periodic sends should happen
+                bool fSendTrickle = pto->HasPermission(NetPermissionFlags::NoBan);
+                if (tx_relay->m_next_inv_send_time < current_time) {
+                    fSendTrickle = true;
+                    if (pto->IsInboundConn()) {
+                        tx_relay->m_next_inv_send_time = NextInvToInbounds(current_time, INBOUND_INVENTORY_BROADCAST_INTERVAL);
+                    } else {
+                        tx_relay->m_next_inv_send_time = current_time + m_rng.rand_exp_duration(OUTBOUND_INVENTORY_BROADCAST_INTERVAL);
+                    }
                 }
-            }
 
-            // Time to send but the peer has requested we not relay transactions.
-            if (fSendTrickle) {
-                LOCK(tx_relay->m_bloom_filter_mutex);
-                if (!tx_relay->m_relay_txs) tx_relay->m_tx_inventory_to_send.clear();
-            }
+                // Time to send but the peer has requested we not relay transactions.
+                if (fSendTrickle) {
+                    LOCK(tx_relay->m_bloom_filter_mutex);
+                    if (!tx_relay->m_relay_txs) tx_relay->m_tx_inventory_to_send.clear();
+                }
 
-            // Respond to BIP35 mempool requests
-            if (fSendTrickle && tx_relay->m_send_mempool) {
-                auto vtxinfo = m_mempool.infoAll();
-                tx_relay->m_send_mempool = false;
-                const CFeeRate filterrate{tx_relay->m_fee_filter_received.load()};
+                // Respond to BIP35 mempool requests
+                if (fSendTrickle && tx_relay->m_send_mempool) {
+                    auto vtxinfo = m_mempool.infoAll();
+                    tx_relay->m_send_mempool = false;
+                    const CFeeRate filterrate{tx_relay->m_fee_filter_received.load()};
 
-                LOCK(tx_relay->m_bloom_filter_mutex);
+                    LOCK(tx_relay->m_bloom_filter_mutex);
 
-                for (const auto& txinfo : vtxinfo) {
+                    for (const auto& txinfo : vtxinfo) {
                     CInv inv{
                         peer->m_wtxid_relay ? MSG_WTX : MSG_TX,
                         peer->m_wtxid_relay ?
@@ -5844,62 +5845,63 @@ bool PeerManagerImpl::SendMessages(CNode* pto)
                 }
             }
 
-            // Determine transactions to relay
-            if (fSendTrickle) {
-                // Produce a vector with all candidates for sending
-                std::vector<std::set<GenTxid>::iterator> vInvTx;
-                vInvTx.reserve(tx_relay->m_tx_inventory_to_send.size());
-                for (std::set<GenTxid>::iterator it = tx_relay->m_tx_inventory_to_send.begin(); it != tx_relay->m_tx_inventory_to_send.end(); it++) {
-                    vInvTx.push_back(it);
-                }
-                const CFeeRate filterrate{tx_relay->m_fee_filter_received.load()};
-                // Topologically and fee-rate sort the inventory we send for privacy and priority reasons.
-                // A heap is used so that not all items need sorting if only a few are being sent.
-                CompareInvMempoolOrder compareInvMempoolOrder(&m_mempool);
-                std::make_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
-                // No reason to drain out at many times the network's capacity,
-                // especially since we have many peers and some will draw much shorter delays.
-                unsigned int nRelayedTransactions = 0;
-                LOCK(tx_relay->m_bloom_filter_mutex);
-                size_t broadcast_max{INVENTORY_BROADCAST_TARGET + (tx_relay->m_tx_inventory_to_send.size() / 1000) * 5};
-                broadcast_max = std::min<size_t>(INVENTORY_BROADCAST_MAX, broadcast_max);
-                while (!vInvTx.empty() && nRelayedTransactions < broadcast_max) {
-                    // Fetch the top element from the heap
-                    std::pop_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
-                    std::set<GenTxid>::iterator it = vInvTx.back();
-                    vInvTx.pop_back();
-                    GenTxid hash = *it;
-                    Assume(peer->m_wtxid_relay == hash.IsWtxid());
-                    CInv inv(peer->m_wtxid_relay ? MSG_WTX : MSG_TX, hash.ToUint256());
-                    // Remove it from the to-be-sent set
-                    tx_relay->m_tx_inventory_to_send.erase(it);
-                    // Check if not in the filter already
-                    if (tx_relay->m_tx_inventory_known_filter.contains(hash.ToUint256())) {
-                        continue;
+                // Determine transactions to relay
+                if (fSendTrickle) {
+                    // Produce a vector with all candidates for sending
+                    std::vector<std::set<GenTxid>::iterator> vInvTx;
+                    vInvTx.reserve(tx_relay->m_tx_inventory_to_send.size());
+                    for (std::set<GenTxid>::iterator it = tx_relay->m_tx_inventory_to_send.begin(); it != tx_relay->m_tx_inventory_to_send.end(); it++) {
+                        vInvTx.push_back(it);
                     }
-                    // Not in the mempool anymore? don't bother sending it.
-                    auto txinfo{std::visit([&](const auto& id) { return m_mempool.info(id); }, hash)};
-                    if (!txinfo.tx) {
-                        continue;
+                    const CFeeRate filterrate{tx_relay->m_fee_filter_received.load()};
+                    // Topologically and fee-rate sort the inventory we send for privacy and priority reasons.
+                    // A heap is used so that not all items need sorting if only a few are being sent.
+                    CompareInvMempoolOrder compareInvMempoolOrder(&m_mempool);
+                    std::make_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
+                    // No reason to drain out at many times the network's capacity,
+                    // especially since we have many peers and some will draw much shorter delays.
+                    unsigned int nRelayedTransactions = 0;
+                    LOCK(tx_relay->m_bloom_filter_mutex);
+                    size_t broadcast_max{INVENTORY_BROADCAST_TARGET + (tx_relay->m_tx_inventory_to_send.size() / 1000) * 5};
+                    broadcast_max = std::min<size_t>(INVENTORY_BROADCAST_MAX, broadcast_max);
+                    while (!vInvTx.empty() && nRelayedTransactions < broadcast_max) {
+                        // Fetch the top element from the heap
+                        std::pop_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
+                        std::set<GenTxid>::iterator it = vInvTx.back();
+                        vInvTx.pop_back();
+                        GenTxid hash = *it;
+                        Assume(peer->m_wtxid_relay == hash.IsWtxid());
+                        CInv inv(peer->m_wtxid_relay ? MSG_WTX : MSG_TX, hash.ToUint256());
+                        // Remove it from the to-be-sent set
+                        tx_relay->m_tx_inventory_to_send.erase(it);
+                        // Check if not in the filter already
+                        if (tx_relay->m_tx_inventory_known_filter.contains(hash.ToUint256())) {
+                            continue;
+                        }
+                        // Not in the mempool anymore? don't bother sending it.
+                        auto txinfo{std::visit([&](const auto& id) { return m_mempool.info(id); }, hash)};
+                        if (!txinfo.tx) {
+                            continue;
+                        }
+                        // Peer told you to not send transactions at that feerate? Don't bother sending it.
+                        if (txinfo.fee < filterrate.GetFee(txinfo.vsize)) {
+                            continue;
+                        }
+                        if (tx_relay->m_bloom_filter && !tx_relay->m_bloom_filter->IsRelevantAndUpdate(*txinfo.tx)) continue;
+                        // Send
+                        vInv.push_back(inv);
+                        nRelayedTransactions++;
+                        if (vInv.size() == MAX_INV_SZ) {
+                            MakeAndPushMessage(*pto, NetMsgType::INV, vInv);
+                            vInv.clear();
+                        }
+                        tx_relay->m_tx_inventory_known_filter.insert(hash.ToUint256());
                     }
-                    // Peer told you to not send transactions at that feerate? Don't bother sending it.
-                    if (txinfo.fee < filterrate.GetFee(txinfo.vsize)) {
-                        continue;
-                    }
-                    if (tx_relay->m_bloom_filter && !tx_relay->m_bloom_filter->IsRelevantAndUpdate(*txinfo.tx)) continue;
-                    // Send
-                    vInv.push_back(inv);
-                    nRelayedTransactions++;
-                    if (vInv.size() == MAX_INV_SZ) {
-                        MakeAndPushMessage(*pto, NetMsgType::INV, vInv);
-                        vInv.clear();
-                    }
-                    tx_relay->m_tx_inventory_known_filter.insert(hash.ToUint256());
-                }
 
-                // Ensure we'll respond to GETDATA requests for anything we've just announced
-                LOCK(m_mempool.cs);
-                tx_relay->m_last_inv_sequence = m_mempool.GetSequence();
+                    // Ensure we'll respond to GETDATA requests for anything we've just announced
+                    LOCK(m_mempool.cs);
+                    tx_relay->m_last_inv_sequence = m_mempool.GetSequence();
+                }
             }
         }
         if (!vInv.empty())
