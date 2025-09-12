@@ -1,6 +1,6 @@
 #include <bitgold-build-config.h> // IWYU pragma: keep
 
-#include <dividend/dividend.h>
+#include <consensus/dividends/dividend.h>
 #include <rpc/server_util.h>
 #include <rpc/util.h>
 #include <validation.h>

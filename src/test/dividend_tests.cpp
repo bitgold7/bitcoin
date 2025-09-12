@@ -1,5 +1,5 @@
 #include <boost/test/unit_test.hpp>
-#include <dividend/dividend.h>
+#include <consensus/dividends/dividend.h>
 #include <consensus/dividends/schedule.h>
 #include <uint256.h>
 #include <primitives/transaction.h>

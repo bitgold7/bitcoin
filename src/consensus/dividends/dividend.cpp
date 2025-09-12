@@ -1,7 +1,7 @@
 // Bitcoin Core's dividend module uses integer arithmetic to avoid floating
 // point rounding errors when calculating payouts.
 
-#include <dividend/dividend.h>
+#include <consensus/dividends/dividend.h>
 
 #include <algorithm>
 #include <vector>

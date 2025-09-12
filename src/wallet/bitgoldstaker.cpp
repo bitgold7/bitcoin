@@ -3,7 +3,7 @@
 #include <consensus/amount.h>
 #include <consensus/consensus.h>
 #include <consensus/merkle.h>
-#include <dividend/dividend.h>
+#include <consensus/dividends/dividend.h>
 #include <interfaces/chain.h>
 #include <key.h>
 #include <node/context.h>

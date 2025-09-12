@@ -1,6 +1,6 @@
 #include <chainparams.h>
 #include <consensus/validation.h>
-#include <dividend/dividend.h>
+#include <consensus/dividends/dividend.h>
 #include <consensus/merkle.h>
 #include <primitives/block.h>
 #include <script/script.h>
