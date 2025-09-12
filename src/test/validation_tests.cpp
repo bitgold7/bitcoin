@@ -7,7 +7,7 @@
 #include <consensus/amount.h>
 #include <consensus/merkle.h>
 #include <core_io.h>
-#include <pow.h>
+#include <pos/difficulty.h>
 #include <hash.h>
 #include <net.h>
 #include <signet.h>
@@ -709,7 +709,7 @@ BOOST_AUTO_TEST_CASE(pos_target_spacing)
     }
     const unsigned int expected = bnNew.GetCompact();
 
-    const unsigned int result = GetPoSNextWorkRequired(&indexLast, indexLast.GetBlockTime() + actual_spacing, params);
+    const unsigned int result = GetPoSNextTargetRequired(&indexLast, indexLast.GetMedianTimePast() + actual_spacing, params);
     BOOST_CHECK_EQUAL(result, expected);
 }
 
