@@ -10,6 +10,7 @@
 
 #include <array>
 #include <chrono>
+#include <consensus/amount.h>
 #include <limits>
 #include <map>
 #include <vector>
@@ -147,7 +148,9 @@ struct Params {
     // Target spacing between staked blocks (seconds)
     int64_t nStakeTargetSpacing{8 * 60};
     // Maximum allowed coin supply (satoshis)
-    uint64_t nMaximumSupply{0};
+    CAmount nMaximumSupply{0};
+    // Reward paid in the genesis block (satoshis)
+    CAmount genesis_reward{0};
     /** The best chain should have at least this much work */
     uint256 nMinimumChainWork;
     /** By default assume that the signatures in ancestors of this block are valid */

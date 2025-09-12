@@ -2232,9 +2232,9 @@ PackageMempoolAcceptResult ProcessNewPackage(Chainstate& active_chainstate, CTxM
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
     if (nHeight <= 0) return 0;
-    if (nHeight == 1) return 3'000'000 * COIN;
+    if (nHeight == 1) return consensusParams.genesis_reward;
 
-    const CAmount max_subsidy{8'000'000 * COIN - 3'000'000 * COIN};
+    const CAmount max_subsidy{consensusParams.nMaximumSupply - consensusParams.genesis_reward};
 
     int halvings = (nHeight - 2) / consensusParams.nSubsidyHalvingInterval;
     if (halvings >= 64) return 0;
