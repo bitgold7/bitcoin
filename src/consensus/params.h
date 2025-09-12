@@ -147,6 +147,10 @@ struct Params {
     uint256 posLimitLower;
     // Target spacing between staked blocks (seconds)
     int64_t nStakeTargetSpacing{8 * 60};
+    std::chrono::seconds StakeTargetSpacing() const
+    {
+        return std::chrono::seconds{nStakeTargetSpacing};
+    }
     //! Total coin supply allowed by consensus (including genesis block)
     CAmount nMaximumSupply{0};
     //! Reward paid in the genesis block (satoshis)

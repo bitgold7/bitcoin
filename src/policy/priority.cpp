@@ -22,7 +22,7 @@ int64_t GetBGDPriority(const CTransaction& tx, CAmount fee,
             int n_blocks = chain_height - static_cast<int>(coin.nHeight);
             if (n_blocks > 0) {
                 stake_duration = std::max<int64_t>(stake_duration,
-                                                   int64_t(n_blocks) * params.nPowTargetSpacing);
+                                                   int64_t(n_blocks) * params.nStakeTargetSpacing);
             }
         }
     }

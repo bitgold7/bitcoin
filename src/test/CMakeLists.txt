@@ -69,6 +69,7 @@ add_executable(test_bitcoin
   policy_fee_tests.cpp
   policyestimator_tests.cpp
   pool_tests.cpp
+  priority_tests.cpp
   stake_tests.cpp
   prevector_tests.cpp
   raii_event_tests.cpp
