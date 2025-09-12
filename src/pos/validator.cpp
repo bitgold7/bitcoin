@@ -1,9 +1,6 @@
 #include "pos/validator.h"
 #include "pos/stake.h"
 
-#include <hash.h>
-#include <chain.h>
-
 namespace pos {
 
 Validator::Validator(uint64_t stake_amount)
@@ -25,12 +22,4 @@ void Validator::ScheduleUnstake(int64_t current_time)
     m_locked_until = current_time + UNSTAKE_DELAY;
     m_active = false;
 }
-
-uint256 ComputeStakeModifier(const CBlockIndex& prev)
-{
-    HashWriter ss;
-    ss << prev.GetBlockHash() << prev.nHeight << prev.nTime;
-    return ss.GetHash();
-}
-
 } // namespace pos
