@@ -27,7 +27,7 @@ BOOST_AUTO_TEST_CASE(payouts_scaled)
         {"A", StakeInfo{10 * COIN, 0}},
         {"B", StakeInfo{20 * COIN, 0}},
     };
-    CAmount pool{static_cast<CAmount>(0.1 * COIN)};
+    CAmount pool{COIN / 10};
     auto payouts{CalculatePayouts(stakes, QUARTER_BLOCKS, pool)};
     BOOST_CHECK_EQUAL(payouts["B"], 2 * payouts["A"]);
     BOOST_CHECK_LE(std::abs(payouts["A"] + payouts["B"] - pool), 1);

@@ -24,12 +24,14 @@ using Payouts = std::map<std::string, CAmount>;
 //! Number of blocks in a quarter and year for dividend calculations.
 inline constexpr int QUARTER_BLOCKS{16200};
 inline constexpr int YEAR_BLOCKS{QUARTER_BLOCKS * 4};
+inline constexpr int BASIS_POINTS{10000};
 
 /**
- * Determine the annual percentage rate for a given stake.
- * The rate increases from 1% up to 10% based on stake age and amount.
+ * Determine the annual percentage rate for a given stake, expressed in basis
+ * points (1% = 100 basis points). Uses only integer arithmetic and limits the
+ * rate between 1% and 10% based on stake age and amount.
  */
-double CalculateApr(CAmount amount, int blocks_held);
+int CalculateAprBasisPoints(CAmount amount, int blocks_held);
 
 /**
  * Calculate dividend payouts for a set of stakes. Payouts occur only on

@@ -1,3 +1,6 @@
+// Bitcoin Core's dividend module uses integer arithmetic to avoid floating
+// point rounding errors when calculating payouts.
+
 #include <dividend/dividend.h>
 
 #include <algorithm>
@@ -5,12 +8,14 @@
 
 namespace dividend {
 
-double CalculateApr(CAmount amount, int blocks_held)
+int CalculateAprBasisPoints(CAmount amount, int blocks_held)
 {
-    double age_factor = std::min(1.0, static_cast<double>(blocks_held) / YEAR_BLOCKS);
-    double amount_factor = std::min(1.0, static_cast<double>(amount) / (1000.0 * COIN));
-    double factor = std::max(age_factor, amount_factor);
-    return 0.01 + 0.09 * factor;
+    // Age and amount factors scaled to BASIS_POINTS precision
+    int64_t age_factor = std::min<int64_t>(blocks_held, YEAR_BLOCKS) * BASIS_POINTS / YEAR_BLOCKS;
+    int64_t amount_factor = std::min<CAmount>(amount, 1000 * COIN) * BASIS_POINTS / (1000 * COIN);
+    int64_t factor = std::max(age_factor, amount_factor);
+    // Base rate is 1% (100 basis points) plus up to 9% (900 bps)
+    return 100 + (900 * factor) / BASIS_POINTS;
 }
 
 Payouts CalculatePayouts(const std::map<std::string, StakeInfo>& stakes, int height, CAmount pool)
@@ -23,16 +28,20 @@ Payouts CalculatePayouts(const std::map<std::string, StakeInfo>& stakes, int hei
     for (const auto& [addr, info] : stakes) {
         int duration = height - info.last_payout_height;
         if (duration <= 0 || info.weight <= 0) continue;
-        double apr = CalculateApr(info.weight, duration);
-        CAmount desired = static_cast<CAmount>(info.weight * apr / 4.0);
+        int apr_bp = CalculateAprBasisPoints(info.weight, duration);
+        CAmount desired = info.weight * apr_bp / (4 * BASIS_POINTS);
         if (desired <= 0) continue;
         pending.push_back({addr, desired});
         total_desired += desired;
     }
     if (total_desired <= 0) return payouts;
-    double scale = total_desired > pool ? static_cast<double>(pool) / total_desired : 1.0;
     for (const auto& p : pending) {
-        CAmount payout = static_cast<CAmount>(p.desired * scale);
+        CAmount payout;
+        if (total_desired <= pool) {
+            payout = p.desired;
+        } else {
+            payout = pool * p.desired / total_desired;
+        }
         if (payout > 0) {
             payouts.emplace(p.addr, payout);
         }
@@ -56,6 +65,7 @@ CMutableTransaction BuildPayoutTx(const std::map<std::string, StakeInfo>& stakes
         paid += amt;
     }
     if (pool > paid) {
+        // Return any leftover back to the dividend pool script
         tx.vout.emplace_back(pool - paid, GetDividendScript());
     }
     return tx;
