@@ -1,9 +1,10 @@
 #ifndef BITCOIN_POS_STAKE_H
 #define BITCOIN_POS_STAKE_H
 
-#include <consensus/amount.h>
+#include <arith_uint256.h>
 #include <chain.h>
 #include <coins.h>
+#include <consensus/amount.h>
 #include <consensus/params.h>
 #include <node/stake_modifier_manager.h>
 #include <primitives/block.h>
@@ -25,6 +26,9 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev, unsigned int nBits,
                           unsigned int nTimeTx, node::StakeModifierManager& stake_modman,
                           uint256& hashProofOfStake, bool fPrintProofOfStake,
                           const Consensus::Params& params);
+
+/** Safely multiply two numbers and clamp to the maximum uint256 value on overflow */
+arith_uint256 SaturatingMultiply(const arith_uint256& a, uint64_t b);
 
 /**
  * Validate the proof-of-stake for a block using contextual chain information.
