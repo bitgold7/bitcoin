@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Verify address prefixes for the BitGold network.
 
-This test checks that different address types use the expected human-
-readable prefixes as defined by the chain parameters.
+This test checks that different address types use the expected human-readable
+prefixes as defined by the chain parameters.
 """
 
 from test_framework.address import base58_to_byte
@@ -22,10 +22,10 @@ class AddressPrefixesTest(BitcoinTestFramework):
         node = self.nodes[0]
 
         legacy_addr = node.getnewaddress(address_type="legacy")
-        assert_equal(legacy_addr[0], "B")
+        assert legacy_addr.startswith("B")
 
         script_addr = node.getnewaddress(address_type="p2sh-segwit")
-        assert_equal(script_addr[0], "G")
+        assert script_addr.startswith("G")
 
         bech32_addr = node.getnewaddress("", "bech32")
         assert bech32_addr.startswith("bg1")

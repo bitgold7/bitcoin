@@ -159,6 +159,7 @@ BASE_SCRIPTS = [
     'rpc_invalid_address_message.py',
     'rpc_validateaddress.py',
     'interface_bitcoin_cli.py',
+    'address_prefixes.py',
     'feature_bind_extra.py',
     'feature_bulletproof_invalid.py',
     'mempool_resurrect.py',
