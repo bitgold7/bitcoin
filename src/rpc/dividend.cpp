@@ -53,6 +53,50 @@ static RPCHelpMan claimdividends()
         }};
 }
 
+static RPCHelpMan getpendingdividends()
+{
+    return RPCHelpMan{
+        "getpendingdividends",
+        "Return pending dividend amounts for all addresses.",
+        {},
+        RPCResult{RPCResult::Type::OBJ, "", "", {{RPCResult::Type::AMOUNT, "<address>", "pending dividend"}}},
+        RPCExamples{HelpExampleCli("getpendingdividends", "") + HelpExampleRpc("getpendingdividends", "")},
+        [](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            ChainstateManager& chainman = EnsureAnyChainman(request.context);
+            LOCK(cs_main);
+            const auto& pend = chainman.ActiveChainstate().GetPendingDividends();
+            UniValue obj(UniValue::VOBJ);
+            for (const auto& [addr, amt] : pend) {
+                obj.pushKV(addr, ValueFromAmount(amt));
+            }
+            return obj;
+        }};
+}
+
+static RPCHelpMan getstakesnapshots()
+{
+    return RPCHelpMan{
+        "getstakesnapshots",
+        "Return recorded stake snapshots keyed by height.",
+        {},
+        RPCResult{RPCResult::Type::OBJ, "", "", {{RPCResult::Type::OBJ, "<height>", "snapshot", {{RPCResult::Type::AMOUNT, "<address>", "stake weight"}}}}},
+        RPCExamples{HelpExampleCli("getstakesnapshots", "") + HelpExampleRpc("getstakesnapshots", "")},
+        [](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            ChainstateManager& chainman = EnsureAnyChainman(request.context);
+            LOCK(cs_main);
+            const auto& snaps = chainman.ActiveChainstate().GetStakeSnapshots();
+            UniValue ret(UniValue::VOBJ);
+            for (const auto& [height, snap] : snaps) {
+                UniValue inner(UniValue::VOBJ);
+                for (const auto& [addr, amt] : snap) {
+                    inner.pushKV(addr, ValueFromAmount(amt));
+                }
+                ret.pushKV(std::to_string(height), inner);
+            }
+            return ret;
+        }};
+}
+
 static RPCHelpMan getdividendschedule()
 {
     return RPCHelpMan{
@@ -96,6 +140,8 @@ static RPCHelpMan getdividendschedule()
 static const CRPCCommand commands[] = {
     {"dividend", &getdividendpool},
     {"dividend", &claimdividends},
+    {"dividend", &getpendingdividends},
+    {"dividend", &getstakesnapshots},
     {"dividend", &getdividendschedule},
 };
 

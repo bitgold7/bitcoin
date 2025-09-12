@@ -2,12 +2,18 @@
 #define BITCOIN_DIVIDEND_DIVIDEND_H
 
 #include <consensus/amount.h>
+#include <serialize.h>
 #include <map>
 #include <string>
 
 struct StakeInfo {
     CAmount weight{0};
     int last_payout_height{0};
+
+    SERIALIZE_METHODS(StakeInfo, obj)
+    {
+        READWRITE(obj.weight, obj.last_payout_height);
+    }
 };
 
 namespace dividend {
