@@ -3427,6 +3427,15 @@ static RPCHelpMan getdividendinfo()
                 stakes.pushKV(addr, obj);
             }
             result.pushKV("stakes", stakes);
+            UniValue snaps(UniValue::VOBJ);
+            for (const auto& [h, snap] : chainstate.GetStakeSnapshots()) {
+                UniValue ss(UniValue::VOBJ);
+                for (const auto& [addr, weight] : snap) {
+                    ss.pushKV(addr, ValueFromAmount(weight));
+                }
+                snaps.pushKV(std::to_string(h), ss);
+            }
+            result.pushKV("snapshots", snaps);
             return result;
         }
     };

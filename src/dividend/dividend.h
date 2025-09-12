@@ -13,8 +13,19 @@ struct StakeInfo {
 namespace dividend {
 using Payouts = std::map<std::string, CAmount>;
 
+//! Number of blocks in a quarter and year for dividend calculations.
+inline constexpr int QUARTER_BLOCKS{16200};
+inline constexpr int YEAR_BLOCKS{QUARTER_BLOCKS * 4};
+
 /**
- * Calculate dividend payouts for a set of stakes.
+ * Determine the annual percentage rate for a given stake.
+ * The rate increases from 1% up to 10% based on stake age and amount.
+ */
+double CalculateApr(CAmount amount, int blocks_held);
+
+/**
+ * Calculate dividend payouts for a set of stakes. Payouts occur only on
+ * quarter boundaries and are capped by the available pool.
  * @param stakes map of address to StakeInfo
  * @param height current block height
  * @param pool total dividend pool to distribute
