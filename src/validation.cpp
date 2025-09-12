@@ -72,7 +72,7 @@
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
-#include <wallet/secp256k1_context.h>
+#include <util/secp256k1_context.h>
 #endif
 
 #include <algorithm>
