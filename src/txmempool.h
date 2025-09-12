@@ -86,7 +86,7 @@ struct mempoolentry_wtxid
 };
 
 struct HybridScore {
-    FeeFrac fee_rate;
+    int fee_band;
     uint64_t stake_weight;
     int64_t time_in_mempool;
     size_t congestion;
@@ -102,8 +102,7 @@ public:
         const CTxMemPoolEntry& y = b;
         HybridScore h1 = x.GetHybridScore();
         HybridScore h2 = y.GetHybridScore();
-        int cmp = FeeRateCompare(h1.fee_rate, h2.fee_rate);
-        if (cmp != 0) return cmp > 0;
+        if (h1.fee_band != h2.fee_band) return h1.fee_band > h2.fee_band;
         if (h1.stake_weight != h2.stake_weight) return h1.stake_weight > h2.stake_weight;
         if (h1.time_in_mempool != h2.time_in_mempool) return h1.time_in_mempool > h2.time_in_mempool;
         return h1.congestion > h2.congestion;
