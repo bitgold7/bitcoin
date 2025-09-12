@@ -611,6 +611,7 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     if (!node_context || !node_context->chainman) return false;
     ChainstateManager& chainman = *node_context->chainman;
     Chainstate& chainstate = chainman.ActiveChainstate();
+    node::StakeModifierManager& man = *Assert(node_context->stake_modman);
 
     LOCK(::cs_main);
     CBlockIndex* pindexPrev = chainstate.m_chain.Tip();
@@ -693,7 +694,7 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     block.hashMerkleRoot = BlockMerkleRoot(block);
 
     if (!ContextualCheckProofOfStake(block, pindexPrev, chainstate.CoinsTip(),
-                                     chainstate.m_chain, consensus)) {
+                                     chainstate.m_chain, man, consensus)) {
         return false;
     }
 

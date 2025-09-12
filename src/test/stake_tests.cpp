@@ -111,12 +111,11 @@ BOOST_AUTO_TEST_CASE(invalid_kernel_amount)
     unsigned int nTimeTx = MIN_STAKE_AGE;
     Consensus::Params params;
 
-    StakeModifierManager& man = GetStakeModifierManager();
-    man = StakeModifierManager();
+    node::StakeModifierManager man;
     man.UpdateOnConnect(&prev_index, params);
 
     BOOST_CHECK(!CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
-                                      amount, prevout, nTimeTx, hash_proof, false, params));
+                                      amount, prevout, nTimeTx, man, hash_proof, false, params));
 }
 
 BOOST_AUTO_TEST_CASE(kernel_hash_matches_expectation)
@@ -300,6 +299,8 @@ BOOST_AUTO_TEST_CASE(height1_requires_coinstake)
     CCoinsView view_base;
     CCoinsViewCache view(&view_base);
     Consensus::Params params;
+    node::StakeModifierManager man;
+    man.UpdateOnConnect(&prev_index, params);
 
     CBlock block;
     block.nTime = 16;
@@ -310,7 +311,7 @@ BOOST_AUTO_TEST_CASE(height1_requires_coinstake)
     coinbase.vout.resize(1);
     block.vtx.emplace_back(MakeTransactionRef(std::move(coinbase)));
 
-    BOOST_CHECK(!ContextualCheckProofOfStake(block, &prev_index, view, chain, params));
+    BOOST_CHECK(!ContextualCheckProofOfStake(block, &prev_index, view, chain, man, params));
 }
 
 BOOST_AUTO_TEST_CASE(valid_height1_coinstake)
@@ -336,6 +337,8 @@ BOOST_AUTO_TEST_CASE(valid_height1_coinstake)
     view.AddCoin(prevout, std::move(coin), false);
 
     Consensus::Params params;
+    node::StakeModifierManager man;
+    man.UpdateOnConnect(&prev_index, params);
     CBlock block;
     block.nTime = params.nStakeMinAge + 16;
     block.nBits = GetPoSNextTargetRequired(&prev_index, block.nTime, params);
@@ -355,7 +358,7 @@ BOOST_AUTO_TEST_CASE(valid_height1_coinstake)
     coinstake.vout[1].nValue = 1 * COIN;
     block.vtx.emplace_back(MakeTransactionRef(std::move(coinstake)));
 
-    BOOST_CHECK(ContextualCheckProofOfStake(block, &prev_index, view, chain, params));
+    BOOST_CHECK(ContextualCheckProofOfStake(block, &prev_index, view, chain, man, params));
 }
 
 BOOST_AUTO_TEST_CASE(reject_low_stake_amount)
@@ -380,6 +383,8 @@ BOOST_AUTO_TEST_CASE(reject_low_stake_amount)
     view.AddCoin(prevout, std::move(coin), false);
 
     Consensus::Params params;
+    node::StakeModifierManager man;
+    man.UpdateOnConnect(&prev_index, params);
     CBlock block;
     block.nTime = params.nStakeMinAge + 16;
     block.nBits = GetPoSNextTargetRequired(&prev_index, block.nTime, params);
@@ -399,7 +404,7 @@ BOOST_AUTO_TEST_CASE(reject_low_stake_amount)
     coinstake.vout[1].nValue = COIN / 2;
     block.vtx.emplace_back(MakeTransactionRef(std::move(coinstake)));
 
-    BOOST_CHECK(!ContextualCheckProofOfStake(block, &prev_index, view, chain, params));
+    BOOST_CHECK(!ContextualCheckProofOfStake(block, &prev_index, view, chain, man, params));
 }
 
 BOOST_AUTO_TEST_CASE(height1_allows_young_coinstake)
@@ -425,6 +430,8 @@ BOOST_AUTO_TEST_CASE(height1_allows_young_coinstake)
     view.AddCoin(prevout, std::move(coin), false);
 
     Consensus::Params params;
+    node::StakeModifierManager man;
+    man.UpdateOnConnect(&prev_index, params);
     CBlock block;
     block.nTime = params.nStakeMinAge; // younger than required age relative to prev_index
     block.nBits = GetPoSNextTargetRequired(&prev_index, block.nTime, params);
@@ -444,7 +451,7 @@ BOOST_AUTO_TEST_CASE(height1_allows_young_coinstake)
     coinstake.vout[1].nValue = 1 * COIN;
     block.vtx.emplace_back(MakeTransactionRef(std::move(coinstake)));
 
-    BOOST_CHECK(ContextualCheckProofOfStake(block, &prev_index, view, chain, params));
+    BOOST_CHECK(ContextualCheckProofOfStake(block, &prev_index, view, chain, man, params));
 }
 
 BOOST_FIXTURE_TEST_CASE(reject_pow_after_height1, ChainTestingSetup)

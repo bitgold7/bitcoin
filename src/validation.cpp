@@ -7,7 +7,8 @@
 
 #include <common/args.h>
 #include <pow.h>
-#include <kernel/stake.h>
+#include <pos/stake.h>
+#include <node/stake_modifier_manager.h>
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -90,10 +91,6 @@ using kernel::CCoinsStats;
 using kernel::CoinStatsHashType;
 using kernel::ComputeUTXOStats;
 using kernel::Notifications;
-using kernel::CheckBlockSignature;
-using kernel::ContextualCheckProofOfStake;
-using kernel::IsProofOfStake;
-using kernel::CheckStakeTimestamp;
 
 using fsbridge::FopenFn;
 using node::BlockManager;
@@ -273,8 +270,12 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
             Chainstate& chainstate = g_chainman->ActiveChainstate();
             CCoinsViewCache view(&chainstate.CoinsTip());
             const CChain& chain{g_chainman->ActiveChain()};
+            node::StakeModifierManager stake_modman;
+            for (int h = 0; h <= pindexPrev->nHeight; ++h) {
+                stake_modman.UpdateOnConnect(chain[h], params);
+            }
             // ContextualCheckProofOfStake enforces coinstake format, minimum age and difficulty
-            if (!ContextualCheckProofOfStake(block, pindexPrev, view, chain, params)) {
+            if (!ContextualCheckProofOfStake(block, pindexPrev, view, chain, stake_modman, params)) {
                 return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "proof of stake check failed");
             }
 

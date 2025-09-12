@@ -152,6 +152,7 @@ bool ContextualCheckProofOfStake(const CBlock& block,
                                  const CBlockIndex* pindexPrev,
                                  const CCoinsViewCache& view,
                                  const CChain& chain,
+                                 node::StakeModifierManager& stake_modman,
                                  const Consensus::Params& params)
 {
     if (!pindexPrev) return false;
@@ -199,7 +200,8 @@ bool ContextualCheckProofOfStake(const CBlock& block,
     if (!CheckStakeKernelHash(pindexPrev, nBits,
                               pindexFrom->GetBlockHash(), nTimeBlockFrom,
                               coin.out.nValue, txin.prevout,
-                              block.nTime, hashProofOfStake, false, params)) {
+                              block.nTime, stake_modman,
+                              hashProofOfStake, false, params)) {
         return false;
     }
 
