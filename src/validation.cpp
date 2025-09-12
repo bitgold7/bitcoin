@@ -190,6 +190,8 @@ const std::vector<std::string> CHECKLEVEL_DOC{
 };
 /** The number of blocks to keep below the deepest prune lock. */
 static constexpr int PRUNE_LOCK_BUFFER{10};
+/** Height threshold before block file pruning is permitted. */
+[[maybe_unused]] static constexpr int64_t N_PRUNE_AFTER_HEIGHT{100'000};
 
 TRACEPOINT_SEMAPHORE(validation, block_connected);
 TRACEPOINT_SEMAPHORE(utxocache, flush);
