@@ -23,6 +23,7 @@ class P2PDNSSeeds(BitcoinTestFramework):
         self.existing_block_relay_connections_test()
         self.force_dns_test()
         self.wait_time_tests()
+        self.bootstrap_using_dns_seeds_test()
 
     def init_arg_tests(self):
         fakeaddr = "fakenodeaddr.fakedomain.invalid."
@@ -123,6 +124,21 @@ class P2PDNSSeeds(BitcoinTestFramework):
 
         # The delay should be 5 mins
         with self.nodes[0].assert_debug_log(expected_msgs=["Waiting 300 seconds before querying DNS seeds.\n"]):
+            self.restart_node(0)
+
+    def bootstrap_using_dns_seeds_test(self):
+        self.log.info("Check that the updated DNS seeds are queried for peer bootstrap")
+        seeds = [
+            "dnsseed.bitgold.org",
+            "dnsseed.bitgold.com",
+            "dnsseed.bitgold.io",
+            "dnsseed.bitgold.net",
+            "dnsseed.bitgold.co",
+        ]
+        with self.nodes[0].assert_debug_log(
+            expected_msgs=[f"Loading addresses from DNS seed {s}" for s in seeds],
+            timeout=12,
+        ):
             self.restart_node(0)
 
 

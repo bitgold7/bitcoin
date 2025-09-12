@@ -172,12 +172,12 @@ public:
                uint256{"0000072775275721f1a3aebb47f462aca90027230a88ceb29f4aad95446acd9d"});
         assert(genesis.hashMerkleRoot ==
                uint256{"66c3315af5839b587720eaac8e0966dd93a7211a39c633deba4c0625ac86623b"});
-        // Ensure DNS entries are coordinated externally before release.
-        vSeeds.emplace_back("seed.bitgold.org");
-        vSeeds.emplace_back("seed.bitgold.net");
-        vSeeds.emplace_back("seed.bitgold.co");
-        vSeeds.emplace_back("seed.bitgold.io");
-        vSeeds.emplace_back("seed.bitgold.info");
+        // Final BitGold mainnet DNS seeds. Keep this list in sync with deployed seeders.
+        vSeeds.emplace_back("dnsseed.bitgold.org");
+        vSeeds.emplace_back("dnsseed.bitgold.com");
+        vSeeds.emplace_back("dnsseed.bitgold.io");
+        vSeeds.emplace_back("dnsseed.bitgold.net");
+        vSeeds.emplace_back("dnsseed.bitgold.co");
 
         // Note that of those which support the service bits prefix, most only support a subset of
         // possible options.
@@ -310,9 +310,9 @@ public:
         assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
         vFixedSeeds.clear();
         vSeeds.clear();
-        // BitGold-specific testnet seeds
+        // Final BitGold testnet DNS seeds. Keep this list in sync with deployed testnet seeders.
         vSeeds.emplace_back("testnet-seed.bitgold.org");
-        vSeeds.emplace_back("seed-testnet.bitgold.org");
+        vSeeds.emplace_back("testnet-seed.bitgold.net");
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 65);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 78);
@@ -431,9 +431,9 @@ public:
 
         vFixedSeeds.clear();
         vSeeds.clear();
-        // BitGold-specific testnet seeds
-        vSeeds.emplace_back("testnet-seed.bitgold.org");
-        vSeeds.emplace_back("seed-testnet.bitgold.org");
+        // Final BitGold testnet4 DNS seeds. Keep this list in sync with deployed seeders.
+        vSeeds.emplace_back("testnet4-seed.bitgold.org");
+        vSeeds.emplace_back("testnet4-seed.bitgold.net");
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 65);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 78);
