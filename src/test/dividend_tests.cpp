@@ -45,4 +45,32 @@ BOOST_AUTO_TEST_CASE(no_payouts)
     BOOST_CHECK(payouts.empty());
 }
 
+BOOST_AUTO_TEST_CASE(multi_stakeholders)
+{
+    using namespace dividend;
+    std::map<std::string, StakeInfo> stakes{
+        {"A", StakeInfo{10 * COIN, 0}},
+        {"B", StakeInfo{20 * COIN, QUARTER_BLOCKS}},
+        {"C", StakeInfo{40 * COIN, 0}},
+    };
+    CAmount pool{100 * COIN};
+    auto payouts{CalculatePayouts(stakes, 2 * QUARTER_BLOCKS, pool)};
+    BOOST_CHECK_EQUAL(payouts.size(), 3);
+    BOOST_CHECK(payouts.count("A"));
+    BOOST_CHECK(payouts.count("B"));
+    BOOST_CHECK(payouts.count("C"));
+}
+
+BOOST_AUTO_TEST_CASE(double_payout_prevention)
+{
+    using namespace dividend;
+    std::map<std::string, StakeInfo> stakes{{"A", StakeInfo{10 * COIN, 0}}};
+    CAmount pool{100 * COIN};
+    auto payouts{CalculatePayouts(stakes, QUARTER_BLOCKS, pool)};
+    BOOST_CHECK(!payouts.empty());
+    stakes["A"].last_payout_height = QUARTER_BLOCKS;
+    payouts = CalculatePayouts(stakes, QUARTER_BLOCKS, pool);
+    BOOST_CHECK(payouts.empty());
+}
+
 BOOST_AUTO_TEST_SUITE_END()

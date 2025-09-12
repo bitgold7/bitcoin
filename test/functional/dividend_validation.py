@@ -17,6 +17,9 @@ from test_framework.messages import (
 from test_framework.script import CScript, OP_TRUE
 from test_framework.util import assert_equal
 
+QUARTER_BLOCKS = 16200
+YEAR_BLOCKS = QUARTER_BLOCKS * 4
+
 STAKE_TIMESTAMP_MASK = None
 MIN_STAKE_AGE = 60 * 60
 
@@ -50,6 +53,7 @@ class DividendValidationTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 1
         self.setup_clean_chain = True
+        self.extra_args = [["-dividendpayouts=1"]]
 
     def run_test(self):
         node = self.nodes[0]
@@ -146,6 +150,36 @@ class DividendValidationTest(BitcoinTestFramework):
 
         pool_after = node.getdividendpool()["amount"]
         assert_equal(pool_after, pool_before + Decimal(dividend_out) / COIN)
+
+        info = node.getdividendinfo()
+        remaining = QUARTER_BLOCKS - node.getblockcount()
+        pool_before = node.getdividendpool()["amount"]
+        node.generatetoaddress(remaining, addr)
+        blockhash = node.getblockhash(QUARTER_BLOCKS)
+        block = node.getblock(blockhash, 2)
+        reward_tx = block["tx"][1]
+        payout_values = [int(Decimal(v["value"]) * COIN) for v in reward_tx["vout"][3:]]
+
+        stakes = info["stakes"]
+        desired = []
+        total_desired = 0
+        for data in stakes.values():
+            weight = int(Decimal(data["weight"]) * COIN)
+            duration = QUARTER_BLOCKS - data["last_payout"]
+            if duration <= 0 or weight <= 0:
+                continue
+            age_factor = min(1.0, duration / YEAR_BLOCKS)
+            amount_factor = min(1.0, weight / (1000 * COIN))
+            factor = max(age_factor, amount_factor)
+            apr = 0.01 + 0.09 * factor
+            d = int(weight * apr / 4.0)
+            if d > 0:
+                desired.append(d)
+                total_desired += d
+        pool = int(Decimal(pool_before) * COIN) + int(Decimal(reward_tx["vout"][2]["value"]) * COIN)
+        scale = min(1.0, pool / total_desired) if total_desired > 0 else 0.0
+        expected = sorted([int(d * scale) for d in desired if int(d * scale) > 0])
+        assert_equal(sorted(payout_values), expected)
 
         node.setmocktime(0)
 if __name__ == "__main__":
