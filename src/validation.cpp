@@ -420,6 +420,14 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
         }
     } else {
         if (IsProofOfStake(block)) {
+            {
+                LOCK(cs_main);
+                Chainstate& chainstate = g_chainman->ActiveChainstate();
+                CCoinsViewCache view(&chainstate.CoinsTip());
+                if (!CheckCoinstakeRewards(block, pindexPrev, view, params, state)) {
+                    return false;
+                }
+            }
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-prev", "proof of stake before activation");
         }
     }
