@@ -20,6 +20,7 @@
 #include <node/context.h>
 #include <node/kernel_notifications.h>
 #include <policy/feerate.h>
+#include <policy/hybrid_comparator.h>
 #include <policy/policy.h>
 #include <pos/stake.h>
 #include <primitives/transaction.h>
@@ -378,7 +379,7 @@ void BlockAssembler::addPackageTxs(int& nPackagesSelected, int& nDescendantsUpda
             bool use_modified = false;
             if (modit != mapModifiedTx.get<ancestor_score>().end()) {
                 if (g_hybrid_mempool) {
-                    use_modified = CompareTxMemPoolEntryByHybridScore()(*modit, CTxMemPoolModifiedEntry(iter));
+                    use_modified = HybridComparator()(*modit, CTxMemPoolModifiedEntry(iter));
                 } else {
                     use_modified = CompareTxMemPoolEntryByAncestorFee()(*modit, CTxMemPoolModifiedEntry(iter));
                 }
