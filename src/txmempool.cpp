@@ -37,6 +37,23 @@
 TRACEPOINT_SEMAPHORE(mempool, added);
 TRACEPOINT_SEMAPHORE(mempool, removed);
 
+namespace {
+// Compare two mempool entries using the priority point system. If priorities
+// are equal, fall back to feerate ordering for tie-breaking.
+bool CompareTxByPoints(const CTxMemPoolEntry& a, const CTxMemPoolEntry& b)
+{
+    if (a.GetPriority() != b.GetPriority()) {
+        return a.GetPriority() > b.GetPriority();
+    }
+    FeeFrac f1(a.GetFee(), a.GetTxSize());
+    FeeFrac f2(b.GetFee(), b.GetTxSize());
+    if (FeeRateCompare(f1, f2) == 0) {
+        return b.GetTx().GetHash() < a.GetTx().GetHash();
+    }
+    return f1 > f2;
+}
+} // namespace
+
 bool TestLockPointValidity(CChain& active_chain, const LockPoints& lp)
 {
     AssertLockHeld(cs_main);
@@ -809,7 +826,7 @@ bool CTxMemPool::CompareDepthAndScore(const GenTxid& hasha, const GenTxid& hashb
     uint64_t counta = i.value()->GetCountWithAncestors();
     uint64_t countb = j.value()->GetCountWithAncestors();
     if (counta == countb) {
-        return CompareTxMemPoolEntryByScore()(*i.value(), *j.value());
+        return CompareTxByPoints(*i.value(), *j.value());
     }
     return counta < countb;
 }
@@ -823,7 +840,7 @@ public:
         uint64_t counta = a->GetCountWithAncestors();
         uint64_t countb = b->GetCountWithAncestors();
         if (counta == countb) {
-            return CompareTxMemPoolEntryByScore()(*a, *b);
+            return CompareTxByPoints(*a, *b);
         }
         return counta < countb;
     }
