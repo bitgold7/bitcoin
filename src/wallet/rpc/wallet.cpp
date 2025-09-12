@@ -1037,6 +1037,9 @@ static RPCHelpMan sendshielded()
                 throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid address");
             }
             CAmount amount = AmountFromValue(request.params[1]);
+            if (amount <= 0) {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Amount must be positive");
+            }
             std::string txid, error;
             if (!pwallet->CreateShieldedTransaction(dest, amount, txid, error)) {
                 throw JSONRPCError(RPC_WALLET_ERROR, error);
@@ -1044,6 +1047,22 @@ static RPCHelpMan sendshielded()
             UniValue result(UniValue::VOBJ);
             result.pushKV("txid", txid);
             return result;
+        }};
+}
+
+static RPCHelpMan getshieldedbalance()
+{
+    return RPCHelpMan{
+        "getshieldedbalance",
+        "Return the total balance held in shielded outputs controlled by this wallet.",
+        {},
+        RPCResult{RPCResult::Type::AMOUNT, "", "total shielded balance"},
+        RPCExamples{HelpExampleCli("getshieldedbalance", "") + HelpExampleRpc("getshieldedbalance", "")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            std::shared_ptr<CWallet> pwallet = GetWalletForJSONRPCRequest(request);
+            if (!pwallet) return UniValue::VNULL;
+            pwallet->BlockUntilSyncedToCurrentChain();
+            return ValueFromAmount(pwallet->GetShieldedBalance());
         }};
 }
 
@@ -1124,6 +1143,7 @@ RPCHelpMan walletprocesspsbt();
 RPCHelpMan walletcreatefundedpsbt();
 RPCHelpMan signrawtransactionwithwallet();
 RPCHelpMan sendshielded();
+RPCHelpMan getshieldedbalance();
 
 // signmessage
 RPCHelpMan signmessage();
@@ -1194,6 +1214,7 @@ std::span<const CRPCCommand> GetWalletRPCCommands()
         {"wallet", &sendmany},
         {"wallet", &sendtoaddress},
         {"wallet", &sendshielded},
+        {"wallet", &getshieldedbalance},
         {"wallet", &setlabel},
         {"wallet", &settxfee},
         {"wallet", &setwalletflag},

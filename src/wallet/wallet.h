@@ -543,6 +543,9 @@ public:
     /** Generate a new shielded address for confidential payments. */
     std::string GetNewShieldedAddress();
 
+    /** Return the total balance held in shielded outputs. */
+    CAmount GetShieldedBalance() const;
+
     /** Configure whether the wallet is unlocked for staking only. */
     void SetStakingOnly(bool staking_only);
     /** True if wallet is unlocked only for staking purposes. */
@@ -593,6 +596,9 @@ public:
 
     /** Threshold for splitting stake outputs. */
     CAmount m_stake_split_threshold GUARDED_BY(cs_wallet){0};
+
+    /** Total balance stored in shielded outputs. */
+    CAmount m_shielded_balance GUARDED_BY(cs_wallet){0};
 
     /** True if wallet is unlocked only for staking, not for spending. */
     bool m_staking_only GUARDED_BY(cs_wallet){false};
