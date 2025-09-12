@@ -87,7 +87,7 @@ class DividendValidationTest(BitcoinTestFramework):
         addr = node.getnewaddress()
         node.generatetoaddress(1, addr)
         block = node.getblock(node.getbestblockhash(), 2)
-        reward_tx = block["tx"][1]
+        reward_tx = block["tx"][0]
         vout = reward_tx["vout"]
         staker = btc_to_sat(vout[1]["value"])
         pool = btc_to_sat(vout[2]["value"])
@@ -105,7 +105,7 @@ class DividendValidationTest(BitcoinTestFramework):
         pool_before = btc_to_sat(info["pool"])
         node.generatetoaddress(1, addr)
         block = node.getblock(node.getbestblockhash(), 2)
-        reward_tx = block["tx"][1]
+        reward_tx = block["tx"][0]
         payouts = calculate_payouts(stakes, QUARTER_BLOCKS, pool_before)
         vouts = reward_tx["vout"][3:]
         assert_equal(len(vouts), len(payouts))

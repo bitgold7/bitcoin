@@ -3,10 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <dividend/dividend.h>
+#include <test/util/setup_common.h>
 
 #include <boost/test/unit_test.hpp>
 
-BOOST_AUTO_TEST_SUITE(dividend_tests)
+BOOST_FIXTURE_TEST_SUITE(dividend_tests, BasicTestingSetup)
 
 BOOST_AUTO_TEST_CASE(multi_stakeholder_snapshots_and_no_double_payout)
 {
