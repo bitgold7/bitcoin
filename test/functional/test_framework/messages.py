@@ -82,10 +82,10 @@ MAX_OP_RETURN_RELAY = 100_000
 DEFAULT_MEMPOOL_EXPIRY_HOURS = 336  # hours
 
 MAGIC_BYTES = {
-    "mainnet": b"\xf9\xbe\xb4\xd9",
-    "testnet4": b"\x1c\x16\x3f\x28",
-    "regtest": b"\xfa\xbf\xb5\xda",
-    "signet": b"\x0a\x03\xcf\x40",
+    "mainnet": b"\xfc\xc1\xc6\xdc",
+    "testnet4": b"\xb2\xd3\xf4\xa5",
+    "regtest": b"\xab\xbc\xcd\xde",
+    "signet": b"\xb3\xc4\xd5\xe6",
 }
 
 def sha256(s):

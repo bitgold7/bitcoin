@@ -18,19 +18,20 @@ class P2PMagicBytesTest(BitcoinTestFramework):
             raise SkipTest("magic bytes are v1-specific")
 
         # Override mainnet magic bytes for the BitGold network
-        MAGIC_BYTES[""] = b"\xfb\xc0\xc5\xdb"
+        MAGIC_BYTES[""] = b"\xfc\xc1\xc6\xdc"
+        MAGIC_BYTES["old"] = b"\xfb\xc0\xc5\xdb"
 
         self.log.info("Connecting with correct magic to default port 8888")
         good_conn = self.nodes[0].add_p2p_connection(P2PInterface(), dstport=8888)
         good_conn.wait_for_verack()
         self.nodes[0].disconnect_p2ps()
 
-        self.log.info("Connecting with incorrect magic disconnects")
+        self.log.info("Connecting with old magic disconnects")
         bad_conn = P2PInterface()
         bad_conn.peer_connect(
             dstaddr="127.0.0.1",
             dstport=8888,
-            net="regtest",
+            net="old",
             timeout_factor=self.nodes[0].timeout_factor,
             supports_v2_p2p=False,
             send_version=True,
