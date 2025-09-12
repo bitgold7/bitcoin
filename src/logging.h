@@ -94,6 +94,7 @@ namespace BCLog {
         SCAN        = (CategoryMask{1} << 27),
         TXPACKAGES  = (CategoryMask{1} << 28),
         STAKING     = (CategoryMask{1} << 29),
+        CONSENSUS   = (CategoryMask{1} << 30),
         ALL         = ~NONE,
     };
     enum class Level {
@@ -189,6 +190,7 @@ namespace BCLog {
             std::source_location source_loc;
             LogFlags category;
             Level level;
+            std::string reason;
         };
 
     private:
@@ -215,6 +217,7 @@ namespace BCLog {
         std::atomic<CategoryMask> m_categories{BCLog::NONE};
 
         void FormatLogStrInPlace(std::string& str, LogFlags category, Level level, const std::source_location& source_loc, std::string_view threadname, SystemClock::time_point now, std::chrono::seconds mocktime) const;
+        std::string FormatLogJSON(std::string_view msg, LogFlags category, Level level, const std::source_location& source_loc, std::string_view threadname, SystemClock::time_point now, std::chrono::seconds mocktime, std::string_view reason) const;
 
         std::string LogTimestampStr(SystemClock::time_point now, std::chrono::seconds mocktime) const;
 
@@ -222,7 +225,7 @@ namespace BCLog {
         std::list<std::function<void(const std::string&)>> m_print_callbacks GUARDED_BY(m_cs) {};
 
         /** Send a string to the log output (internal) */
-        void LogPrintStr_(std::string_view str, std::source_location&& source_loc, BCLog::LogFlags category, BCLog::Level level, bool should_ratelimit)
+        void LogPrintStr_(std::string_view str, std::source_location&& source_loc, BCLog::LogFlags category, BCLog::Level level, bool should_ratelimit, std::string_view reason = {})
             EXCLUSIVE_LOCKS_REQUIRED(m_cs);
 
         std::string GetLogPrefix(LogFlags category, Level level) const;
@@ -236,12 +239,13 @@ namespace BCLog {
         bool m_log_threadnames = DEFAULT_LOGTHREADNAMES;
         bool m_log_sourcelocations = DEFAULT_LOGSOURCELOCATIONS;
         bool m_always_print_category_level = DEFAULT_LOGLEVELALWAYS;
+        bool m_log_json = false;
 
         fs::path m_file_path;
         std::atomic<bool> m_reopen_file{false};
 
         /** Send a string to the log output */
-        void LogPrintStr(std::string_view str, std::source_location&& source_loc, BCLog::LogFlags category, BCLog::Level level, bool should_ratelimit)
+        void LogPrintStr(std::string_view str, std::source_location&& source_loc, BCLog::LogFlags category, BCLog::Level level, bool should_ratelimit, std::string_view reason = {})
             EXCLUSIVE_LOCKS_REQUIRED(!m_cs);
 
         /** Returns whether logs will be written to any output */
@@ -344,7 +348,7 @@ static inline bool LogAcceptCategory(BCLog::LogFlags category, BCLog::Level leve
 bool GetLogCategory(BCLog::LogFlags& flag, std::string_view str);
 
 template <typename... Args>
-inline void LogPrintFormatInternal(std::source_location&& source_loc, const BCLog::LogFlags flag, const BCLog::Level level, const bool should_ratelimit, util::ConstevalFormatString<sizeof...(Args)> fmt, const Args&... args)
+inline void LogPrintFormatInternal(std::source_location&& source_loc, const BCLog::LogFlags flag, const BCLog::Level level, const bool should_ratelimit, std::string_view reason, util::ConstevalFormatString<sizeof...(Args)> fmt, const Args&... args)
 {
     if (LogInstance().Enabled()) {
         std::string log_msg;
@@ -353,19 +357,19 @@ inline void LogPrintFormatInternal(std::source_location&& source_loc, const BCLo
         } catch (tinyformat::format_error& fmterr) {
             log_msg = "Error \"" + std::string{fmterr.what()} + "\" while formatting log message: " + fmt.fmt;
         }
-        LogInstance().LogPrintStr(log_msg, std::move(source_loc), flag, level, should_ratelimit);
+        LogInstance().LogPrintStr(log_msg, std::move(source_loc), flag, level, should_ratelimit, reason);
     }
 }
 
-#define LogPrintLevel_(category, level, should_ratelimit, ...) LogPrintFormatInternal(std::source_location::current(), category, level, should_ratelimit, __VA_ARGS__)
+#define LogPrintLevel_(category, level, should_ratelimit, reason, ...) LogPrintFormatInternal(std::source_location::current(), category, level, should_ratelimit, reason, __VA_ARGS__)
 
 // Log unconditionally. Uses basic rate limiting to mitigate disk filling attacks.
 // Be conservative when using functions that unconditionally log to debug.log!
 // It should not be the case that an inbound peer can fill up a user's storage
 // with debug.log entries.
-#define LogInfo(...) LogPrintLevel_(BCLog::LogFlags::ALL, BCLog::Level::Info, /*should_ratelimit=*/true, __VA_ARGS__)
-#define LogWarning(...) LogPrintLevel_(BCLog::LogFlags::ALL, BCLog::Level::Warning, /*should_ratelimit=*/true, __VA_ARGS__)
-#define LogError(...) LogPrintLevel_(BCLog::LogFlags::ALL, BCLog::Level::Error, /*should_ratelimit=*/true, __VA_ARGS__)
+#define LogInfo(...) LogPrintLevel_(BCLog::LogFlags::ALL, BCLog::Level::Info, /*should_ratelimit=*/true, /*reason=*/"", __VA_ARGS__)
+#define LogWarning(...) LogPrintLevel_(BCLog::LogFlags::ALL, BCLog::Level::Warning, /*should_ratelimit=*/true, /*reason=*/"", __VA_ARGS__)
+#define LogError(...) LogPrintLevel_(BCLog::LogFlags::ALL, BCLog::Level::Error, /*should_ratelimit=*/true, /*reason=*/"", __VA_ARGS__)
 
 // Deprecated unconditional logging.
 #define LogPrintf(...) LogInfo(__VA_ARGS__)
@@ -383,12 +387,15 @@ inline void LogPrintFormatInternal(std::source_location&& source_loc, const BCLo
     do {                                                              \
         if (LogAcceptCategory((category), (level))) {                 \
             bool rate_limit{level >= BCLog::Level::Info};             \
-            LogPrintLevel_(category, level, rate_limit, __VA_ARGS__); \
+            LogPrintLevel_(category, level, rate_limit, "", __VA_ARGS__); \
         }                                                             \
     } while (0)
 
 // Log conditionally, prefixing the output with the passed category name.
 #define LogDebug(category, ...) LogPrintLevel(category, BCLog::Level::Debug, __VA_ARGS__)
 #define LogTrace(category, ...) LogPrintLevel(category, BCLog::Level::Trace, __VA_ARGS__)
+
+// Log with a reason code associated to the category
+#define LogPrintCategory(category, reason, ...) LogPrintLevel_(category, BCLog::Level::Error, /*should_ratelimit=*/true, reason, __VA_ARGS__)
 
 #endif // BITCOIN_LOGGING_H

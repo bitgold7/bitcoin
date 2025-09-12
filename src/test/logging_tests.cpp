@@ -116,7 +116,7 @@ BOOST_FIXTURE_TEST_CASE(logging_LogPrintStr, LogSetup)
     std::vector<std::string> expected;
     for (auto& [msg, category, level, prefix, loc] : cases) {
         expected.push_back(tfm::format("[%s:%s] [%s] %s%s", util::RemovePrefix(loc.file_name(), "./"), loc.line(), loc.function_name(), prefix, msg));
-        LogInstance().LogPrintStr(msg, std::move(loc), category, level, /*should_ratelimit=*/false);
+        LogInstance().LogPrintStr(msg, std::move(loc), category, level, /*should_ratelimit=*/false, "");
     }
     std::ifstream file{tmp_log_path};
     std::vector<std::string> log_lines;
