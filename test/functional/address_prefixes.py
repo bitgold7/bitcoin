@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2024 The Bitcoin Core developers
+# Distributed under the MIT software license, see the accompanying
+# file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Verify address prefixes for the BitGold network.
 
 This test checks that different address types use the expected human-readable
@@ -22,12 +25,12 @@ class AddressPrefixesTest(BitcoinTestFramework):
         node = self.nodes[0]
 
         legacy_addr = node.getnewaddress(address_type="legacy")
-        assert legacy_addr.startswith("B")
+        assert_equal(legacy_addr[0], "B")
 
         script_addr = node.getnewaddress(address_type="p2sh-segwit")
-        assert script_addr.startswith("G")
+        assert_equal(script_addr[0], "G")
 
-        bech32_addr = node.getnewaddress("", "bech32")
+        bech32_addr = node.getnewaddress(address_type="bech32")
         assert bech32_addr.startswith("bg1")
 
         wif = node.dumpprivkey(legacy_addr)
