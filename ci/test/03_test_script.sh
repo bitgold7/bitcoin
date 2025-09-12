@@ -203,14 +203,28 @@ if [ "${RUN_TIDY}" = "true" ]; then
 fi
 
 if [ "$RUN_FUZZ_TESTS" = "true" ]; then
-  # shellcheck disable=SC2086
-  LD_LIBRARY_PATH="${DEPENDS_DIR}/${HOST}/lib" \
-  "${BASE_BUILD_DIR}/test/fuzz/test_runner.py" \
-    ${FUZZ_TESTS_CONFIG} \
-    "${MAKEJOBS}" \
-    -l DEBUG \
-    "${DIR_FUZZ_IN}" \
-    --empty_min_time=60
+  if [ -n "$FUZZ_TARGETS" ]; then
+    for target in $FUZZ_TARGETS; do
+      # shellcheck disable=SC2086
+      LD_LIBRARY_PATH="${DEPENDS_DIR}/${HOST}/lib" \
+      "${BASE_BUILD_DIR}/test/fuzz/test_runner.py" \
+        ${FUZZ_TESTS_CONFIG} \
+        "${MAKEJOBS}" \
+        -l DEBUG \
+        "${DIR_FUZZ_IN}" \
+        "$target" \
+        --empty_min_time=60
+    done
+  else
+    # shellcheck disable=SC2086
+    LD_LIBRARY_PATH="${DEPENDS_DIR}/${HOST}/lib" \
+    "${BASE_BUILD_DIR}/test/fuzz/test_runner.py" \
+      ${FUZZ_TESTS_CONFIG} \
+      "${MAKEJOBS}" \
+      -l DEBUG \
+      "${DIR_FUZZ_IN}" \
+      --empty_min_time=60
+  fi
 fi
 
 if [ "$BOOTSTRAP_FRESH_TESTNET" = "true" ]; then
