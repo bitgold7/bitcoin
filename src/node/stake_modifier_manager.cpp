@@ -26,6 +26,24 @@ uint256 StakeModifierManager::GetCurrentModifier() const
     return m_current_modifier;
 }
 
+uint256 StakeModifierManager::GetDynamicModifier(const CBlockIndex* pindexPrev, unsigned int nTime,
+                                                 const Consensus::Params& params)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!pindexPrev) return m_current_modifier;
+    auto it = m_modifiers.find(pindexPrev->GetBlockHash());
+    if (it == m_modifiers.end()) return m_current_modifier;
+    ModifierEntry& entry = it->second;
+    if (static_cast<int64_t>(nTime) - entry.last_update >= params.nStakeModifierInterval) {
+        entry.modifier = ComputeStakeModifier(pindexPrev, entry.modifier);
+        entry.last_update = nTime;
+        if (m_current_block_hash == pindexPrev->GetBlockHash()) {
+            m_current_modifier = entry.modifier;
+        }
+    }
+    return entry.modifier;
+}
+
 void StakeModifierManager::UpdateOnConnect(const CBlockIndex* pindex, const Consensus::Params& params)
 {
     std::lock_guard<std::mutex> lock(m_mutex);

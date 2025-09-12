@@ -108,7 +108,7 @@ public:
         consensus.nStakeTimestampMask = 0xF;
         consensus.nStakeMinAge = 8 * 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
-        consensus.nStakeModifierVersion = 1;
+        consensus.nStakeModifierVersion = 3;
         consensus.nStakeMinConfirmations = 80;
         consensus.nStakeMaxAgeWeight = 60 * 60 * 24 * 30;
         consensus.posLimit = consensus.powLimit;
@@ -262,7 +262,7 @@ public:
         consensus.nStakeTimestampMask = 0xF;
         consensus.nStakeMinAge = 8 * 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
-        consensus.nStakeModifierVersion = 1;
+        consensus.nStakeModifierVersion = 3;
         consensus.nStakeMinConfirmations = 80;
         consensus.nStakeMaxAgeWeight = 60 * 60 * 24 * 30;
         consensus.posLimit = consensus.powLimit;
@@ -382,7 +382,7 @@ public:
         consensus.nStakeTimestampMask = 0xF;
         consensus.nStakeMinAge = 8 * 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
-        consensus.nStakeModifierVersion = 1;
+        consensus.nStakeModifierVersion = 3;
         consensus.nStakeMinConfirmations = 80;
         consensus.nStakeMaxAgeWeight = 60 * 60 * 24 * 30;
         consensus.posLimit = consensus.powLimit;
@@ -535,7 +535,7 @@ public:
         consensus.nStakeTimestampMask = 0xF;
         consensus.nStakeMinAge = 8 * 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
-        consensus.nStakeModifierVersion = 1;
+        consensus.nStakeModifierVersion = 3;
         consensus.nStakeMinConfirmations = 80;
         consensus.nStakeMaxAgeWeight = 60 * 60 * 24 * 30;
         consensus.fPowAllowMinDifficultyBlocks = false;
@@ -640,7 +640,7 @@ public:
         consensus.nStakeTimestampMask = 0xF;
         consensus.nStakeMinAge = 8 * 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
-        consensus.nStakeModifierVersion = 1;
+        consensus.nStakeModifierVersion = 3;
         consensus.nStakeMinConfirmations = 80;
         consensus.nStakeMaxAgeWeight = 60 * 60 * 24 * 30;
         consensus.posLimit = consensus.powLimit;

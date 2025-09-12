@@ -39,6 +39,13 @@ public:
     /** Return the current stake modifier. */
     uint256 GetCurrentModifier() const;
 
+    /**
+     * Return the current stake modifier, refreshing it if the provided time
+     * exceeds the refresh interval (v3 algorithm).
+     */
+    uint256 GetDynamicModifier(const CBlockIndex* pindexPrev, unsigned int nTime,
+                               const Consensus::Params& params);
+
     /** Update the modifier on block connect. */
     void UpdateOnConnect(const CBlockIndex* pindex, const Consensus::Params& params);
 
