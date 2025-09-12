@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <dividend/dividend.h>
+#include <consensus/dividends/schedule.h>
 #include <node/miner.h>
 
 #include <chain.h>
@@ -171,7 +172,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     CAmount pool = m_chainstate.GetDividendPool() + dividend_reward;
     CMutableTransaction payoutTx;
     const bool payouts_enabled = gArgs.GetBoolArg("-dividendpayouts", false);
-    if (payouts_enabled && nHeight > 0 && nHeight % dividend::QUARTER_BLOCKS == 0 && pool > 0) {
+    if (payouts_enabled && consensus::dividends::IsSnapshotHeight(nHeight) && pool > 0) {
         payoutTx = dividend::BuildPayoutTx(m_chainstate.GetStakeInfo(), nHeight, pool);
     }
     coinbaseTx.vout.resize(2);
@@ -660,7 +661,7 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     CAmount pool = chainstate.GetDividendPool() + dividend_reward;
     CMutableTransaction payoutTx;
     const bool payouts_enabled = gArgs.GetBoolArg("-dividendpayouts", false);
-    if (payouts_enabled && height > 0 && height % dividend::QUARTER_BLOCKS == 0 && pool > 0) {
+    if (payouts_enabled && consensus::dividends::IsSnapshotHeight(height) && pool > 0) {
         payoutTx = dividend::BuildPayoutTx(chainstate.GetStakeInfo(), height, pool);
     }
     coinstake.vout.resize(3);
