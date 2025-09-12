@@ -804,4 +804,77 @@ BOOST_AUTO_TEST_CASE(MempoolAncestryTestsDiamond)
     BOOST_CHECK_EQUAL(descendants, 4ULL);
 }
 
+BOOST_AUTO_TEST_CASE(MempoolPriorityEviction)
+{
+    CTxMemPool& pool = *Assert(m_node.mempool);
+    LOCK2(::cs_main, pool.cs);
+    TestMemPoolEntryHelper entry;
+
+    // Transaction with higher priority but lower fee
+    CMutableTransaction tx_high;
+    tx_high.vin.resize(1);
+    tx_high.vin[0].scriptSig = CScript() << OP_1;
+    tx_high.vout.resize(1);
+    tx_high.vout[0].scriptPubKey = CScript() << OP_1 << OP_EQUAL;
+    tx_high.vout[0].nValue = 10 * COIN;
+    AddToMempool(pool, entry.Fee(1000LL).FromTx(tx_high));
+    auto it_high = pool.GetIter(tx_high.GetHash()).value();
+    pool.mapTx.modify(it_high, [](CTxMemPoolEntry& e) { e.SetPriority(1); });
+
+    // Transaction with lower priority but higher fee
+    CMutableTransaction tx_low;
+    tx_low.vin.resize(1);
+    tx_low.vin[0].scriptSig = CScript() << OP_1;
+    tx_low.vout.resize(1);
+    tx_low.vout[0].scriptPubKey = CScript() << OP_1 << OP_EQUAL;
+    tx_low.vout[0].nValue = 10 * COIN;
+    AddToMempool(pool, entry.Fee(10000LL).FromTx(tx_low));
+    auto it_low = pool.GetIter(tx_low.GetHash()).value();
+    pool.mapTx.modify(it_low, [](CTxMemPoolEntry& e) { e.SetPriority(0); });
+
+    // Force eviction to a single entry. The lower priority tx should be evicted
+    pool.TrimToSize(pool.DynamicMemoryUsage() - 1);
+    BOOST_CHECK(pool.exists(tx_high.GetHash()));
+    BOOST_CHECK(!pool.exists(tx_low.GetHash()));
+
+    // Clean up
+    pool.TrimToSize(0);
+}
+
+BOOST_AUTO_TEST_CASE(MempoolPriorityMining)
+{
+    CTxMemPool& pool = *Assert(m_node.mempool);
+    LOCK2(::cs_main, pool.cs);
+    TestMemPoolEntryHelper entry;
+
+    // High priority, low fee transaction
+    CMutableTransaction tx_high;
+    tx_high.vin.resize(1);
+    tx_high.vin[0].scriptSig = CScript() << OP_1;
+    tx_high.vout.resize(1);
+    tx_high.vout[0].scriptPubKey = CScript() << OP_1 << OP_EQUAL;
+    tx_high.vout[0].nValue = 10 * COIN;
+    AddToMempool(pool, entry.Fee(1000LL).FromTx(tx_high));
+    auto it_high = pool.GetIter(tx_high.GetHash()).value();
+    pool.mapTx.modify(it_high, [](CTxMemPoolEntry& e) { e.SetPriority(1); });
+
+    // Low priority, high fee transaction
+    CMutableTransaction tx_low;
+    tx_low.vin.resize(1);
+    tx_low.vin[0].scriptSig = CScript() << OP_1;
+    tx_low.vout.resize(1);
+    tx_low.vout[0].scriptPubKey = CScript() << OP_1 << OP_EQUAL;
+    tx_low.vout[0].nValue = 10 * COIN;
+    AddToMempool(pool, entry.Fee(10000LL).FromTx(tx_low));
+    auto it_low = pool.GetIter(tx_low.GetHash()).value();
+    pool.mapTx.modify(it_low, [](CTxMemPoolEntry& e) { e.SetPriority(0); });
+
+    auto sorted = pool.GetSortedDepthAndScore();
+    BOOST_REQUIRE_EQUAL(sorted.size(), 2U);
+    BOOST_CHECK_EQUAL(sorted.front()->GetTx().GetHash(), tx_high.GetHash());
+
+    // Clean up
+    pool.TrimToSize(0);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
