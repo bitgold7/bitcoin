@@ -167,7 +167,8 @@ void BitGoldStaker::ThreadStakeMiner()
                         coinstake.nLockTime = nTimeTx;
                         coinstake.vin.emplace_back(stake_out.outpoint);
                         coinstake.vin[0].nSequence = CTxIn::SEQUENCE_FINAL;
-                        coinstake.vout.resize(3);
+                        coinstake.vout.clear();
+                        coinstake.vout.emplace_back();
                         coinstake.vout[0].SetNull();
                         int64_t coin_age_weight = int64_t(nTimeTx) - int64_t(pindexFrom->GetBlockTime());
                         CAmount subsidy = GetProofOfStakeReward(pindexPrev->nHeight + 1, /*fees=*/0,
@@ -189,25 +190,16 @@ void BitGoldStaker::ThreadStakeMiner()
                                 if (total >= split_threshold) break;
                             }
                         }
-// Keep vout[0] (coinstake marker) intact, rebuild the rest deterministically.
-CScript dividendScript = dividend::GetDividendScript();  // or: CScript() << OP_TRUE
-
-// Ensure we start from a known state: only the marker output at index 0.
-if (coinstake.vout.size() > 1) {
-    coinstake.vout.resize(1);
-}
-
-// Build stake outputs (split if large enough), then append the dividend output.
-if (total > split_threshold * 2) {
-    const CAmount half = total / 2;
-    coinstake.vout.emplace_back(half,            stake_out.txout.scriptPubKey);
-    coinstake.vout.emplace_back(total - half,    stake_out.txout.scriptPubKey);
-} else {
-    coinstake.vout.emplace_back(total,           stake_out.txout.scriptPubKey);
-}
-
-// Dividend output last.
-coinstake.vout.emplace_back(dividend_reward, dividendScript);
+                        // Rebuild outputs deterministically: marker, stake payout(s), dividend
+                        CScript dividendScript = dividend::GetDividendScript();
+                        if (total > split_threshold * 2) {
+                            const CAmount half = total / 2;
+                            coinstake.vout.emplace_back(half, stake_out.txout.scriptPubKey);
+                            coinstake.vout.emplace_back(total - half, stake_out.txout.scriptPubKey);
+                        } else {
+                            coinstake.vout.emplace_back(total, stake_out.txout.scriptPubKey);
+                        }
+                        coinstake.vout.emplace_back(dividend_reward, dividendScript);
 
                         {
                             LOCK(m_wallet.cs_wallet);

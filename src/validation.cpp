@@ -20,6 +20,7 @@
 #include <consensus/merkle.h>
 #include <consensus/tx_check.h>
 #include <consensus/tx_verify.h>
+#include <consensus/reward.h>
 #include <consensus/validation.h>
 #include <cuckoocache.h>
 #include <dividend/dividend.h>
@@ -203,14 +204,15 @@ TRACEPOINT_SEMAPHORE(mempool, replaced);
 TRACEPOINT_SEMAPHORE(mempool, rejected);
 ChainstateManager* g_chainman{nullptr};
 
-static bool CheckCoinstakeRewards(const CBlock& block, const CBlockIndex* pindexPrev,
-                                  const CCoinsViewCache& view,
-                                  const Consensus::Params& params,
-                                  BlockValidationState& state)
+static bool CheckBlockRewards(const CBlock& block, const CBlockIndex* pindexPrev,
+                              const CCoinsViewCache& view,
+                              const Consensus::Params& params,
+                              BlockValidationState& state)
 {
-    // Verify 90/10 fee split between validator and dividend pool
     CAmount fees{0};
-    for (size_t i = 2; i < block.vtx.size(); ++i) {
+    const bool is_pos{IsProofOfStake(block)};
+    const size_t start{is_pos ? 2 : 1};
+    for (size_t i = start; i < block.vtx.size(); ++i) {
         const CTransaction& tx{*block.vtx[i]};
         CAmount in_val{0};
         for (const auto& in : tx.vin) {
@@ -231,42 +233,27 @@ static bool CheckCoinstakeRewards(const CBlock& block, const CBlockIndex* pindex
     }
 
     const int height{pindexPrev->nHeight + 1};
-    CAmount block_subsidy{GetBlockSubsidy(height, params)};
-    CAmount total_reward{fees + block_subsidy};
-    CAmount dividend_reward{total_reward / 10};
-    CAmount validator_reward{total_reward - dividend_reward};
+    const CAmount block_subsidy{GetBlockSubsidy(height, params)};
+    const CAmount total_reward{fees + block_subsidy};
+    const CAmount dividend_reward{total_reward / 10};
+    const CAmount validator_reward{total_reward - dividend_reward};
 
-    const CTransaction& reward_tx{*block.vtx[1]};
+    const CTransaction& reward_tx{*(block.vtx[is_pos ? 1 : 0])};
     CAmount stake_input_total{0};
-    for (const auto& in : reward_tx.vin) {
-        const Coin& coin{view.AccessCoin(in.prevout)};
-        if (coin.IsSpent()) {
-            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
-                                 "bad-txns-inputs-missingorspent");
+    if (is_pos) {
+        for (const auto& in : reward_tx.vin) {
+            const Coin& coin{view.AccessCoin(in.prevout)};
+            if (coin.IsSpent()) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
+                                     "bad-txns-inputs-missingorspent");
+            }
+            stake_input_total += coin.out.nValue;
         }
-        stake_input_total += coin.out.nValue;
     }
 
-    if (reward_tx.vout.size() < 2 ||
-        reward_tx.vout[1].nValue != stake_input_total + validator_reward) {
-        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
-                             "bad-validator-amount");
-    }
-    if (reward_tx.vout.size() < 3) {
-        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
-                             "bad-dividend-missing");
-    }
-    if (reward_tx.vout[2].nValue != dividend_reward) {
-        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
-                             "bad-dividend-amount");
-    }
-    if (reward_tx.vout[2].scriptPubKey != dividend::GetDividendScript()) {
-        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
-                             "bad-dividend-script");
-    }
-    if (reward_tx.vout.size() != 3) {
-        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
-                             "bad-dividend-extra");
+    if (!Consensus::CheckRewardSplit(reward_tx, stake_input_total,
+                                     validator_reward, dividend_reward, state)) {
+        return false;
     }
 
     return true;
@@ -366,7 +353,7 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
                 return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "proof of stake check failed");
             }
 
-            if (!CheckCoinstakeRewards(block, pindexPrev, view, params, state)) {
+            if (!CheckBlockRewards(block, pindexPrev, view, params, state)) {
                 return false;
             }
 
@@ -427,15 +414,15 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-double-sign", "validator produced multiple blocks");
         }
     } else {
-        if (IsProofOfStake(block)) {
-            {
-                LOCK(cs_main);
-                Chainstate& chainstate = g_chainman->ActiveChainstate();
-                CCoinsViewCache view(&chainstate.CoinsTip());
-                if (!CheckCoinstakeRewards(block, pindexPrev, view, params, state)) {
-                    return false;
-                }
+        {
+            LOCK(cs_main);
+            Chainstate& chainstate = g_chainman->ActiveChainstate();
+            CCoinsViewCache view(&chainstate.CoinsTip());
+            if (!CheckBlockRewards(block, pindexPrev, view, params, state)) {
+                return false;
             }
+        }
+        if (IsProofOfStake(block)) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-prev", "proof of stake before activation");
         }
     }
