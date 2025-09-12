@@ -21,14 +21,14 @@ static constexpr auto HELP_USAGE = R"(Usage: %s [OPTIONS] COMMAND...
 
 Options:
   -m, --multiprocess     Run multiprocess binaries bitcoin-node, bitcoin-gui.
-  -M, --monolithic       Run monolithic binaries bitcoind, bitcoin-qt. (Default behavior)
+  -M, --monolithic       Run monolithic binaries bitgoldd, bitcoin-qt. (Default behavior)
   -v, --version          Show version information
   -h, --help             Show this help message
 
 Commands:
   gui [ARGS]     Start GUI, equivalent to running 'bitcoin-qt [ARGS]' or 'bitcoin-gui [ARGS]'.
-  node [ARGS]    Start node, equivalent to running 'bitcoind [ARGS]' or 'bitcoin-node [ARGS]'.
-  rpc [ARGS]     Call RPC method, equivalent to running 'bitcoin-cli -named [ARGS]'.
+  node [ARGS]    Start node, equivalent to running 'bitgoldd [ARGS]' or 'bitcoin-node [ARGS]'.
+  rpc [ARGS]     Call RPC method, equivalent to running 'bitgold-cli -named [ARGS]'.
   wallet [ARGS]  Call wallet command, equivalent to running 'bitcoin-wallet [ARGS]'.
   tx [ARGS]      Manipulate hex-encoded transactions, equivalent to running 'bitcoin-tx [ARGS]'.
   help [-a]      Show this help message. Include -a or --all to show additional commands.
@@ -71,9 +71,9 @@ int main(int argc, char* argv[])
         } else if (cmd.command == "gui") {
             args.emplace_back(cmd.use_multiprocess ? "bitcoin-gui" : "bitcoin-qt");
         } else if (cmd.command == "node") {
-            args.emplace_back(cmd.use_multiprocess ? "bitcoin-node" : "bitcoind");
+            args.emplace_back(cmd.use_multiprocess ? "bitcoin-node" : "bitgoldd");
         } else if (cmd.command == "rpc") {
-            args.emplace_back("bitcoin-cli");
+            args.emplace_back("bitgold-cli");
             // Since "bitcoin rpc" is a new interface that doesn't need to be
             // backward compatible, enable -named by default so it is convenient
             // for callers to use a mix of named and unnamed parameters. Callers
@@ -136,12 +136,12 @@ CommandLine ParseCommandLine(int argc, char* argv[])
     return cmd;
 }
 
-//! Execute the specified bitcoind, bitcoin-qt or other command line in `args`
+//! Execute the specified bitgoldd, bitcoin-qt or other command line in `args`
 //! using src, bin and libexec directory paths relative to this executable, where
 //! the path to this executable is specified in `wrapper_argv0`.
 //!
 //! @param args Command line arguments to execute, where first argument should
-//!             be a relative path to a bitcoind, bitcoin-qt or other executable
+//!             be a relative path to a bitgoldd, bitcoin-qt or other executable
 //!             that will be located on the PATH or relative to wrapper_argv0.
 //!
 //! @param wrapper_argv0 String containing first command line argument passed to

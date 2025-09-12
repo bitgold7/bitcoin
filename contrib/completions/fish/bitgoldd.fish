@@ -1,8 +1,8 @@
 # Disable files from being included in completions by default
-complete --command bitcoind --no-files
+complete --command bitgoldd --no-files
 
 # Extract options
-function __fish_bitcoind_get_options
+function __fish_bitgoldd_get_options
     argparse 'nofiles' -- $argv
     set --local cmd (commandline -opc)[1]
     set --local options
@@ -21,15 +21,15 @@ end
 
 # Add options with file completion
 complete \
-    --command bitcoind \
-    --arguments "(__fish_bitcoind_get_options)"
+    --command bitgoldd \
+    --arguments "(__fish_bitgoldd_get_options)"
 # Enable file completions only if the commandline now contains a `*.=` style option
-complete --command bitcoind \
+complete --command bitgoldd \
     --condition 'string match --regex -- ".*=" (commandline -pt)' \
     --force-files
 
 # Add options without file completion
 complete \
-    --command bitcoind \
-    --arguments "(__fish_bitcoind_get_options --nofiles)"
+    --command bitgoldd \
+    --arguments "(__fish_bitgoldd_get_options --nofiles)"
 

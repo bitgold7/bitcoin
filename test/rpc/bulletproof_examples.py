@@ -2,7 +2,7 @@
 """Example RPC calls for Bulletproof functionality.
 
 This script demonstrates how to call the Bulletproof RPC methods using
-HTTP. A bitcoind instance with RPC enabled must be running locally.
+HTTP. A bitgoldd instance with RPC enabled must be running locally.
 If no node is running the script will exit gracefully.
 """
 
