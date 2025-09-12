@@ -7,7 +7,7 @@
 
 #include <common/args.h>
 #include <pow.h>
-#include <kernel/stake.h>
+#include <pos/stake.h>
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -90,10 +90,6 @@ using kernel::CCoinsStats;
 using kernel::CoinStatsHashType;
 using kernel::ComputeUTXOStats;
 using kernel::Notifications;
-using kernel::CheckBlockSignature;
-using kernel::ContextualCheckProofOfStake;
-using kernel::IsProofOfStake;
-using kernel::CheckStakeTimestamp;
 
 using fsbridge::FopenFn;
 using node::BlockManager;

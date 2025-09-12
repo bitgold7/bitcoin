@@ -19,7 +19,6 @@ add_library(bitcoinkernel
   disconnected_transactions.cpp
   mempool_removal_reason.cpp
   mempool_priority.cpp
-  stake.cpp
   ../pow.cpp
   ../arith_uint256.cpp
   ../chain.cpp
