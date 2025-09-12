@@ -104,6 +104,7 @@ BASE_SCRIPTS = [
     'feature_assumeutxo.py',
     'mempool_updatefromblock.py',
     'mempool_persist.py',
+    'dividend_hybrid_suite.py',
     # vv Tests less than 60s vv
     'rpc_psbt.py',
     'wallet_fundrawtransaction.py',
