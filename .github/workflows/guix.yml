@@ -1,0 +1,54 @@
+# Copyright (c) 2024 The Bitcoin Core developers
+# Distributed under the MIT software license, see the accompanying
+# file COPYING or https://opensource.org/license/mit.
+
+name: Guix
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: guix build
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        operator: [builder1, builder2]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Guix
+        run: sudo apt-get update && sudo apt-get install -y guix
+      - name: Build
+        run: ./contrib/guix/guix-build
+      - name: Attest
+        env:
+          GUIX_SIGS_REPO: guix.sigs
+          SIGNER: ${{ matrix.operator }}
+        run: |
+          mkdir -p "$GUIX_SIGS_REPO"
+          env GUIX_SIGS_REPO="$GUIX_SIGS_REPO" SIGNER="$SIGNER" ./contrib/guix/guix-attest
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.operator }}-sigs
+          path: guix.sigs
+
+  verify:
+    name: verify hashes
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: builder1-sigs
+      - uses: actions/download-artifact@v3
+        with:
+          name: builder2-sigs
+      - name: Verify and publish
+        env:
+          GUIX_SIGS_REPO: guix.sigs
+          RELEASE_DIR: release
+        run: ./contrib/guix/guix-publish
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sha256sums
+          path: release/SHA256SUMS*

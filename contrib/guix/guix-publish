@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+export LC_ALL=C
+set -e -o pipefail
+
+# Source the common prelude, which:
+#   1. Checks if we're at the top directory of the Bitcoin Core repository
+#   2. Defines a few common functions and variables
+#
+# shellcheck source=libexec/prelude.bash
+source "$(dirname "${BASH_SOURCE[0]}")/libexec/prelude.bash"
+
+###################
+## Sanity Checks ##
+###################
+
+check_tools gpg mkdir find
+
+cmd_usage() {
+cat <<'USAGE'
+Synopsis:
+
+    env GUIX_SIGS_REPO=<path/to/guix.sigs> \
+        RELEASE_DIR=<output-dir> \
+      ./contrib/guix/guix-publish
+
+The script expects at least two signature directories in GUIX_SIGS_REPO/$VERSION.
+USAGE
+}
+
+if [ -z "$GUIX_SIGS_REPO" ] || [ -z "$RELEASE_DIR" ]; then
+    cmd_usage
+    exit 1
+fi
+
+OUTDIR_BASE="${GUIX_SIGS_REPO}/${VERSION}"
+if [ ! -d "$OUTDIR_BASE" ]; then
+    echo "ERR: '$OUTDIR_BASE' does not exist"
+    exit 1
+fi
+
+# Ensure at least two operator directories exist
+if [ "$(find "$OUTDIR_BASE" -mindepth 1 -maxdepth 1 -type d | wc -l)" -lt 2 ]; then
+    echo "ERR: At least two operator signatures are required in '$OUTDIR_BASE'"
+    exit 1
+fi
+
+env GUIX_SIGS_REPO="$GUIX_SIGS_REPO" ./contrib/guix/guix-verify
+
+mkdir -p "$RELEASE_DIR"
+cat "$OUTDIR_BASE"/*/all.SHA256SUMS | sort | uniq > "$RELEASE_DIR/SHA256SUMS"
+
+gpg --armor --detach-sign --output "$RELEASE_DIR/SHA256SUMS.asc" "$RELEASE_DIR/SHA256SUMS"
+
+echo "SHA256SUMS and signature written to $RELEASE_DIR"
