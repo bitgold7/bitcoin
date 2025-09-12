@@ -7,6 +7,7 @@
 #include <optional>
 #include <uint256.h>
 #include <validationinterface.h>
+#include <pos/stake_modifier_interface.h>
 
 class CBlockIndex;
 class ChainstateManager;
@@ -17,7 +18,7 @@ namespace node {
 /**
  * Manages cached stake modifiers for consensus and networking.
  */
-class StakeModifierManager : public CValidationInterface
+class StakeModifierManager : public CValidationInterface, public StakeModifierProvider
 {
 private:
     struct ModifierEntry {
@@ -37,14 +38,14 @@ public:
     std::optional<uint256> GetModifier(const uint256& block_hash) const;
 
     /** Return the current stake modifier. */
-    uint256 GetCurrentModifier() const;
+    uint256 GetCurrentModifier() const override;
 
     /**
      * Return the current stake modifier, refreshing it if the provided time
      * exceeds the refresh interval (v3 algorithm).
      */
     uint256 GetDynamicModifier(const CBlockIndex* pindexPrev, unsigned int nTime,
-                               const Consensus::Params& params);
+                               const Consensus::Params& params) override;
 
     /** Update the modifier on block connect. */
     void UpdateOnConnect(const CBlockIndex* pindex, const Consensus::Params& params);

@@ -1,7 +1,6 @@
 #include <pos/stake.h>
 #include <pos/difficulty.h>
 #include <pos/stakemodifier.h>
-#include <node/stake_modifier_manager.h>
 
 #include <arith_uint256.h>
 #include <hash.h>
@@ -9,7 +8,6 @@
 #include <pubkey.h>
 #include <util/overflow.h>
 #include <logging.h>
-#include <validation.h>
 #include <algorithm>
 
 #include <cassert>
@@ -113,7 +111,7 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
                           CAmount amount,
                           const COutPoint& prevout,
                           unsigned int nTimeTx,
-                          node::StakeModifierManager& stake_modman,
+                          StakeModifierProvider& stake_modman,
                           uint256& hashProofOfStake,
                           bool fPrintProofOfStake,
                           const Consensus::Params& params)
@@ -173,6 +171,7 @@ bool ContextualCheckProofOfStake(const CBlock& block,
                                  const CBlockIndex* pindexPrev,
                                  const CCoinsViewCache& view,
                                  const CChain& chain,
+                                 StakeModifierProvider& stake_modman,
                                  const Consensus::Params& params)
 {
     if (!pindexPrev) return false;
@@ -221,7 +220,7 @@ bool ContextualCheckProofOfStake(const CBlock& block,
     if (!CheckStakeKernelHash(pindexPrev, nBits,
                               pindexFrom->GetBlockHash(), nTimeBlockFrom,
                               coin.out.nValue, txin.prevout,
-                              block.nTime, hashProofOfStake, false, params)) {
+                              block.nTime, stake_modman, hashProofOfStake, false, params)) {
         return false;
     }
 

@@ -5,11 +5,11 @@
 #include <chain.h>
 #include <coins.h>
 #include <consensus/params.h>
-#include <node/stake_modifier_manager.h>
 #include <primitives/block.h>
 #include <uint256.h>
 #include <arith_uint256.h>
 #include <util/time.h>
+#include <pos/stake_modifier_interface.h>
 
 class CBlockIndex;
 
@@ -23,7 +23,7 @@ arith_uint256 MultiplyStakeTarget(const arith_uint256& bnTarget, CAmount amount)
 bool CheckStakeKernelHash(const CBlockIndex* pindexPrev, unsigned int nBits,
                           uint256 hashBlockFrom, unsigned int nTimeBlockFrom,
                           CAmount amount, const COutPoint& prevout,
-                          unsigned int nTimeTx, node::StakeModifierManager& stake_modman,
+                          unsigned int nTimeTx, StakeModifierProvider& stake_modman,
                           uint256& hashProofOfStake, bool fPrintProofOfStake,
                           const Consensus::Params& params);
 
@@ -35,6 +35,7 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev, unsigned int nBits,
  */
 bool ContextualCheckProofOfStake(const CBlock& block, const CBlockIndex* pindexPrev,
                                  const CCoinsViewCache& view, const CChain& chain,
+                                 StakeModifierProvider& stake_modman,
                                  const Consensus::Params& params);
 
 /**
