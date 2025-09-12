@@ -7,7 +7,7 @@ This document shows how to use RPC calls related to staking and dividends.
 Returns whether staking is enabled and if the wallet is currently staking.
 
 ```
-$ bitcoin-cli getstakinginfo
+$ bitgold-cli getstakinginfo
 {
   "enabled": true,
   "staking": false
@@ -20,7 +20,7 @@ Reserves a portion of the wallet balance from staking. Call with no
 parameters to return the current amount.
 
 ```
-$ bitcoin-cli setreservebalance true 100
+$ bitgold-cli setreservebalance true 100
 {
   "reserved": 100.00000000
 }
@@ -31,7 +31,7 @@ $ bitcoin-cli setreservebalance true 100
 Deprecated alias for `setreservebalance`.
 
 ```
-$ bitcoin-cli reservebalance
+$ bitgold-cli reservebalance
 {
   "reserved": 100.00000000
 }
@@ -43,7 +43,7 @@ Sets the minimum amount before a staking output is split. Setting the value
 to `0` disables splitting.
 
 ```
-$ bitcoin-cli setstakesplitthreshold 50
+$ bitgold-cli setstakesplitthreshold 50
 {
   "threshold": 50.00000000
 }
@@ -54,7 +54,7 @@ $ bitcoin-cli setstakesplitthreshold 50
 Displays the dividend pool, stake information, and snapshots.
 
 ```
-$ bitcoin-cli getdividendinfo
+$ bitgold-cli getdividendinfo
 {
   "pool": "12.50000000",
   "stakes": {
@@ -78,7 +78,7 @@ Claims matured dividends for an address. Dividend payouts must be enabled
 with `-dividendpayouts`.
 
 ```
-$ bitcoin-cli claimdividends "addr"
+$ bitgold-cli claimdividends "addr"
 {
   "claimed": "0.25000000",
   "remaining": "12.25000000"
