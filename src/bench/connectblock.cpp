@@ -89,9 +89,9 @@ std::pair<std::vector<CKey>, std::vector<CTxOut>> CreateKeysAndOutputs(const CKe
     return {keys, outputs};
 }
 
-void BenchmarkConnectBlock(benchmark::Bench& bench, std::vector<CKey>& keys, std::vector<CTxOut>& outputs, TestChain100Setup& test_setup)
+void BenchmarkConnectBlock(benchmark::Bench& bench, std::vector<CKey>& keys, std::vector<CTxOut>& outputs, TestChain100Setup& test_setup, int num_txs = 1000)
 {
-    const auto& test_block{CreateTestBlock(test_setup, keys, outputs)};
+    const auto& test_block{CreateTestBlock(test_setup, keys, outputs, num_txs)};
     bench.unit("block").run([&] {
         LOCK(cs_main);
         auto& chainman{test_setup.m_node.chainman};
@@ -126,6 +126,14 @@ static void ConnectBlockAllEcdsa(benchmark::Bench& bench)
     BenchmarkConnectBlock(bench, keys, outputs, *test_setup);
 }
 
+static void ConnectBlock20MB(benchmark::Bench& bench)
+{
+    const auto test_setup{MakeNoLogFileContext<TestChain100Setup>()};
+    auto [keys, outputs]{CreateKeysAndOutputs(test_setup->coinbaseKey, /*num_schnorr=*/1, /*num_ecdsa=*/0)};
+    BenchmarkConnectBlock(bench, keys, outputs, *test_setup, /*num_txs=*/20000);
+}
+
 BENCHMARK(ConnectBlockAllSchnorr, benchmark::PriorityLevel::HIGH);
 BENCHMARK(ConnectBlockMixedEcdsaSchnorr, benchmark::PriorityLevel::HIGH);
 BENCHMARK(ConnectBlockAllEcdsa, benchmark::PriorityLevel::HIGH);
+BENCHMARK(ConnectBlock20MB);
