@@ -9,12 +9,12 @@ import tempfile
 import argparse
 
 BINARIES = [
-'bin/bitgoldd',
-'bin/bitgold-cli',
-'bin/bitcoin-tx',
-'bin/bitcoin-wallet',
-'bin/bitcoin-util',
-'bin/bitcoin-qt',
+    'bin/bitgoldd',
+    'bin/bitgold-cli',
+    'bin/bitgold-tx',
+    'bin/bitgold-wallet',
+    'bin/bitgold-util',
+    'bin/bitgold-qt',
 ]
 
 parser = argparse.ArgumentParser(
