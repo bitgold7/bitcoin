@@ -707,7 +707,8 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     block.hashMerkleRoot = BlockMerkleRoot(block);
 
     if (!ContextualCheckProofOfStake(block, pindexPrev, chainstate.CoinsTip(),
-                                     chainstate.m_chain, consensus)) {
+                                     chainstate.m_chain, *node_context->stake_modman,
+                                     consensus)) {
         return false;
     }
 

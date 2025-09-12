@@ -272,7 +272,9 @@ coinstake.vout.emplace_back(dividend_reward, dividendScript);
                             LOCK(cs_main);
                             if (!ContextualCheckProofOfStake(block, pindexPrev,
                                                              chainman.ActiveChainstate().CoinsTip(),
-                                                             chainman.ActiveChain(), consensus)) {
+                                                             chainman.ActiveChain(),
+                                                             *node_context->stake_modman,
+                                                             consensus)) {
                                 LogDebug(BCLog::STAKING, "ThreadStakeMiner: produced block failed CheckProofOfStake\n");
                                 continue;
                             }
