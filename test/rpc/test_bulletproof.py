@@ -50,6 +50,10 @@ class BulletproofRPCTest(unittest.TestCase):
         for proof in proofs:
             verified = self.rpc_call("verifybulletproof", [proof])
             self.assertTrue(verified.get("result"))
+            # Tamper with the proof by flipping the first byte to test verification failure.
+            flipped = f"{int(proof[:2], 16) ^ 1:02x}" + proof[2:]
+            tampered = self.rpc_call("verifybulletproof", [flipped])
+            self.assertFalse(tampered.get("result"))
 
     def test_invalid_proof(self):
         # A random string should not verify as a valid Bulletproof.
