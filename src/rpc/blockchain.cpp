@@ -3408,7 +3408,7 @@ static RPCHelpMan getdividendinfo()
                 {RPCResult::Type::NUM, "last_payout", "Height of last payout"},
                 {RPCResult::Type::STR_AMOUNT, "pending", "Pending dividend amount"},
             }}}},
-            {RPCResult::Type::OBJ, "snapshots", "Stake weight snapshots by height"},
+            {RPCResult::Type::OBJ, "snapshots", "Stake weight snapshots by block hash"},
         }},
         RPCExamples{HelpExampleCli("getdividendinfo", "") + HelpExampleRpc("getdividendinfo", "")},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
@@ -3433,7 +3433,7 @@ static RPCHelpMan getdividendinfo()
                 for (const auto& [addr, weight] : snap) {
                     ss.pushKV(addr, ValueFromAmount(weight));
                 }
-                snaps.pushKV(std::to_string(h), ss);
+                snaps.pushKV(h.ToString(), ss);
             }
             result.pushKV("snapshots", snaps);
             return result;

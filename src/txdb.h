@@ -13,6 +13,7 @@
 #include <kernel/cs_main.h>
 #include <sync.h>
 #include <util/fs.h>
+#include <uint256.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -71,8 +72,8 @@ public:
     bool WriteStakeInfo(const std::map<std::string, StakeInfo>& info);
     std::map<std::string, CAmount> GetPendingDividends() const;
     bool WritePendingDividends(const std::map<std::string, CAmount>& divs);
-    std::map<int, std::map<std::string, CAmount>> GetStakeSnapshots() const;
-    bool WriteStakeSnapshots(const std::map<int, std::map<std::string, CAmount>>& snaps);
+    std::map<uint256, std::map<std::string, CAmount>> GetStakeSnapshots() const;
+    bool WriteStakeSnapshots(const std::map<uint256, std::map<std::string, CAmount>>& snaps);
     std::map<int, dividend::Payouts> GetDividendHistory() const;
     bool WriteDividendHistory(const std::map<int, dividend::Payouts>& hist);
 };

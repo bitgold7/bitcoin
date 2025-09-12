@@ -77,21 +77,21 @@ static RPCHelpMan getstakesnapshots()
 {
     return RPCHelpMan{
         "getstakesnapshots",
-        "Return recorded stake snapshots keyed by height.",
+        "Return recorded stake snapshots keyed by block hash.",
         {},
-        RPCResult{RPCResult::Type::OBJ, "", "", {{RPCResult::Type::OBJ, "<height>", "snapshot", {{RPCResult::Type::AMOUNT, "<address>", "stake weight"}}}}},
+        RPCResult{RPCResult::Type::OBJ, "", "", {{RPCResult::Type::OBJ, "<hash>", "snapshot", {{RPCResult::Type::AMOUNT, "<address>", "stake weight"}}}}},
         RPCExamples{HelpExampleCli("getstakesnapshots", "") + HelpExampleRpc("getstakesnapshots", "")},
         [](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
             ChainstateManager& chainman = EnsureAnyChainman(request.context);
             LOCK(cs_main);
             const auto& snaps = chainman.ActiveChainstate().GetStakeSnapshots();
             UniValue ret(UniValue::VOBJ);
-            for (const auto& [height, snap] : snaps) {
+            for (const auto& [hash, snap] : snaps) {
                 UniValue inner(UniValue::VOBJ);
                 for (const auto& [addr, amt] : snap) {
                     inner.pushKV(addr, ValueFromAmount(amt));
                 }
-                ret.pushKV(std::to_string(height), inner);
+                ret.pushKV(hash.ToString(), inner);
             }
             return ret;
         }};

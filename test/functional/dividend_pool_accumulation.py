@@ -30,7 +30,9 @@ class DividendPoolAccumulationTest(BitcoinTestFramework):
         pending = node.getpendingdividends()
         assert isinstance(pending, dict)
         snaps = node.getstakesnapshots()
-        assert str(QUARTER_BLOCKS) in snaps
+        assert len(snaps) == 1
+        snap_hash = list(snaps.keys())[0]
+        assert_equal(len(snap_hash), 64)
 
         # Claiming from address should succeed even if amount is zero
         claim = node.claimdividends(addr)

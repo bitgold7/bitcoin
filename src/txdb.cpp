@@ -132,14 +132,14 @@ bool CCoinsViewDB::WritePendingDividends(const std::map<std::string, CAmount>& d
     return m_db->Write(DB_PENDING_DIVIDENDS, divs);
 }
 
-std::map<int, std::map<std::string, CAmount>> CCoinsViewDB::GetStakeSnapshots() const
+std::map<uint256, std::map<std::string, CAmount>> CCoinsViewDB::GetStakeSnapshots() const
 {
-    std::map<int, std::map<std::string, CAmount>> snaps;
+    std::map<uint256, std::map<std::string, CAmount>> snaps;
     m_db->Read(DB_STAKE_SNAPSHOTS, snaps);
     return snaps;
 }
 
-bool CCoinsViewDB::WriteStakeSnapshots(const std::map<int, std::map<std::string, CAmount>>& snaps)
+bool CCoinsViewDB::WriteStakeSnapshots(const std::map<uint256, std::map<std::string, CAmount>>& snaps)
 {
     return m_db->Write(DB_STAKE_SNAPSHOTS, snaps);
 }

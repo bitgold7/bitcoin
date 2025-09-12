@@ -324,6 +324,7 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   rpc/txoutproof.cpp
   rpc/dividend.cpp
   dividend/dividend.cpp
+  dividend/snapshot.cpp
   $<$<TARGET_EXISTS:bitcoin_wallet>:rpc/staking.cpp>
   script/sigcache.cpp
   signet.cpp

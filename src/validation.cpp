@@ -23,6 +23,7 @@
 #include <consensus/validation.h>
 #include <cuckoocache.h>
 #include <dividend/dividend.h>
+#include <dividend/snapshot.h>
 #include <flatfile.h>
 #include <hash.h>
 #include <kernel/chain.h>
@@ -494,7 +495,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
     (void)state;
     (void)view;
     if (!fJustCheck && pindex != nullptr && block.vtx.size() > 1 && block.vtx[1]->vout.size() > 2) {
-        AddToDividendPool(block.vtx[1]->vout[2].nValue, pindex->nHeight);
+        AddToDividendPool(block.vtx[1]->vout[2].nValue, *pindex);
     }
     return true;
 }
@@ -2503,15 +2504,12 @@ void Chainstate::LoadDividendPool()
     m_dividend_history = CoinsDB().GetDividendHistory();
 }
 
-void Chainstate::AddToDividendPool(CAmount amount, int height)
+void Chainstate::AddToDividendPool(CAmount amount, const CBlockIndex& index)
 {
     m_dividend_pool += amount;
+    int height = index.nHeight;
     if (gArgs.GetBoolArg("-dividendpayouts", false) && height > 0 && height % dividend::QUARTER_BLOCKS == 0) {
-        std::map<std::string, CAmount> snap;
-        for (const auto& [addr, info] : m_stake_info) {
-            snap.emplace(addr, info.weight);
-        }
-        m_stake_snapshots.emplace(height, snap);
+        dividend::StoreSnapshot(m_stake_snapshots, index.GetBlockHash(), m_stake_info);
         auto payouts = dividend::CalculatePayouts(m_stake_info, height, m_dividend_pool);
         for (const auto& [addr, amt] : payouts) {
             m_pending_dividends[addr] += amt;
