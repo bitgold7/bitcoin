@@ -11,6 +11,15 @@ namespace kernel {
 
 namespace {
 uint256 g_last_modifier;
+
+static bool IsCoinStakeTx(const CTransaction& tx)
+{
+    if (tx.IsCoinBase()) return false;
+    if (tx.vin.size() != 1) return false;
+    if (tx.vout.size() < 2) return false;
+    if (!tx.vout[0].scriptPubKey.empty()) return false;
+    return true;
+}
 }
 
 uint256 ComputeStakeModifierV3(const CBlockIndex* pindexPrev, const uint256& prev_modifier)
@@ -52,18 +61,18 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev, unsigned int nBits,
     arith_uint256 bnWeight(amount);
     bnTarget *= bnWeight;
 
-    g_last_modifier = ComputeStakeModifierV3(pindexPrev, g_last_modifier);
-    hashProofOfStake = ComputeKernelHash(g_last_modifier, prevout, nTimeBlockFrom, nTimeTx);
+    uint256 stake_modifier = ComputeStakeModifierV3(pindexPrev, g_last_modifier);
+    hashProofOfStake = ComputeKernelHash(stake_modifier, prevout, nTimeBlockFrom, nTimeTx);
     return UintToArith256(hashProofOfStake) <= bnTarget;
 }
 
 bool IsProofOfStake(const CBlock& block)
 {
     if (block.vtx.size() < 2) return false;
-    const CTransaction& tx = *block.vtx[1];
-    if (tx.IsCoinBase()) return false;
-    if (tx.vin.empty() || tx.vout.size() < 2) return false;
-    if (!tx.vout[0].scriptPubKey.empty()) return false;
+    if (!IsCoinStakeTx(*block.vtx[1])) return false;
+    for (size_t i = 2; i < block.vtx.size(); ++i) {
+        if (IsCoinStakeTx(*block.vtx[i])) return false;
+    }
     return true;
 }
 
@@ -96,12 +105,11 @@ bool ContextualCheckProofOfStake(const CBlock& block,
 {
     if (!pindexPrev) return false;
     if (!IsProofOfStake(block)) return false;
-    if (block.nTime < pindexPrev->GetBlockTime() + params.nStakeTargetSpacing) return false;
+    if (CheckStakeTimestamp(block, pindexPrev->GetBlockTime(), params) != StakeTimeValidationResult::OK) return false;
 
     const CTransaction& coinstake{*block.vtx[1]};
     if (block.nTime != coinstake.nLockTime) return false;
-    if ((block.nTime & params.nStakeTimestampMask) != 0) return false;
-    if (coinstake.vin.empty()) return false;
+    if (coinstake.vin.size() != 1) return false;
 
     const CTxIn& txin{coinstake.vin[0]};
     const Coin& coin = view.AccessCoin(txin.prevout);
@@ -116,6 +124,8 @@ bool ContextualCheckProofOfStake(const CBlock& block,
                               block.nTime, hashProofOfStake, params)) {
         return false;
     }
+    if (!CheckBlockSignature(block)) return false;
+    g_last_modifier = ComputeStakeModifierV3(pindexPrev, g_last_modifier);
     return true;
 }
 

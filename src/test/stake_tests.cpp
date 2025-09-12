@@ -1,5 +1,6 @@
 #include <pos/stake.h>
 #include <pos/stakemodifier.h>
+#include <kernel/stake.h>
 #include <node/stake_modifier_manager.h>
 #include <pos/difficulty.h>
 #include <chain.h>
@@ -654,6 +655,90 @@ BOOST_AUTO_TEST_CASE(stake_modifier_version_selection)
     BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
                                      amount, prevout, nTimeTx, man3, proof3, false, params3));
     BOOST_CHECK_EQUAL(proof3, expect3);
+}
+
+BOOST_AUTO_TEST_CASE(multiple_coinstakes_disallowed)
+{
+    CMutableTransaction coinbase;
+    coinbase.vin.resize(1);
+    coinbase.vin[0].prevout.SetNull();
+    coinbase.vout.resize(1);
+
+    CMutableTransaction cs;
+    cs.vin.resize(1);
+    cs.vout.resize(2);
+    cs.vout[0].SetNull();
+
+    CBlock block;
+    block.vtx.emplace_back(MakeTransactionRef(coinbase));
+    block.vtx.emplace_back(MakeTransactionRef(cs));
+    block.vtx.emplace_back(MakeTransactionRef(cs));
+
+    BOOST_CHECK(!kernel::IsProofOfStake(block));
+}
+
+BOOST_AUTO_TEST_CASE(invalid_coinstake_timestamp)
+{
+    uint256 prev_hash{1};
+    CBlockIndex prev_index;
+    prev_index.nHeight = 0;
+    prev_index.nTime = 0;
+    prev_index.phashBlock = &prev_hash;
+
+    CChain chain;
+    chain.SetTip(prev_index);
+
+    CCoinsView view_base;
+    CCoinsViewCache view(&view_base);
+    Consensus::Params params;
+
+    CMutableTransaction coinbase;
+    coinbase.vin.resize(1);
+    coinbase.vin[0].prevout.SetNull();
+    coinbase.vout.resize(1);
+
+    CMutableTransaction coinstake;
+    coinstake.vin.resize(1);
+    coinstake.vout.resize(2);
+    coinstake.vout[0].SetNull();
+    coinstake.vin[0].prevout = COutPoint(Txid::FromUint256(uint256{2}), 0);
+
+    Coin coin;
+    coin.out.nValue = 1 * COIN;
+    coin.nHeight = 0;
+    view.AddCoin(coinstake.vin[0].prevout, std::move(coin), false);
+
+    CBlock block;
+    block.vtx.emplace_back(MakeTransactionRef(coinbase));
+    block.vtx.emplace_back(MakeTransactionRef(coinstake));
+    block.nTime = 16;
+    block.nBits = 0x207fffff;
+    coinstake.nLockTime = block.nTime + 16; // mismatch
+    block.vtx[1] = MakeTransactionRef(coinstake);
+
+    BOOST_CHECK(!kernel::ContextualCheckProofOfStake(block, &prev_index, view, chain, params));
+}
+
+BOOST_AUTO_TEST_CASE(invalid_block_signature)
+{
+    CMutableTransaction coinbase;
+    coinbase.vin.resize(1);
+    coinbase.vin[0].prevout.SetNull();
+    coinbase.vout.resize(1);
+
+    CMutableTransaction coinstake;
+    coinstake.vin.resize(1);
+    coinstake.vout.resize(2);
+    coinstake.vout[0].SetNull();
+    coinstake.vin[0].scriptSig << std::vector<unsigned char>(72, 0x00)
+                                << std::vector<unsigned char>(33, 0x00);
+
+    CBlock block;
+    block.vtx.emplace_back(MakeTransactionRef(coinbase));
+    block.vtx.emplace_back(MakeTransactionRef(coinstake));
+    block.vchBlockSig.assign(72, 0x00);
+
+    BOOST_CHECK(!kernel::CheckBlockSignature(block));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
