@@ -3,9 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <chainparams.h>
+#include <chain.h>
 #include <consensus/amount.h>
 #include <consensus/merkle.h>
 #include <core_io.h>
+#include <pow.h>
 #include <hash.h>
 #include <net.h>
 #include <signet.h>
@@ -14,6 +16,7 @@
 #include <util/time.h>
 #include <validation.h>
 #include <script/script.h>
+#include <arith_uint256.h>
 
 #include <string>
 #include <limits>
@@ -438,5 +441,37 @@ BOOST_FIXTURE_TEST_CASE(bulletproof_activation_tests, TestChain100Setup)
     dep.nStartTime = old_start;
 }
 #endif
+
+BOOST_AUTO_TEST_CASE(pos_target_spacing)
+{
+    Consensus::Params params;
+    params.nPowTargetSpacing = 10 * 60; // 10 minutes
+    params.nPowTargetTimespan = 14 * 24 * 60 * 60;
+    params.posLimit = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    params.nStakeTargetSpacing = 10 * 60;
+
+    CBlockIndex indexLast;
+    indexLast.nTime = 1000;
+    arith_uint256 bn = UintToArith256(params.posLimit);
+    bn >>= 1; // start below limit to avoid clamping
+    indexLast.nBits = bn.GetCompact();
+
+    const int64_t actual_spacing = params.nStakeTargetSpacing / 2;
+
+    // Expected new target computed with non-default spacing
+    arith_uint256 bnNew = bn;
+    const int64_t interval = params.DifficultyAdjustmentInterval();
+    const int64_t target_spacing = params.nStakeTargetSpacing;
+    bnNew *= ((interval - 1) * target_spacing + 2 * actual_spacing);
+    bnNew /= ((interval + 1) * target_spacing);
+    const arith_uint256 bnLimit = UintToArith256(params.posLimit);
+    if (bnNew <= 0 || bnNew > bnLimit) {
+        bnNew = bnLimit;
+    }
+    const unsigned int expected = bnNew.GetCompact();
+
+    const unsigned int result = GetPoSNextWorkRequired(&indexLast, indexLast.GetBlockTime() + actual_spacing, params);
+    BOOST_CHECK_EQUAL(result, expected);
+}
 
 BOOST_AUTO_TEST_SUITE_END()
