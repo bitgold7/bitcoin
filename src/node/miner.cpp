@@ -178,12 +178,12 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     coinbaseTx.vout.resize(2 + payouts.size());
     coinbaseTx.vout[0].scriptPubKey = m_options.coinbase_output_script;
     coinbaseTx.vout[0].nValue = validator_reward;
-    coinbaseTx.vout[1].scriptPubKey = CScript() << OP_TRUE;
+    coinbaseTx.vout[1].scriptPubKey = dividend::GetDividendScript();
     coinbaseTx.vout[1].nValue = dividend_reward;
     size_t idx = 2;
     for (const auto& [addr, amt] : payouts) {
         (void)addr; // address handling omitted
-        coinbaseTx.vout[idx].scriptPubKey = CScript() << OP_TRUE;
+        coinbaseTx.vout[idx].scriptPubKey = dividend::GetDividendScript();
         coinbaseTx.vout[idx].nValue = amt;
         ++idx;
     }
@@ -665,12 +665,12 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     coinstake.vout[0].SetNull();
     coinstake.vout[1].nValue = stake_out->txout.nValue + validator_reward;
     coinstake.vout[1].scriptPubKey = stake_out->txout.scriptPubKey;
-    coinstake.vout[2].scriptPubKey = CScript() << OP_TRUE;
+    coinstake.vout[2].scriptPubKey = dividend::GetDividendScript();
     coinstake.vout[2].nValue = dividend_reward;
     size_t pay_idx = 3;
     for (const auto& [addr, amt] : payouts) {
         (void)addr;
-        coinstake.vout[pay_idx].scriptPubKey = CScript() << OP_TRUE;
+        coinstake.vout[pay_idx].scriptPubKey = dividend::GetDividendScript();
         coinstake.vout[pay_idx].nValue = amt;
         ++pay_idx;
     }

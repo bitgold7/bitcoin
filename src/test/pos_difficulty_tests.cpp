@@ -60,18 +60,19 @@ BOOST_AUTO_TEST_CASE(stake_timestamp_mask)
     const Consensus::Params& params = Params().GetConsensus();
     CBlockHeader header;
 
-    // Valid timestamp: divisible by mask and not far in the future
-    header.nTime = GetTime();
-    header.nTime &= ~params.nStakeTimestampMask;
-    BOOST_CHECK(kernel::CheckStakeTimestamp(header, params));
+    unsigned int prev_time = (GetTime() & ~params.nStakeTimestampMask) - params.nStakeTargetSpacing;
+
+    // Valid timestamp: divisible by mask, after previous block, and not far in the future
+    header.nTime = prev_time + params.nStakeTargetSpacing;
+    BOOST_CHECK(kernel::CheckStakeTimestamp(header, prev_time, params));
 
     // Fails mask divisibility
     header.nTime |= 1;
-    BOOST_CHECK(!kernel::CheckStakeTimestamp(header, params));
+    BOOST_CHECK(!kernel::CheckStakeTimestamp(header, prev_time, params));
 
     // Valid mask but too far in the future
     header.nTime = (GetTime() + 16) & ~params.nStakeTimestampMask;
-    BOOST_CHECK(!kernel::CheckStakeTimestamp(header, params));
+    BOOST_CHECK(!kernel::CheckStakeTimestamp(header, prev_time, params));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

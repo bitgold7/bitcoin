@@ -60,15 +60,8 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
 }
 
 /**
- * Build the genesis block. Note that the output of its generation
- * transaction cannot be spent since it did not originally exist in the
- * database.
- *
- * CBlock(hash=000000000019d6, ver=1, hashPrevBlock=00000000000000, hashMerkleRoot=4a5e1e, nTime=1231006505, nBits=1d00ffff, nNonce=2083236893, vtx=1)
- *   CTransaction(hash=4a5e1e, ver=1, vin.size=1, vout.size=1, nLockTime=0)
- *     CTxIn(COutPoint(000000, -1), coinbase 04ffff001d0104455468652054696d65732030332f4a616e2f32303339204368616e63656c6c6f72206f6e206272696e6b206f66207365636f6e64206261696c6f757420666f722062616e6b73)
- *     CTxOut(nValue=50.00000000, scriptPubKey=0x5F1DF16B2B704C8A578D0B)
- *   vMerkleTree: 4a5e1e
+ * Build the genesis block, minting the initial 3,000,000 coins and exposing
+ * a spendable output.
  */
 static CBlock CreateGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
@@ -88,7 +81,7 @@ public:
         m_chain_type = ChainType::MAIN;
         consensus.signet_blocks = false;
         consensus.signet_challenge.clear();
-        consensus.nSubsidyHalvingInterval = 50000;
+        consensus.nSubsidyHalvingInterval = 50'000;
         consensus.script_flag_exceptions.emplace( // BIP16 exception
             uint256{"00000000000002dc756eebf4f49723ed8d30cc28a5f108eb94b1ba88ac4f9c22"}, SCRIPT_VERIFY_NONE);
         consensus.script_flag_exceptions.emplace( // Taproot exception
@@ -150,10 +143,10 @@ public:
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
          * a large 32-bit integer with any alignment.
          */
-        pchMessageStart[0] = 0xfb;
-        pchMessageStart[1] = 0xc0;
-        pchMessageStart[2] = 0xc5;
-        pchMessageStart[3] = 0xdb;
+        pchMessageStart[0] = 0xfc;
+        pchMessageStart[1] = 0xc1;
+        pchMessageStart[2] = 0xc6;
+        pchMessageStart[3] = 0xdc;
         nDefaultPort = 8888;
         nPruneAfterHeight = 100'000;
         m_assumed_blockchain_size = 720; // MB
@@ -169,6 +162,7 @@ public:
         genesis = CreateGenesisBlock(genesis_timestamp, genesis_script,
                                      1704067200, 1106766, 0x1e0ffff0, 1,
                                      3'000'000 * COIN);
+        assert(genesis.vtx[0]->vout[0].nValue == 3'000'000 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.defaultAssumeValid =
             uint256{"0000030e31ae394ca69551a5ed5a321d1175e043efae4afacdf09351a0b8a83c"};
@@ -244,7 +238,7 @@ public:
         m_chain_type = ChainType::TESTNET;
         consensus.signet_blocks = false;
         consensus.signet_challenge.clear();
-        consensus.nSubsidyHalvingInterval = 50000;
+        consensus.nSubsidyHalvingInterval = 50'000;
         consensus.script_flag_exceptions.emplace( // BIP16 exception
             uint256{"00000000dd30457c001f4095d208cc1296b0eed002427aa599874af7a432b105"}, SCRIPT_VERIFY_NONE);
         consensus.BIP34Height = 21111;
@@ -299,10 +293,10 @@ public:
         consensus.nMinimumChainWork = uint256{};
         consensus.defaultAssumeValid = uint256{};
 
-        pchMessageStart[0] = 0xb1;
-        pchMessageStart[1] = 0xd2;
-        pchMessageStart[2] = 0xf3;
-        pchMessageStart[3] = 0xa4;
+        pchMessageStart[0] = 0xb2;
+        pchMessageStart[1] = 0xd3;
+        pchMessageStart[2] = 0xf4;
+        pchMessageStart[3] = 0xa5;
         nDefaultPort = 28889;
         nPruneAfterHeight = 1000;
         m_assumed_blockchain_size = 200;
@@ -366,7 +360,7 @@ public:
         m_chain_type = ChainType::TESTNET4;
         consensus.signet_blocks = false;
         consensus.signet_challenge.clear();
-        consensus.nSubsidyHalvingInterval = 50000;
+        consensus.nSubsidyHalvingInterval = 50'000;
         consensus.BIP34Height = 21111;
         consensus.BIP34Hash = uint256{"0000000023b3a96d3484e5abb3755c413e7d41500f8e2a5c3f0dd01299cd8ef8"};
         consensus.BIP65Height = 581885;          // 00000000007f6655f22f98e72ed80d8b06dc761d5da09df0fa1dc4be4f861eb6
@@ -521,7 +515,7 @@ public:
         m_chain_type = ChainType::SIGNET;
         consensus.signet_blocks = true;
         consensus.signet_challenge.assign(bin.begin(), bin.end());
-        consensus.nSubsidyHalvingInterval = 50000;
+        consensus.nSubsidyHalvingInterval = 50'000;
         consensus.BIP34Height = 1;
         consensus.BIP34Hash = uint256{};
         consensus.BIP65Height = 1;
@@ -571,10 +565,10 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].threshold = 1815;         // 90%
         consensus.vDeployments[Consensus::DEPLOYMENT_BULLETPROOF].period = 2016;
 
-        pchMessageStart[0] = 0xb2;
-        pchMessageStart[1] = 0xc3;
-        pchMessageStart[2] = 0xd4;
-        pchMessageStart[3] = 0xe5;
+        pchMessageStart[0] = 0xb3;
+        pchMessageStart[1] = 0xc4;
+        pchMessageStart[2] = 0xd5;
+        pchMessageStart[3] = 0xe6;
 
         nDefaultPort = 38888;
         nPruneAfterHeight = 1000;
@@ -623,7 +617,7 @@ public:
         m_chain_type = ChainType::REGTEST;
         consensus.signet_blocks = false;
         consensus.signet_challenge.clear();
-        consensus.nSubsidyHalvingInterval = 50000;
+        consensus.nSubsidyHalvingInterval = 50'000;
         consensus.BIP34Height = 1; // Always active unless overridden
         consensus.BIP34Hash = uint256();
         consensus.BIP65Height = 1;  // Always active unless overridden
@@ -676,10 +670,10 @@ public:
         consensus.nMinimumChainWork = uint256{};
         consensus.defaultAssumeValid = uint256{};
 
-        pchMessageStart[0] = 0xaa;
-        pchMessageStart[1] = 0xbb;
-        pchMessageStart[2] = 0xcc;
-        pchMessageStart[3] = 0xdd;
+        pchMessageStart[0] = 0xab;
+        pchMessageStart[1] = 0xbc;
+        pchMessageStart[2] = 0xcd;
+        pchMessageStart[3] = 0xde;
         nDefaultPort = 38333;
         nPruneAfterHeight = opts.fastprune ? 100 : 1000;
         m_assumed_blockchain_size = 0;

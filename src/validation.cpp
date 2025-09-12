@@ -72,7 +72,7 @@
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
-#include <wallet/secp256k1_context.h>
+#include <util/secp256k1_context.h>
 #endif
 
 #include <algorithm>
@@ -268,8 +268,8 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
         if (!IsProofOfStake(block)) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "expected proof-of-stake block");
         }
-        // Timestamp must respect the network's stake mask and drift limits
-        if (!CheckStakeTimestamp(block, params)) {
+        // Timestamp must respect the network's stake mask, drift, and spacing limits
+        if (!CheckStakeTimestamp(block, pindexPrev->GetBlockTime(), params)) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time", "invalid proof-of-stake timestamp");
         }
         {
@@ -325,6 +325,9 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
             }
             if (reward_tx.vout[2].nValue != dividend_reward) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-amount");
+            }
+            if (reward_tx.vout[2].scriptPubKey != dividend::GetDividendScript()) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-script");
             }
 
             static constexpr int QUARTER_BLOCKS{16200};
