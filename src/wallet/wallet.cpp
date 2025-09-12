@@ -3251,7 +3251,7 @@ void CWallet::postInitProcess()
 void CWallet::StartStakeMiner()
 {
     if (!m_staker) {
-        m_staker = std::make_unique<Stake>(*this);
+        m_staker = std::make_unique<BitGoldStaker>(*this);
     }
     if (!m_staker->IsActive()) {
         m_staker->Start();

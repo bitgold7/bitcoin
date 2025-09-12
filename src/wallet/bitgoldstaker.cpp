@@ -7,6 +7,7 @@
 #include <key.h>
 #include <node/context.h>
 #include <node/stake_modifier_manager.h>
+#include <pos/difficulty.h>
 #include <pos/stake.h>
 #include <script/standard.h>
 #include <util/time.h>
@@ -138,7 +139,7 @@ void BitGoldStaker::ThreadStakeMiner()
                         unsigned int nTimeTx = std::max<int64_t>(pindexPrev->GetMedianTimePast() + 1,
                                                                  TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()));
                         nTimeTx &= ~consensus.nStakeTimestampMask;
-                        unsigned int nBits = pindexPrev->nBits;
+                        unsigned int nBits = GetPoSNextTargetRequired(pindexPrev, nTimeTx, consensus);
                         uint256 hash_proof;
                         LogTrace(BCLog::STAKING, "ThreadStakeMiner: checking kernel for %s", stake_out.outpoint.ToString());
                         RecordAttempt();
@@ -212,7 +213,7 @@ void BitGoldStaker::ThreadStakeMiner()
                         block.hashPrevBlock = pindexPrev->GetBlockHash();
                         block.nVersion = chainman.m_versionbitscache.ComputeBlockVersion(pindexPrev, consensus);
                         block.nTime = nTimeTx;
-                        block.nBits = pindexPrev->nBits;
+                        block.nBits = nBits;
                         block.nNonce = 0;
                         block.hashMerkleRoot = BlockMerkleRoot(block);
 

@@ -18,9 +18,11 @@
 #include <deploymentstatus.h>
 #include <logging.h>
 #include <node/context.h>
+#include <node/stake_modifier_manager.h>
 #include <node/kernel_notifications.h>
 #include <policy/feerate.h>
 #include <policy/policy.h>
+#include <pos/difficulty.h>
 #include <pos/stake.h>
 #include <primitives/transaction.h>
 #include <util/moneystr.h>
@@ -198,7 +200,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     // Fill in header
     pblock->hashPrevBlock = pindexPrev->GetBlockHash();
     UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
-    pblock->nBits = pindexPrev->nBits;
+    pblock->nBits = GetPoSNextTargetRequired(pindexPrev, pblock->nTime, chainparams.GetConsensus());
     pblock->nNonce = 0;
     pblock->vchBlockSig.clear();
 
@@ -612,10 +614,14 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     ChainstateManager& chainman = *node_context->chainman;
     Chainstate& chainstate = chainman.ActiveChainstate();
 
-    LOCK(::cs_main);
-    CBlockIndex* pindexPrev = chainstate.m_chain.Tip();
-    if (!pindexPrev) return false;
-    const int height = pindexPrev->nHeight + 1;
+    CBlockIndex* pindexPrev;
+    int height;
+    {
+        LOCK(::cs_main);
+        pindexPrev = chainstate.m_chain.Tip();
+        if (!pindexPrev) return false;
+        height = pindexPrev->nHeight + 1;
+    }
     if (height < 2) {
         return false; // wait until the PoW phase completes
     }
@@ -634,8 +640,36 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     if (!stake_out) return false;
 
     // Construct coinstake transaction
+    uint256 confirmed_block_hash;
+    {
+        LOCK(wallet.cs_wallet);
+        const CWalletTx* wtx = wallet.GetWalletTx(stake_out->outpoint.hash);
+        if (!wtx) return false;
+        auto* conf = wtx->state<TxStateConfirmed>();
+        if (!conf) return false;
+        confirmed_block_hash = conf->confirmed_block_hash;
+    }
+    const CBlockIndex* pindexFrom;
+    {
+        LOCK(::cs_main);
+        pindexFrom = chainman.m_blockman.LookupBlockIndex(confirmed_block_hash);
+    }
+    if (!pindexFrom) return false;
+
+    unsigned int nTime = std::max<int64_t>(
+        GetMinimumTime(pindexPrev, consensus.DifficultyAdjustmentInterval()),
+        TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()));
+    nTime &= ~STAKE_TIMESTAMP_MASK;
+    unsigned int nBits = GetPoSNextTargetRequired(pindexPrev, nTime, consensus);
+    uint256 hash_proof;
+    node::StakeModifierManager& man = *Assert(node_context->stake_modman);
+    if (!CheckStakeKernelHash(pindexPrev, nBits, pindexFrom->GetBlockHash(), pindexFrom->nTime,
+                              stake_out->txout.nValue, stake_out->outpoint, nTime, man, hash_proof, true, consensus)) {
+        return false;
+    }
+
     CMutableTransaction coinstake;
-    coinstake.nLockTime = height;
+    coinstake.nLockTime = nTime;
     coinstake.vin.emplace_back(stake_out->outpoint);
     coinstake.vin[0].nSequence = CTxIn::SEQUENCE_FINAL;
     int64_t coin_age_weight = consensus.nStakeMinAge; // Placeholder until wallet provides age
@@ -644,10 +678,14 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     CAmount dividend_reward = reward - validator_reward;
     static constexpr int QUARTER_BLOCKS{16200};
     dividend::Payouts payouts;
-    CAmount pool = chainstate.GetDividendPool() + dividend_reward;
+    CAmount pool{0};
     const bool payouts_enabled = gArgs.GetBoolArg("-dividendpayouts", false);
-    if (payouts_enabled && height > 0 && height % QUARTER_BLOCKS == 0 && pool > 0) {
-        payouts = dividend::CalculatePayouts(chainstate.GetStakeInfo(), height, pool);
+    {
+        LOCK(::cs_main);
+        pool = chainstate.GetDividendPool() + dividend_reward;
+        if (payouts_enabled && height > 0 && height % QUARTER_BLOCKS == 0 && pool > 0) {
+            payouts = dividend::CalculatePayouts(chainstate.GetStakeInfo(), height, pool);
+        }
     }
     coinstake.vout.resize(3 + payouts.size());
     coinstake.vout[0].SetNull();
@@ -683,18 +721,17 @@ bool CreatePosBlock(wallet::CWallet& wallet)
 
     block.hashPrevBlock = pindexPrev->GetBlockHash();
     block.nVersion = chainman.m_versionbitscache.ComputeBlockVersion(pindexPrev, consensus);
-    unsigned int nTime = std::max<int64_t>(
-        GetMinimumTime(pindexPrev, consensus.DifficultyAdjustmentInterval()),
-        TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()));
-    nTime &= ~STAKE_TIMESTAMP_MASK;
     block.nTime = nTime;
-    block.nBits = pindexPrev->nBits;
+    block.nBits = nBits;
     block.nNonce = 0;
     block.hashMerkleRoot = BlockMerkleRoot(block);
 
-    if (!ContextualCheckProofOfStake(block, pindexPrev, chainstate.CoinsTip(),
-                                     chainstate.m_chain, consensus)) {
-        return false;
+    {
+        LOCK(cs_main);
+        if (!ContextualCheckProofOfStake(block, pindexPrev, chainstate.CoinsTip(),
+                                         chainstate.m_chain, consensus)) {
+            return false;
+        }
     }
 
     bool new_block{false};
