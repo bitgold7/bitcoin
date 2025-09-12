@@ -38,6 +38,7 @@ add_executable(test_bitcoin
   cuckoocache_tests.cpp
   dbwrapper_tests.cpp
   denialofservice_tests.cpp
+  dividend_tests.cpp
   descriptor_tests.cpp
   disconnected_transactions.cpp
   feefrac_tests.cpp
