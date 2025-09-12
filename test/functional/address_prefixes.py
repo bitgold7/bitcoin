@@ -49,6 +49,11 @@ class AddressPrefixesTest(BitcoinTestFramework):
         assert legacy[0] == 'B'
         script = main.getnewaddress(address_type='p2sh-segwit')
         assert script[0] == 'G'
+        # Modified prefixes should be rejected
+        bad_legacy = 'G' + legacy[1:]
+        bad_script = 'B' + script[1:]
+        assert_equal(main.validateaddress(bad_legacy)["isvalid"], False)
+        assert_equal(main.validateaddress(bad_script)["isvalid"], False)
         bech32 = main.getnewaddress("", "bech32")
         assert bech32.startswith('bg1')
         wif = main.dumpprivkey(legacy)
