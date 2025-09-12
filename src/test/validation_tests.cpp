@@ -28,14 +28,16 @@ static void TestBlockSubsidyHalvings(const Consensus::Params& consensusParams)
     const CAmount genesis_reward{3'000'000 * COIN};
     BOOST_CHECK_EQUAL(GetBlockSubsidy(1, consensusParams), genesis_reward);
 
-    int maxHalvings = 64;
-    const CAmount nInitialSubsidy = 50 * COIN;
+    const CAmount nInitialSubsidy{50 * COIN};
+    BOOST_CHECK_EQUAL(GetBlockSubsidy(2, consensusParams), nInitialSubsidy);
+    BOOST_CHECK_EQUAL(GetBlockSubsidy(consensusParams.nSubsidyHalvingInterval + 1, consensusParams), nInitialSubsidy);
 
-    CAmount nPreviousSubsidy = nInitialSubsidy * 2; // for height == 2
-    BOOST_CHECK_EQUAL(nPreviousSubsidy, nInitialSubsidy * 2);
-    for (int nHalvings = 0; nHalvings < maxHalvings; ++nHalvings) {
-        const int nHeight = 2 + nHalvings * consensusParams.nSubsidyHalvingInterval;
-        const CAmount nSubsidy = GetBlockSubsidy(nHeight, consensusParams);
+    const int maxHalvings{64};
+    CAmount nPreviousSubsidy{nInitialSubsidy};
+    for (int nHalvings = 1; nHalvings < maxHalvings; ++nHalvings) {
+        const int nHeight{2 + nHalvings * consensusParams.nSubsidyHalvingInterval};
+        BOOST_CHECK_EQUAL(GetBlockSubsidy(nHeight - 1, consensusParams), nPreviousSubsidy);
+        const CAmount nSubsidy{GetBlockSubsidy(nHeight, consensusParams)};
         BOOST_CHECK(nSubsidy <= nInitialSubsidy);
         BOOST_CHECK_EQUAL(nSubsidy, nPreviousSubsidy / 2);
         nPreviousSubsidy = nSubsidy;
