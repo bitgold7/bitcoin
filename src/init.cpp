@@ -304,6 +304,7 @@ void Shutdown(NodeContext& node)
     // Because these depend on each-other, we make sure that neither can be
     // using the other before destroying them.
     if (node.peerman && node.validation_signals) node.validation_signals->UnregisterValidationInterface(node.peerman.get());
+    if (node.stake_modman && node.validation_signals) node.validation_signals->UnregisterValidationInterface(node.stake_modman.get());
     if (node.connman) node.connman->Stop();
 
     StopTorControl();
@@ -389,6 +390,7 @@ void Shutdown(NodeContext& node)
     }
     node.mempool.reset();
     node.fee_estimator.reset();
+    node.stake_modman.reset();
     node.chainman.reset();
     node.validation_signals.reset();
     node.scheduler.reset();
@@ -1277,6 +1279,7 @@ static ChainstateLoadResult InitAndLoadChainstate(
     }
     ChainstateManager& chainman = *node.chainman;
     node.stake_modman = std::make_unique<node::StakeModifierManager>();
+    Assert(node.validation_signals)->RegisterValidationInterface(node.stake_modman.get());
     if (chainman.m_interrupt) return {ChainstateLoadStatus::INTERRUPTED, {}};
 
     // This is defined and set here instead of inline in validation.h to avoid a hard

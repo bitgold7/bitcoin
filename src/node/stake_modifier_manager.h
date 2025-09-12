@@ -2,9 +2,11 @@
 #define BITCOIN_NODE_STAKE_MODIFIER_MANAGER_H
 
 #include <map>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <uint256.h>
+#include <validationinterface.h>
 
 class CBlockIndex;
 class ChainstateManager;
@@ -15,7 +17,7 @@ namespace node {
 /**
  * Manages cached stake modifiers for consensus and networking.
  */
-class StakeModifierManager
+class StakeModifierManager : public CValidationInterface
 {
 private:
     struct ModifierEntry {
@@ -48,6 +50,9 @@ public:
 
     /** Validate and store a received stake modifier message. */
     bool ProcessStakeModifier(ChainstateManager& chainman, const uint256& block_hash, const uint256& modifier);
+
+    void BlockConnected(ChainstateRole role, const std::shared_ptr<const CBlock>& block, const CBlockIndex* pindex) override;
+    void BlockDisconnected(const std::shared_ptr<const CBlock>& block, const CBlockIndex* pindex) override;
 };
 
 } // namespace node
