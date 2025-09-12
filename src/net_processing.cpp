@@ -3510,6 +3510,7 @@ void PeerManagerImpl::ProcessMessage(CNode& pfrom, const std::string& msg_type, 
 
         int64_t nTime;
         CService addrMe;
+        uint16_t addrMePort{0};
         uint64_t nNonce = 1;
         ServiceFlags nServices;
         int nVersion;
@@ -3523,6 +3524,15 @@ void PeerManagerImpl::ProcessMessage(CNode& pfrom, const std::string& msg_type, 
         }
         vRecv.ignore(8); // Ignore the addrMe service bits sent by the peer
         vRecv >> CNetAddr::V1(addrMe);
+        vRecv >> Using<BigEndianFormatter<2>>(addrMePort);
+        addrMe = CService{addrMe, addrMePort};
+        if (addrMePort != 0 && addrMePort != Params().GetDefaultPort()) {
+            LogPrintLevel(BCLog::NET, BCLog::Level::Warning,
+                          "peer advertises unexpected port %u, %s\n",
+                          addrMePort, pfrom.DisconnectMsg(fLogIPs));
+            pfrom.fDisconnect = true;
+            return;
+        }
         if (!pfrom.IsInboundConn()) {
             // Overwrites potentially existing services. In contrast to this,
             // unvalidated services received via gossip relay in ADDR/ADDRV2
