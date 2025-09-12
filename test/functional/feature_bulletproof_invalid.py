@@ -37,6 +37,26 @@ class BulletproofInvalidTest(BitcoinTestFramework):
         res2 = node.testmempoolaccept([tx2.serialize().hex()])[0]
         assert_equal(res2["reject-reason"], "bad-bulletproof-missing")
 
+        # Tampered commitment -> bad-bulletproof
+        tx3 = tx_from_hex(created["hex"])
+        elems3 = list(CScript(tx3.vout[0].scriptPubKey))
+        corrupt = bytearray(elems3[1])
+        corrupt[0] ^= 1
+        tx3.vout[0].scriptPubKey = CScript([CScriptOp(0xbb), bytes(corrupt), elems3[2]])
+        tx3.rehash()
+        res3 = node.testmempoolaccept([tx3.serialize().hex()])[0]
+        assert_equal(res3["reject-reason"], "bad-bulletproof")
+
+        # Balance violation -> bad-bulletproof-balance
+        addr1 = node.getnewaddress()
+        addr2 = node.getnewaddress()
+        created2 = node.createrawbulletprooftransaction([], {addr1: 0, addr2: 0})
+        tx4 = tx_from_hex(created2["hex"])
+        tx4.vout[1].scriptPubKey = CScript([])
+        tx4.rehash()
+        res4 = node.testmempoolaccept([tx4.serialize().hex()])[0]
+        assert_equal(res4["reject-reason"], "bad-bulletproof-balance")
+
 
 if __name__ == '__main__':
-    BulletproofInvalidTest().main()
+    BulletproofInvalidTest(__file__).main()

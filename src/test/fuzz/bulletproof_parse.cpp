@@ -1,4 +1,5 @@
 #include <bulletproofs.h>
+#include <script/script.h>
 #include <streams.h>
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
@@ -25,6 +26,27 @@ FUZZ_TARGET(bulletproof_parse)
         (void)VerifyBulletproof(decoded);
     } catch (const std::ios_base::failure&) {
         return;
+    }
+
+    const auto script_bytes = fdp.ConsumeRandomLengthByteVector(256);
+    CScript script(script_bytes.begin(), script_bytes.end());
+    CBulletproof extracted;
+    bool malformed{false};
+    CScript::const_iterator pc{script.begin()};
+    opcodetype opcode;
+    std::vector<unsigned char> data;
+    if (script.GetOp(pc, opcode) && opcode == OP_BULLETPROOF) {
+        if (!script.GetOp(pc, opcode, data) || data.size() != sizeof(extracted.commitment.data)) {
+            malformed = true;
+        } else {
+            std::memcpy(extracted.commitment.data, data.data(), sizeof(extracted.commitment.data));
+            if (!script.GetOp(pc, opcode, extracted.proof)) {
+                malformed = true;
+            }
+        }
+        if (!malformed) {
+            (void)VerifyBulletproof(extracted);
+        }
     }
 #else
     (void)fdp;
