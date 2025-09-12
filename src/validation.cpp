@@ -203,6 +203,19 @@ TRACEPOINT_SEMAPHORE(mempool, replaced);
 TRACEPOINT_SEMAPHORE(mempool, rejected);
 ChainstateManager* g_chainman{nullptr};
 
+static bool CheckBlockTime(const CBlock& block, BlockValidationState& state, const Consensus::Params& params)
+{
+    const int64_t nTime{block.GetBlockTime()};
+    if (params.fEnablePoS && IsProofOfStake(block)) {
+        if (nTime > GetTime() + 15) {
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time-future", "stake timestamp too far in future");
+        }
+    } else if (nTime > GetTime() + MAX_FUTURE_BLOCK_TIME) {
+        return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "time-too-new", "block timestamp too far in the future");
+    }
+    return true;
+}
+
 static bool CheckCoinstakeRewards(const CBlock& block, const CBlockIndex* pindexPrev,
                                   const CCoinsViewCache& view,
                                   const Consensus::Params& params,
@@ -299,6 +312,10 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
         if (!unique_txids.insert(tx->GetHash()).second) {
             return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-duplicate", "duplicate transaction");
         }
+    }
+
+    if (!CheckBlockTime(block, state, params)) {
+        return false;
     }
 
     // Reject legacy coinstake format (null prevout)
