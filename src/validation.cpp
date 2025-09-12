@@ -6,9 +6,9 @@
 #include <bitcoin-build-config.h> // IWYU pragma: keep
 
 #include <common/args.h>
-#include <pow.h>
 #include <kernel/stake.h>
 #include <pos/slashing.h>
+#include <pow.h>
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -89,13 +89,13 @@
 #include <utility>
 
 using kernel::CCoinsStats;
+using kernel::CheckBlockSignature;
+using kernel::CheckStakeTimestamp;
 using kernel::CoinStatsHashType;
 using kernel::ComputeUTXOStats;
-using kernel::Notifications;
-using kernel::CheckBlockSignature;
 using kernel::ContextualCheckProofOfStake;
 using kernel::IsProofOfStake;
-using kernel::CheckStakeTimestamp;
+using kernel::Notifications;
 
 using fsbridge::FopenFn;
 using node::BlockManager;
@@ -137,7 +137,7 @@ bool CheckBulletproofs(const CTransaction& tx, TxValidationState& state)
     std::vector<secp256k1_pedersen_commitment> input_comms;
     std::vector<secp256k1_pedersen_commitment> output_comms;
     auto check_script = [&](const CScript& script,
-                           std::vector<secp256k1_pedersen_commitment>& commits) -> bool {
+                            std::vector<secp256k1_pedersen_commitment>& commits) -> bool {
         CBulletproof bp;
         bool malformed{false};
         bool present = ExtractBulletproofFromScript(script, bp, malformed);
@@ -306,7 +306,20 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
             CAmount block_subsidy = GetBlockSubsidy(height, params);
             CAmount total_reward = fees + block_subsidy;
             CAmount dividend_reward = total_reward / 10;
+            CAmount validator_reward = total_reward - dividend_reward;
             const CTransaction& reward_tx{*block.vtx[1]};
+            CAmount stake_input_total{0};
+            for (const auto& in : reward_tx.vin) {
+                const Coin& coin{view.AccessCoin(in.prevout)};
+                if (coin.IsSpent()) {
+                    return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-inputs-missingorspent");
+                }
+                stake_input_total += coin.out.nValue;
+            }
+            if (reward_tx.vout.size() < 2 ||
+                reward_tx.vout[1].nValue != stake_input_total + validator_reward) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-validator-amount");
+            }
             if (reward_tx.vout.size() < 3) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-missing");
             }

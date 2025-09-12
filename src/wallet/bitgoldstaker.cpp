@@ -6,10 +6,10 @@
 #include <interfaces/chain.h>
 #include <key.h>
 #include <node/context.h>
-#include <node/stake_modifier_manager.h>
 #include <node/miner.h>
-#include <pos/stake.h>
+#include <node/stake_modifier_manager.h>
 #include <pos/difficulty.h>
+#include <pos/stake.h>
 #include <script/standard.h>
 #include <util/time.h>
 #include <validation.h>
@@ -73,8 +73,7 @@ void BitGoldStaker::ThreadStakeMiner()
             }
             const int min_depth = chain_height < MIN_STAKE_DEPTH ? 0 : MIN_STAKE_DEPTH;
             const std::chrono::seconds min_age =
-                chain_height < MIN_STAKE_DEPTH ? std::chrono::seconds{0}
-                                               : std::chrono::seconds{consensus.nStakeMinAge};
+                chain_height < MIN_STAKE_DEPTH ? std::chrono::seconds{0} : std::chrono::seconds{consensus.nStakeMinAge};
 
             std::vector<COutput> candidates =
                 m_wallet.GetStakeableCoins(min_depth, min_age, MIN_STAKE_AMOUNT);
@@ -171,10 +170,10 @@ void BitGoldStaker::ThreadStakeMiner()
                         coinstake.vout[0].SetNull();
                         int64_t coin_age_weight = int64_t(nTimeTx) - int64_t(pindexFrom->GetBlockTime());
                         CAmount subsidy = GetProofOfStakeReward(pindexPrev->nHeight + 1, /*fees=*/0,
-                                                               coin_age_weight, consensus);
+                                                                coin_age_weight, consensus);
                         CAmount total_reward = subsidy + fees;
-                        CAmount validator_reward = total_reward * 9 / 10;
-                        CAmount dividend_reward = total_reward - validator_reward;
+                        CAmount dividend_reward = total_reward / 10;
+                        CAmount validator_reward = total_reward - dividend_reward;
                         CAmount input_total = stake_out.txout.nValue;
                         CAmount total = input_total + validator_reward;
                         CAmount split_threshold = 2 * MIN_STAKE_AMOUNT;
@@ -189,17 +188,10 @@ void BitGoldStaker::ThreadStakeMiner()
                                 if (total >= split_threshold) break;
                             }
                         }
-                        if (total > split_threshold * 2) {
-                            CAmount half = total / 2;
-                            coinstake.vout.emplace_back(half, stake_out.txout.scriptPubKey);
-                            coinstake.vout.emplace_back(total - half, stake_out.txout.scriptPubKey);
-                            coinstake.vout.emplace_back(dividend_reward, CScript() << OP_TRUE);
-                        } else {
-                            coinstake.vout[1].nValue = total;
-                            coinstake.vout[1].scriptPubKey = stake_out.txout.scriptPubKey;
-                            coinstake.vout[2].nValue = dividend_reward;
-                            coinstake.vout[2].scriptPubKey = CScript() << OP_TRUE;
-                        }
+                        coinstake.vout[1].nValue = total;
+                        coinstake.vout[1].scriptPubKey = stake_out.txout.scriptPubKey;
+                        coinstake.vout[2].nValue = dividend_reward;
+                        coinstake.vout[2].scriptPubKey = CScript() << OP_TRUE;
                         {
                             LOCK(m_wallet.cs_wallet);
                             if (!m_wallet.SignTransaction(coinstake)) {

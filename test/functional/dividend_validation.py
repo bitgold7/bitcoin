@@ -117,6 +117,28 @@ class DividendValidationTest(BitcoinTestFramework):
         validator_reward = reward * 9 // 10
         dividend_reward = reward - validator_reward
 
+        # Block with incorrect validator reward
+        bad_coinstake = CTransaction()
+        bad_coinstake.nLockTime = ntime
+        bad_coinstake.vin.append(CTxIn(COutPoint(int(txid, 16), vout)))
+        bad_coinstake.vout.append(CTxOut(0, CScript()))
+        bad_coinstake.vout.append(CTxOut(amount + validator_reward - 1, script))
+        bad_coinstake.vout.append(CTxOut(dividend_reward, CScript([OP_TRUE])))
+        signed_hex = node.signrawtransactionwithwallet(bad_coinstake.serialize().hex())["hex"]
+        bad_coinstake = CTransaction()
+        bad_coinstake.deserialize(bytes.fromhex(signed_hex))
+
+        bad_coinbase = create_coinbase(prev_height + 1, nValue=0)
+        bad_block = create_block(
+            int(prev_hash, 16),
+            bad_coinbase,
+            ntime,
+            tmpl={"bits": prev_block["bits"], "height": prev_height + 1},
+            txlist=[bad_coinstake],
+        )
+        bad_block.hashMerkleRoot = bad_block.calc_merkle_root()
+        node.p2p.send_blocks_and_test([bad_block], node, success=False, reject_reason=b"bad-validator-amount")
+
         coinstake = CTransaction()
         coinstake.nLockTime = ntime
         coinstake.vin.append(CTxIn(COutPoint(int(txid, 16), vout)))
