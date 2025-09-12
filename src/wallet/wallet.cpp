@@ -3467,6 +3467,12 @@ std::string CWallet::GetNewShieldedAddress()
     return std::string("sbg") + GetRandHash().ToString();
 }
 
+CAmount CWallet::GetShieldedBalance() const
+{
+    LOCK(cs_wallet);
+    return m_shielded_balance;
+}
+
 void CWallet::SetStakingOnly(bool staking_only)
 {
     LOCK(cs_wallet);
@@ -3503,6 +3509,7 @@ bool CWallet::CreateShieldedTransaction(const CTxDestination& dest, CAmount amou
     }
 #endif
     txid = mtx.GetHash().GetHex();
+    m_shielded_balance += amount;
     return true;
 }
 
