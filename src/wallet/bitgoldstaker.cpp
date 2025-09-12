@@ -9,8 +9,8 @@
 #include <node/context.h>
 #include <node/miner.h>
 #include <node/stake_modifier_manager.h>
-#include <pos/difficulty.h>
-#include <pos/stake.h>
+#include <consensus/pos/difficulty.h>
+#include <consensus/pos/stake.h>
 #include <script/standard.h>
 #include <util/time.h>
 #include <validation.h>

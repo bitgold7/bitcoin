@@ -43,7 +43,7 @@
 #include <policy/fees.h>
 #include <policy/packages.h>
 #include <policy/policy.h>
-#include <pos/stake.h>
+#include <consensus/pos/stake.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <protocol.h>

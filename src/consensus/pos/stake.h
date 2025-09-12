@@ -1,5 +1,5 @@
-#ifndef BITCOIN_POS_STAKE_H
-#define BITCOIN_POS_STAKE_H
+#ifndef BITCOIN_CONSENSUS_POS_STAKE_H
+#define BITCOIN_CONSENSUS_POS_STAKE_H
 
 #include <consensus/amount.h>
 #include <chain.h>
@@ -65,4 +65,4 @@ inline StakeTimeValidationResult CheckStakeTimestamp(const CBlockHeader& h, unsi
     return StakeTimeValidationResult::OK;
 }
 
-#endif // BITCOIN_POS_STAKE_H
+#endif // BITCOIN_CONSENSUS_POS_STAKE_H

@@ -38,7 +38,7 @@
 #include <rpc/util.h>
 #include <script/descriptor.h>
 #include <serialize.h>
-#include <pos/stake.h>
+#include <consensus/pos/stake.h>
 #include <streams.h>
 #include <sync.h>
 #include <txdb.h>

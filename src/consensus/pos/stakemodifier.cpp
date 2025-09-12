@@ -1,4 +1,4 @@
-#include <pos/stakemodifier.h>
+#include <consensus/pos/stakemodifier.h>
 
 #include <chain.h>
 #include <hash.h>

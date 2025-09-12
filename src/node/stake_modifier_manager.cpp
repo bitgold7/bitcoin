@@ -4,7 +4,7 @@
 #include <chain.h>
 #include <chainparams.h>
 #include <consensus/params.h>
-#include <pos/stakemodifier.h>
+#include <consensus/pos/stakemodifier.h>
 #include <validation.h>
 #include <vector>
 

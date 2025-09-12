@@ -1,4 +1,4 @@
-#include <pos/difficulty.h>
+#include <consensus/pos/difficulty.h>
 
 #include <chain.h>
 

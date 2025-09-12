@@ -22,7 +22,7 @@
 #include <node/kernel_notifications.h>
 #include <policy/feerate.h>
 #include <policy/policy.h>
-#include <pos/stake.h>
+#include <consensus/pos/stake.h>
 #include <primitives/transaction.h>
 #include <util/moneystr.h>
 #include <util/signalinterrupt.h>

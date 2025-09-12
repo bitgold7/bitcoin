@@ -1,8 +1,7 @@
-#include <pos/stake.h>
-#include <pos/stakemodifier.h>
-#include <kernel/stake.h>
+#include <consensus/pos/stake.h>
+#include <consensus/pos/stakemodifier.h>
 #include <node/stake_modifier_manager.h>
-#include <pos/difficulty.h>
+#include <consensus/pos/difficulty.h>
 #include <chain.h>
 #include <kernel/chain.h>
 #include <consensus/amount.h>
