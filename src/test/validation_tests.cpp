@@ -17,6 +17,7 @@
 #include <validation.h>
 #include <script/script.h>
 #include <arith_uint256.h>
+#include <cstring>
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
@@ -483,6 +484,64 @@ BOOST_AUTO_TEST_CASE(bulletproof_validation_tests)
     TxValidationState state4;
     BOOST_CHECK(!CheckBulletproofs(tx4, state4));
     BOOST_CHECK_EQUAL(state4.GetRejectReason(), "bad-bulletproof-balance");
+}
+
+BOOST_AUTO_TEST_CASE(bulletproof_commitment_tests)
+{
+    // Balanced input and output commitments should verify.
+    CMutableTransaction mtx;
+    mtx.version = CTransaction::CURRENT_VERSION | CTransaction::BULLETPROOF_VERSION;
+    mtx.vin.emplace_back();
+    CBulletproof in_bp = MakeBulletproof(/*value=*/5);
+    CScript in_script;
+    in_script << OP_BULLETPROOF
+              << std::vector<unsigned char>(in_bp.commitment.data,
+                                             in_bp.commitment.data + sizeof(in_bp.commitment.data))
+              << in_bp.proof;
+    mtx.vin[0].scriptSig = in_script;
+
+    mtx.vout.emplace_back(CAmount{0}, CScript());
+    CBulletproof out_bp = MakeBulletproof(/*value=*/5);
+    CScript out_script;
+    out_script << OP_BULLETPROOF
+               << std::vector<unsigned char>(out_bp.commitment.data,
+                                              out_bp.commitment.data + sizeof(out_bp.commitment.data))
+               << out_bp.proof;
+    mtx.vout[0].scriptPubKey = out_script;
+
+    const CTransaction tx{mtx};
+    TxValidationState state;
+    BOOST_CHECK(CheckBulletproofs(tx, state));
+
+    // Malformed proof should be rejected.
+    std::vector<unsigned char> bad_proof = out_bp.proof;
+    if (!bad_proof.empty()) bad_proof[0] ^= 1;
+    CMutableTransaction mtx_bad = mtx;
+    CScript bad_script;
+    bad_script << OP_BULLETPROOF
+               << std::vector<unsigned char>(out_bp.commitment.data,
+                                              out_bp.commitment.data + sizeof(out_bp.commitment.data))
+               << bad_proof;
+    mtx_bad.vout[0].scriptPubKey = bad_script;
+    const CTransaction tx_bad{mtx_bad};
+    TxValidationState state_bad;
+    BOOST_CHECK(!CheckBulletproofs(tx_bad, state_bad));
+    BOOST_CHECK_EQUAL(state_bad.GetRejectReason(), "bad-bulletproof");
+
+    // Commitment that does not match the proof should be rejected.
+    unsigned char bad_commit[33];
+    std::memcpy(bad_commit, out_bp.commitment.data, sizeof(bad_commit));
+    bad_commit[0] ^= 1;
+    CMutableTransaction mtx_bad2 = mtx;
+    CScript bad_script2;
+    bad_script2 << OP_BULLETPROOF
+                << std::vector<unsigned char>(bad_commit, bad_commit + sizeof(bad_commit))
+                << out_bp.proof;
+    mtx_bad2.vout[0].scriptPubKey = bad_script2;
+    const CTransaction tx_bad2{mtx_bad2};
+    TxValidationState state_bad2;
+    BOOST_CHECK(!CheckBulletproofs(tx_bad2, state_bad2));
+    BOOST_CHECK_EQUAL(state_bad2.GetRejectReason(), "bad-bulletproof");
 }
 
 BOOST_FIXTURE_TEST_CASE(bulletproof_activation_tests, TestChain100Setup)
