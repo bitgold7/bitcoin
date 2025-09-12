@@ -37,6 +37,7 @@
 #include <wallet/coinselection.h>
 #include <wallet/walletutil.h>
 #include <wallet/blinding.h>
+#include <key/confidentialaddress.h>
 
 class Chainstate;
 #ifdef ENABLE_BULLETPROOFS
@@ -893,6 +894,9 @@ public:
 
     util::Result<CTxDestination> GetNewDestination(const OutputType type, const std::string label);
     util::Result<CTxDestination> GetNewChangeDestination(const OutputType type);
+
+    ConfidentialAddress GetNewConfidentialAddress(const std::string& label);
+    bool ValidateConfidentialAddress(const std::string& input, ConfidentialAddress& out) const;
 
     isminetype IsMine(const CTxDestination& dest) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     isminetype IsMine(const CScript& script) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);

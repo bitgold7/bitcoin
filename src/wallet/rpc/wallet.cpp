@@ -1077,6 +1077,8 @@ RPCHelpMan getaddressinfo();
 RPCHelpMan getnewaddress();
 RPCHelpMan getnewshieldedaddress();
 RPCHelpMan getrawchangeaddress();
+RPCHelpMan getnewconfidentialaddress();
+RPCHelpMan validateconfidentialaddress();
 RPCHelpMan setlabel();
 RPCHelpMan listaddressgroupings();
 RPCHelpMan keypoolrefill();
@@ -1162,6 +1164,8 @@ std::span<const CRPCCommand> GetWalletRPCCommands()
         {"wallet", &getnewaddress},
         {"wallet", &getnewshieldedaddress},
         {"wallet", &getrawchangeaddress},
+        {"wallet", &getnewconfidentialaddress},
+        {"wallet", &validateconfidentialaddress},
         {"wallet", &getreceivedbyaddress},
         {"wallet", &getreceivedbylabel},
         {"wallet", &gettransaction},
