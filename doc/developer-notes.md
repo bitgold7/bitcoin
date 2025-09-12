@@ -1393,6 +1393,12 @@ A few guidelines for introducing and reviewing new RPC interfaces:
   - *Rationale*: If a RPC response is not a JSON object, then it is harder to avoid API breakage if
     new data in the response is needed.
 
+- Result arrays may contain elements with different object layouts. Document these by listing an
+  `RPCResult` entry for each possible variant within the array.
+
+  - *Rationale*: Explicit schemas for heterogeneous arrays enable automatic result validation, as
+    used by `getdescriptoractivity`.
+
 - Wallet RPCs call BlockUntilSyncedToCurrentChain to maintain consistency with
   `getblockchaininfo`'s state immediately prior to the call's execution. Wallet
   RPCs whose behavior does *not* depend on the current chainstate may omit this

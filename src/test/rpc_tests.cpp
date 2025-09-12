@@ -133,6 +133,38 @@ BOOST_AUTO_TEST_CASE(rpc_namedonlyparams)
                           HasJSON(R"({"code":-8,"message":"Parameter options specified twice both as positional and named argument"})"));
 }
 
+BOOST_AUTO_TEST_CASE(rpc_result_hetero_array)
+{
+    const RPCResult result{RPCResult::Type::ARR, "", "", {
+        {RPCResult{"when type='foo'", RPCResult::Type::OBJ, "", "", {
+            {RPCResult::Type::STR, "type", "always 'foo'"},
+            {RPCResult::Type::NUM, "n", "number"},
+        }}},
+        {RPCResult{"when type='bar'", RPCResult::Type::OBJ, "", "", {
+            {RPCResult::Type::STR, "type", "always 'bar'"},
+            {RPCResult::Type::STR, "s", "string"},
+        }}},
+    }};
+
+    UniValue ok(UniValue::VARR);
+    UniValue foo(UniValue::VOBJ);
+    foo.pushKV("type", "foo");
+    foo.pushKV("n", 1);
+    UniValue bar(UniValue::VOBJ);
+    bar.pushKV("type", "bar");
+    bar.pushKV("s", "x");
+    ok.push_back(foo);
+    ok.push_back(bar);
+    ok.push_back(foo);
+    BOOST_CHECK(result.MatchesType(ok).isTrue());
+
+    UniValue bad{ok};
+    UniValue invalid(UniValue::VOBJ);
+    invalid.pushKV("type", "foo");
+    bad.push_back(invalid);
+    BOOST_CHECK(!result.MatchesType(bad).isTrue());
+}
+
 BOOST_AUTO_TEST_CASE(rpc_rawparams)
 {
     // Test raw transaction API argument handling

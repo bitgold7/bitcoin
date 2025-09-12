@@ -1145,11 +1145,29 @@ UniValue RPCResult::MatchesType(const UniValue& result) const
 
     if (UniValue::VARR == result.getType()) {
         UniValue errors(UniValue::VOBJ);
-        for (size_t i{0}; i < result.get_array().size(); ++i) {
-            // If there are more results than documented, reuse the last doc_inner.
-            const RPCResult& doc_inner{m_inner.at(std::min(m_inner.size() - 1, i))};
-            UniValue match{doc_inner.MatchesType(result.get_array()[i])};
-            if (!match.isTrue()) errors.pushKV(strprintf("%d", i), std::move(match));
+        if (m_type == Type::ARR_FIXED) {
+            if (result.size() != m_inner.size()) {
+                errors.pushKV("length", strprintf("expected %u items, got %u", m_inner.size(), result.size()));
+            }
+            for (size_t i{0}; i < std::min(result.size(), m_inner.size()); ++i) {
+                UniValue match{m_inner.at(i).MatchesType(result.get_array()[i])};
+                if (!match.isTrue()) errors.pushKV(strprintf("%d", i), std::move(match));
+            }
+        } else {
+            for (size_t i{0}; i < result.get_array().size(); ++i) {
+                const UniValue& val{result.get_array()[i]};
+                bool ok{false};
+                UniValue mismatch(UniValue::VARR);
+                for (const auto& doc_inner : m_inner) {
+                    UniValue match{doc_inner.MatchesType(val)};
+                    if (match.isTrue()) { ok = true; break; }
+                    mismatch.push_back(std::move(match));
+                }
+                if (!ok) {
+                    UniValue err = mismatch.size() == 1 ? mismatch[0] : mismatch;
+                    errors.pushKV(strprintf("%d", i), std::move(err));
+                }
+            }
         }
         if (errors.empty()) return true; // empty result array is valid
         return errors;

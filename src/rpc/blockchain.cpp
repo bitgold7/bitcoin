@@ -2621,7 +2621,7 @@ static RPCHelpMan getdescriptoractivity()
         RPCResult{
             RPCResult::Type::OBJ, "", "", {
                 {RPCResult::Type::ARR, "activity", "events", {
-                    {RPCResult::Type::OBJ, "", "", {
+                    {RPCResult{"when type='spend'", RPCResult::Type::OBJ, "", "", {
                         {RPCResult::Type::STR, "type", "always 'spend'"},
                         {RPCResult::Type::STR_AMOUNT, "amount", "The total amount in " + CURRENCY_UNIT + " of the spent output"},
                         {RPCResult::Type::STR_HEX, "blockhash", /*optional=*/true, "The blockhash this spend appears in (omitted if unconfirmed)"},
@@ -2632,7 +2632,7 @@ static RPCHelpMan getdescriptoractivity()
                         {RPCResult::Type::NUM, "prevout_vout", "The vout of the prevout"},
                         {RPCResult::Type::OBJ, "prevout_spk", "", ScriptPubKeyDoc()},
                     }},
-                    {RPCResult::Type::OBJ, "", "", {
+                    {RPCResult{"when type='receive'", RPCResult::Type::OBJ, "", "", {
                         {RPCResult::Type::STR, "type", "always 'receive'"},
                         {RPCResult::Type::STR_AMOUNT, "amount", "The total amount in " + CURRENCY_UNIT + " of the new output"},
                         {RPCResult::Type::STR_HEX, "blockhash", /*optional=*/true, "The block that this receive is in (omitted if unconfirmed)"},
@@ -2641,8 +2641,7 @@ static RPCHelpMan getdescriptoractivity()
                         {RPCResult::Type::NUM, "vout", "The vout of the receiving output"},
                         {RPCResult::Type::OBJ, "output_spk", "", ScriptPubKeyDoc()},
                     }},
-                    // TODO is the skip_type_check avoidable with a heterogeneous ARR?
-                }, /*skip_type_check=*/true},
+                }},
             },
         },
         RPCExamples{
