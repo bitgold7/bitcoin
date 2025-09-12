@@ -15,6 +15,7 @@
 #include <util/time.h>
 #include <validation.h>
 #include <wallet/bitgoldstaker.h>
+#include <wallet/stake.h>
 #include <wallet/spend.h>
 #include <wallet/wallet.h>
 
@@ -137,9 +138,10 @@ void BitGoldStaker::ThreadStakeMiner()
                             continue;
                         }
 
-                        unsigned int nTimeTx = std::max<int64_t>(pindexPrev->GetMedianTimePast() + 1,
-                                                                 TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()));
-                        nTimeTx &= ~consensus.nStakeTimestampMask;
+                        unsigned int nTimeTx{0};
+                        if (!GetStakeTime(*pindexPrev, consensus, nTimeTx)) {
+                            continue;
+                        }
                         unsigned int nBits = GetPoSNextTargetRequired(pindexPrev, nTimeTx, consensus);
                         uint256 hash_proof;
                         LogTrace(BCLog::STAKING, "ThreadStakeMiner: checking kernel for %s", stake_out.outpoint.ToString());
