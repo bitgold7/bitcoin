@@ -635,11 +635,11 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     if (!stake_out) return false;
 
     // Determine block time and difficulty
-    unsigned int nTimeTx = std::max<int64_t>(
+    unsigned int nTime = std::max<int64_t>(
         GetMinimumTime(pindexPrev, consensus.DifficultyAdjustmentInterval()),
         TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()));
-    nTimeTx &= ~consensus.nStakeTimestampMask;
-    unsigned int nBits = GetPoSNextTargetRequired(pindexPrev, nTimeTx, consensus);
+    nTime &= ~consensus.nStakeTimestampMask;
+    unsigned int nBits = GetPoSNextTargetRequired(pindexPrev, nTime, consensus);
 
     // Look up the block time of the staking UTXO
     int coin_height = pindexPrev->nHeight - stake_out->depth + 1;
@@ -649,10 +649,10 @@ bool CreatePosBlock(wallet::CWallet& wallet)
 
     // Construct coinstake transaction
     CMutableTransaction coinstake;
-    coinstake.nLockTime = nTimeTx;
+    coinstake.nLockTime = nTime;
     coinstake.vin.emplace_back(stake_out->outpoint);
     coinstake.vin[0].nSequence = CTxIn::SEQUENCE_FINAL;
-    int64_t coin_age_weight = int64_t(nTimeTx) - stake_time;
+    int64_t coin_age_weight = int64_t(nTime) - stake_time;
     CAmount reward = GetProofOfStakeReward(height, /*fees=*/0, coin_age_weight, consensus);
     CAmount validator_reward = reward * 9 / 10;
     CAmount dividend_reward = reward - validator_reward;
@@ -697,7 +697,7 @@ bool CreatePosBlock(wallet::CWallet& wallet)
 
     block.hashPrevBlock = pindexPrev->GetBlockHash();
     block.nVersion = chainman.m_versionbitscache.ComputeBlockVersion(pindexPrev, consensus);
-    block.nTime = nTimeTx;
+    block.nTime = nTime;
     block.nBits = nBits;
     block.nNonce = 0;
     block.hashMerkleRoot = BlockMerkleRoot(block);
