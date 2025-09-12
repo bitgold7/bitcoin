@@ -278,7 +278,7 @@ coinstake.vout.emplace_back(dividend_reward, dividendScript);
 
                         bool new_block{false};
                         if (!chainman.ProcessNewBlock(std::make_shared<const CBlock>(block),
-                                                      /*force_processing=*/true, /*min_pow_checked=*/true,
+                                                      /*force_processing=*/true,
                                                       &new_block)) {
                             LogDebug(BCLog::STAKING, "ThreadStakeMiner: ProcessNewBlock failed\n");
                             continue;
