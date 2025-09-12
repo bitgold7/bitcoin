@@ -859,6 +859,74 @@
         <source>Recent transactions</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location filename="../forms/overviewpage.ui" line="283"/>
+        <source>Stake status:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../forms/overviewpage.ui" line="300"/>
+        <source>Copy remedy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../overviewpage.cpp" line="279"/>
+        <source>Wallet locked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../overviewpage.cpp" line="282"/>
+        <source>Not staking</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../overviewpage.cpp" line="284"/>
+        <source>Low weight</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../overviewpage.cpp" line="286"/>
+        <source>Staking</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../overviewpage.cpp" line="287"/>
+        <source>walletpassphrase &lt;pass&gt; &lt;timeout&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../overviewpage.cpp" line="289"/>
+        <source>startstaking</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../overviewpage.cpp" line="291"/>
+        <source>add coins to stake</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>BitcoinGUI</name>
+    <message>
+        <location filename="../bitcoingui.cpp" line="1499"/>
+        <source>Staking: Wallet locked</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../bitcoingui.cpp" line="1501"/>
+        <source>Staking: Inactive</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../bitcoingui.cpp" line="1503"/>
+        <source>Staking: Low weight</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../bitcoingui.cpp" line="1505"/>
+        <source>Staking: Active</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>PSBTOperationsDialog</name>

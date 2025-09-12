@@ -1494,8 +1494,17 @@ void BitcoinGUI::updateStakingStatus()
     WalletView* walletView = walletFrame->currentWalletView();
     if (!walletView) return;
     WalletModel* walletModel = walletView->getWalletModel();
-    bool staking = walletModel->wallet().IsStaking();
-    labelStakingText->setText(staking ? tr("Staking: Active") : tr("Staking: Inactive"));
+    QString text;
+    if (walletModel->getEncryptionStatus() == WalletModel::Locked) {
+        text = tr("Staking: Wallet locked");
+    } else if (!walletModel->isStaking()) {
+        text = tr("Staking: Inactive");
+    } else if (walletModel->getStakingStats().staked_balance == 0) {
+        text = tr("Staking: Low weight");
+    } else {
+        text = tr("Staking: Active");
+    }
+    labelStakingText->setText(text);
 #endif
 }
 #endif // ENABLE_WALLET
