@@ -14,10 +14,24 @@
 #include <pubkey.h>
 #include <script/script.h>
 #include <uint256.h>
+#include <validationmetrics.h>
+#include <chrono>
 
 typedef std::vector<unsigned char> valtype;
 
 namespace {
+
+class ScriptEvalTimer {
+    std::chrono::steady_clock::time_point m_start;
+public:
+    ScriptEvalTimer() : m_start(std::chrono::steady_clock::now()) {}
+    ~ScriptEvalTimer() {
+        g_validation_metrics.script_eval_time.fetch_add(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - m_start).count(),
+            std::memory_order_relaxed);
+    }
+};
 
 inline bool set_success(ScriptError* ret)
 {
@@ -408,6 +422,7 @@ static bool EvalChecksig(const valtype& sig, const valtype& pubkey, CScript::con
 
 bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, unsigned int flags, const BaseSignatureChecker& checker, SigVersion sigversion, ScriptExecutionData& execdata, ScriptError* serror)
 {
+    ScriptEvalTimer eval_timer;
     static const CScriptNum bnZero(0);
     static const CScriptNum bnOne(1);
     // static const CScriptNum bnFalse(0);
@@ -1659,13 +1674,25 @@ uint256 SignatureHash(const CScript& scriptCode, const T& txTo, unsigned int nIn
 template <class T>
 bool GenericTransactionSignatureChecker<T>::VerifyECDSASignature(const std::vector<unsigned char>& vchSig, const CPubKey& pubkey, const uint256& sighash) const
 {
-    return pubkey.Verify(sighash, vchSig);
+    const auto start{std::chrono::steady_clock::now()};
+    bool ret = pubkey.Verify(sighash, vchSig);
+    g_validation_metrics.sigcheck_time.fetch_add(
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - start).count(),
+        std::memory_order_relaxed);
+    return ret;
 }
 
 template <class T>
 bool GenericTransactionSignatureChecker<T>::VerifySchnorrSignature(std::span<const unsigned char> sig, const XOnlyPubKey& pubkey, const uint256& sighash) const
 {
-    return pubkey.VerifySchnorr(sighash, sig);
+    const auto start{std::chrono::steady_clock::now()};
+    bool ret = pubkey.VerifySchnorr(sighash, sig);
+    g_validation_metrics.sigcheck_time.fetch_add(
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - start).count(),
+        std::memory_order_relaxed);
+    return ret;
 }
 
 template <class T>

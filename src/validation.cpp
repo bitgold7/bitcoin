@@ -70,6 +70,7 @@
 #include <util/trace.h>
 #include <util/translation.h>
 #include <validationinterface.h>
+#include <validationmetrics.h>
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
@@ -147,7 +148,13 @@ bool CheckBulletproofs(const CTransaction& tx, TxValidationState& state)
         }
         if (present) {
             has_bp = true;
-            if (!VerifyBulletproof(bp)) {
+            const auto start{std::chrono::steady_clock::now()};
+            bool ok = VerifyBulletproof(bp);
+            g_validation_metrics.bulletproof_time.fetch_add(
+                std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::steady_clock::now() - start).count(),
+                std::memory_order_relaxed);
+            if (!ok) {
                 return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
             }
             commits.push_back(bp.commitment);
@@ -518,6 +525,8 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
             AddToDividendPool(stake_tx.vout[2].nValue, pindex->nHeight, block.GetHash());
         }
     }
+    LogValidationMetrics();
+    g_validation_metrics.Reset();
     return true;
 }
 
