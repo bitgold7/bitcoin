@@ -2276,7 +2276,7 @@ void PeerManagerImpl::ProcessGetBlockData(CNode& pfrom, Peer& peer, const CInv& 
     if (need_activate_chain) {
         BlockValidationState state;
         if (!m_chainman.ActiveChainstate().ActivateBestChain(state, a_recent_block)) {
-            LogDebug(BCLog::NET, "failed to activate chain (%s)\n", state.ToString());
+            LogPrintCategory(BCLog::CONSENSUS, state.GetRejectReason(), "failed to activate chain (%s)", state.ToString());
         }
     }
 
@@ -4151,7 +4151,7 @@ void PeerManagerImpl::ProcessMessage(CNode& pfrom, const std::string& msg_type, 
             }
             BlockValidationState state;
             if (!m_chainman.ActiveChainstate().ActivateBestChain(state, a_recent_block)) {
-                LogDebug(BCLog::NET, "failed to activate chain (%s)\n", state.ToString());
+                LogPrintCategory(BCLog::CONSENSUS, state.GetRejectReason(), "failed to activate chain (%s)", state.ToString());
             }
         }
 
