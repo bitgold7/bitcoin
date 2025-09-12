@@ -23,6 +23,9 @@
 
 using util::SplitString;
 
+/** SLIP-44 coin type for BitGold (BGD). */
+const uint32_t BIP44_COIN_TYPE{3252};
+
 void ReadSigNetArgs(const ArgsManager& args, CChainParams::SigNetOptions& options)
 {
     if (!args.GetArgs("-signetseednode").empty()) {
