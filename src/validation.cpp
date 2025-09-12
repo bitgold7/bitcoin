@@ -330,26 +330,8 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-script");
             }
 
-            static constexpr int QUARTER_BLOCKS{16200};
-            CAmount pool_before = chainstate.GetDividendPool() + dividend_reward;
-            const bool payouts_enabled = gArgs.GetBoolArg("-dividendpayouts", false);
-            if (payouts_enabled && height % QUARTER_BLOCKS == 0) {
-                auto payouts = dividend::CalculatePayouts(chainstate.GetStakeInfo(), height, pool_before);
-                if (reward_tx.vout.size() != 3 + payouts.size()) {
-                    return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-payout-missing");
-                }
-                size_t idx = 3;
-                for (const auto& [addr, amt] : payouts) {
-                    (void)addr; // addresses are not validated here
-                    if (reward_tx.vout[idx].nValue != amt) {
-                        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-payout-amount");
-                    }
-                    ++idx;
-                }
-            } else {
-                if (reward_tx.vout.size() != 3) {
-                    return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-extra");
-                }
+            if (reward_tx.vout.size() != 3) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-extra");
             }
 
             chainstate.AddToDividendPool(dividend_reward, height);
@@ -2426,6 +2408,9 @@ void Chainstate::InitCoinsDB(
 void Chainstate::LoadDividendPool()
 {
     m_dividend_pool = CoinsDB().GetDividendPool();
+    m_stake_info = CoinsDB().GetStakeInfo();
+    m_pending_dividends = CoinsDB().GetPendingDividends();
+    m_stake_snapshots = CoinsDB().GetStakeSnapshots();
 }
 
 void Chainstate::AddToDividendPool(CAmount amount, int height)
@@ -2436,13 +2421,25 @@ void Chainstate::AddToDividendPool(CAmount amount, int height)
         for (const auto& [addr, info] : m_stake_info) {
             snap.emplace(addr, info.weight);
         }
-        m_stake_snapshots.emplace(height, std::move(snap));
+        m_stake_snapshots.emplace(height, snap);
+        auto payouts = dividend::CalculatePayouts(m_stake_info, height, m_dividend_pool);
+        for (const auto& [addr, amt] : payouts) {
+            m_pending_dividends[addr] += amt;
+        }
         for (auto& [addr, info] : m_stake_info) {
             info.last_payout_height = height;
         }
-        m_dividend_pool = 0;
+        CAmount paid{0};
+        for (const auto& [addr, amt] : payouts) {
+            (void)addr;
+            paid += amt;
+        }
+        m_dividend_pool -= paid;
     }
     CoinsDB().WriteDividendPool(m_dividend_pool);
+    CoinsDB().WriteStakeInfo(m_stake_info);
+    CoinsDB().WritePendingDividends(m_pending_dividends);
+    CoinsDB().WriteStakeSnapshots(m_stake_snapshots);
 }
 
 void Chainstate::UpdateStakeWeight(const std::string& addr, CAmount weight)
@@ -2456,6 +2453,7 @@ CAmount Chainstate::ClaimDividend(const std::string& addr)
     if (it == m_pending_dividends.end()) return 0;
     CAmount amount = it->second;
     m_pending_dividends.erase(it);
+    CoinsDB().WritePendingDividends(m_pending_dividends);
     return amount;
 }
 
