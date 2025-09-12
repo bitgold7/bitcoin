@@ -8,6 +8,6 @@
 #else
 #define UNUSED
 #endif
-static const char UNUSED *bitcoin_strings[] = {
+static const char UNUSED *bitgold_strings[] = {
 QT_TRANSLATE_NOOP("bitcoin-core", "The BitGold Core developers"),
 };

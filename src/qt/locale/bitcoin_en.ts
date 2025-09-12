@@ -1896,7 +1896,7 @@ Note:  Since the fee is calculated on a per-byte basis, a fee rate of &quot;100 
 <context>
     <name>bitcoin-core</name>
     <message>
-        <location filename="../bitcoinstrings.cpp" line="+12"/>
+        <location filename="../bitgoldstrings.cpp" line="+12"/>
         <source>The BitGold Core developers</source>
         <translation type="unfinished"></translation>
     </message>

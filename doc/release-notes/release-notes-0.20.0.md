@@ -1,7 +1,7 @@
 0.20.0 Release Notes
 ====================
 
-Bitcoin Core version 0.20.0 is now available from:
+Bitgold Core version 0.20.0 is now available from:
 
   <https://bitcoincore.org/bin/bitcoin-core-0.20.0/>
 
@@ -449,7 +449,7 @@ Build system
 - #15756 Add shortcuts for tab tools (promag)
 - #16944 create PSBT with watch-only wallet (Sjors)
 - #16964 Change sendcoins dialogue Yes to Send (instagibbs)
-- #17068 Always generate `bitcoinstrings.cpp` on `make translate` (D4nte)
+- #17068 Always generate `bitgoldstrings.cpp` on `make translate` (D4nte)
 - #17096 Rename debug window (Zero-1729)
 - #17105 Make RPCConsole::TabTypes an enum class (promag)
 - #17125 Add toolTip and placeholderText to sign message fields (dannmat)

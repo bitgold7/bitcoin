@@ -587,7 +587,7 @@ Support for Python 2 has been discontinued for all test files and tools.
 - #13043 `6e249e4` OptionsDialog: add prune setting (Sjors)
 - #13506 `6579d80` load wallet in UI after possible init aborts (jonasschnelli)
 - #13458 `dc53f7f` Drop qt4 support (laanwj)
-- #13528 `b877c39` Move BitcoinGUI initializers to class, fix initializer order warning (laanwj)
+- #13528 `b877c39` Move BitgoldGUI initializers to class, fix initializer order warning (laanwj)
 - #13536 `baf3a3a` coincontrol: Remove unused qt4 workaround (MarcoFalke)
 - #13537 `10ffca7` Peer table: Visualize inbound/outbound state for every row (wodry)
 - #13791 `2c14c1f` Reject dialogs if key escape is pressed (promag)
