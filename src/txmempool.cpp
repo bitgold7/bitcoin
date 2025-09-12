@@ -420,6 +420,15 @@ void CTxMemPoolEntry::UpdateAncestorState(int32_t modifySize, CAmount modifyFee,
     assert(int(nSigOpCostWithAncestors) >= 0);
 }
 
+HybridScore CTxMemPoolEntry::GetHybridScore() const
+{
+    HybridScore score{FeeFrac(GetFee(), GetTxSize()),
+                      static_cast<uint64_t>(GetTx().vin.size()),
+                      ::GetTime() - nTime,
+                      0};
+    return score;
+}
+
 //! Clamp option values and populate the error if options are not valid.
 static CTxMemPool::Options&& Flatten(CTxMemPool::Options&& opts, bilingual_str& error)
 {

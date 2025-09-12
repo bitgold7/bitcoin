@@ -25,6 +25,7 @@
 
 bool g_enable_priority{false};
 int64_t g_max_priority{100};
+bool g_hybrid_mempool{false};
 
 CAmount GetDustThreshold(const CTxOut& txout, const CFeeRate& dustRelayFeeIn)
 {

@@ -22,6 +22,8 @@ class CScript;
 // Global policy switches for mempool priority handling
 extern bool g_enable_priority;
 extern int64_t g_max_priority;
+// When true, use hybrid mempool scoring
+extern bool g_hybrid_mempool;
 
 /** Default for -blockmaxweight, which controls the range of block weights the mining code will create.
  *  Set to the network's consensus limit of 20,000,000 weight units. */
