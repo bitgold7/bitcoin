@@ -362,6 +362,41 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
                 return false;
             }
 
+            if (gArgs.GetBoolArg("-dividendpayouts", false) && next_height % dividend::QUARTER_BLOCKS == 0) {
+                CAmount pool = chainstate.GetDividendPool() + block.vtx[1]->vout[2].nValue;
+                const CTransactionRef payout_tx{block.vtx.size() > 2 ? block.vtx[2] : nullptr};
+                dividend::Payouts expected = dividend::CalculatePayouts(chainstate.GetStakeInfo(), next_height, pool);
+                if (expected.empty()) {
+                    if (payout_tx && !payout_tx->vout.empty()) {
+                        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-payout", "unexpected dividend payout");
+                    }
+                } else {
+                    if (!payout_tx) {
+                        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-payout-missing", "missing dividend payout");
+                    }
+                    std::vector<std::pair<std::string, CAmount>> exp_vec(expected.begin(), expected.end());
+                    CAmount paid{0};
+                    if (payout_tx->vout.size() < exp_vec.size()) {
+                        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-payout-size", "payout output count mismatch");
+                    }
+                    for (size_t i = 0; i < exp_vec.size(); ++i) {
+                        const CTxOut& out{payout_tx->vout[i]};
+                        if (out.scriptPubKey != dividend::GetDividendScript() || out.nValue != exp_vec[i].second) {
+                            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-payout-amt", "payout amount mismatch");
+                        }
+                        paid += exp_vec[i].second;
+                    }
+                    CAmount leftover = pool - paid;
+                    if (leftover > 0) {
+                        if (payout_tx->vout.size() != exp_vec.size() + 1 || payout_tx->vout.back().scriptPubKey != dividend::GetDividendScript() || payout_tx->vout.back().nValue != leftover) {
+                            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-payout-change", "payout change mismatch");
+                        }
+                    } else if (payout_tx->vout.size() != exp_vec.size()) {
+                        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-payout-extra", "unexpected payout output");
+                    }
+                }
+            }
+
         }
         // The block must be signed by the coinstake input
         if (!CheckBlockSignature(block)) {

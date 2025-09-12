@@ -1,6 +1,8 @@
 #include <boost/test/unit_test.hpp>
 #include <dividend/dividend.h>
+#include <primitives/transaction.h>
 #include <test/util/setup_common.h>
+#include <vector>
 
 BOOST_FIXTURE_TEST_SUITE(dividend_tests, BasicTestingSetup)
 
@@ -71,6 +73,50 @@ BOOST_AUTO_TEST_CASE(double_payout_prevention)
     stakes["A"].last_payout_height = QUARTER_BLOCKS;
     payouts = CalculatePayouts(stakes, QUARTER_BLOCKS, pool);
     BOOST_CHECK(payouts.empty());
+}
+
+BOOST_AUTO_TEST_CASE(rounding_behavior)
+{
+    using namespace dividend;
+    std::map<std::string, StakeInfo> stakes{{"A", {10 * COIN, 0}}, {"B", {20 * COIN, 0}}};
+    CAmount pool{100};
+    auto expected = CalculatePayouts(stakes, QUARTER_BLOCKS, pool);
+    CMutableTransaction tx = BuildPayoutTx(stakes, QUARTER_BLOCKS, pool);
+    std::vector<std::pair<std::string, CAmount>> exp_vec(expected.begin(), expected.end());
+    CAmount paid{0};
+    for (size_t i = 0; i < exp_vec.size(); ++i) {
+        BOOST_CHECK_EQUAL(tx.vout[i].nValue, exp_vec[i].second);
+        paid += exp_vec[i].second;
+    }
+    CAmount leftover = pool - paid;
+    if (leftover > 0) {
+        BOOST_CHECK_EQUAL(tx.vout.back().nValue, leftover);
+    }
+    CAmount total{0};
+    for (const auto& out : tx.vout) total += out.nValue;
+    BOOST_CHECK_EQUAL(total, pool);
+}
+
+BOOST_AUTO_TEST_CASE(chain_reorg_consistency)
+{
+    using namespace dividend;
+    std::map<std::string, StakeInfo> stakes{{"A", {15 * COIN, 0}}, {"B", {5 * COIN, 0}}};
+    CAmount pool{50 * COIN};
+    CMutableTransaction tx1 = BuildPayoutTx(stakes, QUARTER_BLOCKS, pool);
+    CMutableTransaction tx2 = BuildPayoutTx(stakes, QUARTER_BLOCKS, pool);
+    BOOST_CHECK_EQUAL(CTransaction(tx1).GetHash(), CTransaction(tx2).GetHash());
+}
+
+BOOST_AUTO_TEST_CASE(empty_pool)
+{
+    using namespace dividend;
+    std::map<std::string, StakeInfo> stakes{{"A", {10 * COIN, 0}}, {"B", {20 * COIN, 0}}};
+    auto payouts1 = CalculatePayouts(stakes, QUARTER_BLOCKS, 0);
+    auto payouts2 = CalculatePayouts(stakes, QUARTER_BLOCKS, 0);
+    BOOST_CHECK(payouts1.empty());
+    BOOST_CHECK(payouts1 == payouts2);
+    CMutableTransaction tx = BuildPayoutTx(stakes, QUARTER_BLOCKS, 0);
+    BOOST_CHECK(tx.vout.empty());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

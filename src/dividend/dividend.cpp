@@ -40,4 +40,25 @@ Payouts CalculatePayouts(const std::map<std::string, StakeInfo>& stakes, int hei
     return payouts;
 }
 
+CMutableTransaction BuildPayoutTx(const std::map<std::string, StakeInfo>& stakes, int height, CAmount pool)
+{
+    CMutableTransaction tx;
+    Payouts payouts = CalculatePayouts(stakes, height, pool);
+    if (payouts.empty()) return tx;
+    // Non-coinbase placeholder input to avoid IsCoinBase
+    tx.vin.emplace_back(COutPoint(uint256(), 0));
+    std::vector<std::pair<std::string, CAmount>> recipients(payouts.begin(), payouts.end());
+    std::sort(recipients.begin(), recipients.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    CAmount paid{0};
+    for (const auto& [addr, amt] : recipients) {
+        (void)addr;
+        tx.vout.emplace_back(amt, GetDividendScript());
+        paid += amt;
+    }
+    if (pool > paid) {
+        tx.vout.emplace_back(pool - paid, GetDividendScript());
+    }
+    return tx;
+}
+
 } // namespace dividend

@@ -168,29 +168,26 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     CAmount total_reward = block_subsidy + nFees;
     CAmount validator_reward = total_reward * 9 / 10;
     CAmount dividend_reward = total_reward - validator_reward;
-    static constexpr int QUARTER_BLOCKS{16200};
-    dividend::Payouts payouts;
     CAmount pool = m_chainstate.GetDividendPool() + dividend_reward;
+    CMutableTransaction payoutTx;
     const bool payouts_enabled = gArgs.GetBoolArg("-dividendpayouts", false);
-    if (payouts_enabled && nHeight > 0 && nHeight % QUARTER_BLOCKS == 0 && pool > 0) {
-        payouts = dividend::CalculatePayouts(m_chainstate.GetStakeInfo(), nHeight, pool);
+    if (payouts_enabled && nHeight > 0 && nHeight % dividend::QUARTER_BLOCKS == 0 && pool > 0) {
+        payoutTx = dividend::BuildPayoutTx(m_chainstate.GetStakeInfo(), nHeight, pool);
     }
-    coinbaseTx.vout.resize(2 + payouts.size());
+    coinbaseTx.vout.resize(2);
     coinbaseTx.vout[0].scriptPubKey = m_options.coinbase_output_script;
     coinbaseTx.vout[0].nValue = validator_reward;
     coinbaseTx.vout[1].scriptPubKey = dividend::GetDividendScript();
     coinbaseTx.vout[1].nValue = dividend_reward;
-    size_t idx = 2;
-    for (const auto& [addr, amt] : payouts) {
-        (void)addr; // address handling omitted
-        coinbaseTx.vout[idx].scriptPubKey = dividend::GetDividendScript();
-        coinbaseTx.vout[idx].nValue = amt;
-        ++idx;
-    }
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     Assert(nHeight > 0);
     coinbaseTx.nLockTime = static_cast<uint32_t>(nHeight - 1);
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
+    if (!payoutTx.vout.empty()) {
+        pblock->vtx.insert(pblock->vtx.begin() + 1, MakeTransactionRef(payoutTx));
+        pblocktemplate->vTxFees.insert(pblocktemplate->vTxFees.begin(), CAmount{0});
+        pblocktemplate->vTxSigOpsCost.insert(pblocktemplate->vTxSigOpsCost.begin(), 0);
+    }
     pblocktemplate->vchCoinbaseCommitment = m_chainstate.m_chainman.GenerateCoinbaseCommitment(*pblock, pindexPrev);
 
     LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);
@@ -654,26 +651,18 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     CAmount total_reward = subsidy + fees;
     CAmount validator_reward = total_reward * 9 / 10;
     CAmount dividend_reward = total_reward - validator_reward;
-    static constexpr int QUARTER_BLOCKS{16200};
-    dividend::Payouts payouts;
     CAmount pool = chainstate.GetDividendPool() + dividend_reward;
+    CMutableTransaction payoutTx;
     const bool payouts_enabled = gArgs.GetBoolArg("-dividendpayouts", false);
-    if (payouts_enabled && height > 0 && height % QUARTER_BLOCKS == 0 && pool > 0) {
-        payouts = dividend::CalculatePayouts(chainstate.GetStakeInfo(), height, pool);
+    if (payouts_enabled && height > 0 && height % dividend::QUARTER_BLOCKS == 0 && pool > 0) {
+        payoutTx = dividend::BuildPayoutTx(chainstate.GetStakeInfo(), height, pool);
     }
-    coinstake.vout.resize(3 + payouts.size());
+    coinstake.vout.resize(3);
     coinstake.vout[0].SetNull();
     coinstake.vout[1].nValue = stake_out->txout.nValue + validator_reward;
     coinstake.vout[1].scriptPubKey = stake_out->txout.scriptPubKey;
     coinstake.vout[2].scriptPubKey = dividend::GetDividendScript();
     coinstake.vout[2].nValue = dividend_reward;
-    size_t pay_idx = 3;
-    for (const auto& [addr, amt] : payouts) {
-        (void)addr;
-        coinstake.vout[pay_idx].scriptPubKey = dividend::GetDividendScript();
-        coinstake.vout[pay_idx].nValue = amt;
-        ++pay_idx;
-    }
     {
         LOCK(wallet.cs_wallet);
         if (!wallet.SignTransaction(coinstake)) return false;
@@ -692,6 +681,9 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     CBlock block;
     block.vtx.emplace_back(MakeTransactionRef(std::move(coinbase)));
     block.vtx.emplace_back(MakeTransactionRef(std::move(coinstake)));
+    if (!payoutTx.vout.empty()) {
+        block.vtx.emplace_back(MakeTransactionRef(payoutTx));
+    }
     for (size_t i = 1; i < pblocktemplate->block.vtx.size(); ++i) {
         block.vtx.emplace_back(pblocktemplate->block.vtx[i]);
     }
