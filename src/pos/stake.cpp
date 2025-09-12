@@ -167,6 +167,7 @@ bool ContextualCheckProofOfStake(const CBlock& block,
 {
     if (!pindexPrev) return false;
     if (!IsProofOfStake(block)) return false;
+    if (block.nTime < pindexPrev->GetBlockTime() + params.nStakeTargetSpacing) return false;
 
     const CTransaction& coinstake = *block.vtx[1];
 
