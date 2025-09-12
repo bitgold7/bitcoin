@@ -28,7 +28,7 @@ static const int CONTINUE_EXECUTION=-1;
 
 const TranslateFn G_TRANSLATION_FUN{nullptr};
 
-static void SetupBitcoinUtilArgs(ArgsManager &argsman)
+static void SetupBitGoldUtilArgs(ArgsManager &argsman)
 {
     SetupHelpOptions(argsman);
 
@@ -43,7 +43,7 @@ static void SetupBitcoinUtilArgs(ArgsManager &argsman)
 // CONTINUE_EXECUTION when it's expected to continue further.
 static int AppInitUtil(ArgsManager& args, int argc, char* argv[])
 {
-    SetupBitcoinUtilArgs(args);
+    SetupBitGoldUtilArgs(args);
     std::string error;
     if (!args.ParseParameters(argc, argv, error)) {
         tfm::format(std::cerr, "Error parsing command line arguments: %s\n", error);
@@ -52,16 +52,16 @@ static int AppInitUtil(ArgsManager& args, int argc, char* argv[])
 
     if (HelpRequested(args) || args.GetBoolArg("-version", false)) {
         // First part of help message is specific to this utility
-        std::string strUsage = CLIENT_NAME " bitcoin-util utility version " + FormatFullVersion() + "\n";
+        std::string strUsage = CLIENT_NAME " bitgold-util utility version " + FormatFullVersion() + "\n";
 
         if (args.GetBoolArg("-version", false)) {
             strUsage += FormatParagraph(LicenseInfo());
         } else {
             strUsage += "\n"
-                "The bitcoin-util tool provides bitcoin related functionality that does not rely on the ability to access a running node. Available [commands] are listed below.\n"
+                "The bitgold-util tool provides bitgold related functionality that does not rely on the ability to access a running node. Available [commands] are listed below.\n"
                 "\n"
-                "Usage:  bitcoin-util [options] [command]\n"
-                "or:     bitcoin-util [options] grind <hex-block-header>\n";
+                "Usage:  bitgold-util [options] [command]\n"
+                "or:     bitgold-util [options] grind <hex-block-header>\n";
             strUsage += "\n" + args.GetHelpMessage();
         }
 
