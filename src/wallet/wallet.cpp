@@ -28,10 +28,12 @@
 #include <interfaces/handler.h>
 #include <interfaces/wallet.h>
 #include <kernel/chain.h>
+#include <node/context.h>
 #include <kernel/mempool_removal_reason.h>
 #include <key.h>
 #include <key_io.h>
 #include <logging.h>
+#include <validation.h>
 #include <random.h>
 #include <node/types.h>
 #include <outputtype.h>
@@ -3307,6 +3309,18 @@ CAmount CWallet::GetStakingRewards() const
 {
     LOCK(cs_wallet);
     return m_cumulative_staking_rewards;
+}
+
+CAmount CWallet::GetDividendBalance() const
+{
+    interfaces::Chain* chain = m_chain;
+    if (!chain) return 0;
+    node::NodeContext* context = chain->context();
+    if (context && context->chainman) {
+        LOCK(::cs_main);
+        return context->chainman->ActiveChainstate().GetDividendPool();
+    }
+    return 0;
 }
 
 void CWallet::SetReserveBalance(CAmount amount)

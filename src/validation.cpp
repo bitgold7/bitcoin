@@ -292,19 +292,20 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
                 }
                 fees += in_val - out_val;
             }
-            CAmount validator_fee = fees * 9 / 10;
-            CAmount dividend_fee = fees - validator_fee;
+            const int height{pindexPrev->nHeight + 1};
+            CAmount block_subsidy = GetBlockSubsidy(height, params);
+            CAmount total_reward = fees + block_subsidy;
+            CAmount dividend_reward = total_reward / 10;
             const CTransaction& reward_tx{*block.vtx[1]};
             if (reward_tx.vout.size() < 3) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-missing");
             }
-            if (reward_tx.vout[2].nValue != dividend_fee) {
+            if (reward_tx.vout[2].nValue != dividend_reward) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-amount");
             }
 
             static constexpr int QUARTER_BLOCKS{16200};
-            const int height{pindexPrev->nHeight + 1};
-            CAmount pool_before = chainstate.GetDividendPool() + dividend_fee;
+            CAmount pool_before = chainstate.GetDividendPool() + dividend_reward;
             const bool payouts_enabled = gArgs.GetBoolArg("-dividendpayouts", false);
             if (payouts_enabled && height % QUARTER_BLOCKS == 0) {
                 auto payouts = dividend::CalculatePayouts(chainstate.GetStakeInfo(), height, pool_before);
@@ -325,7 +326,7 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
                 }
             }
 
-            chainstate.AddToDividendPool(dividend_fee, height);
+            chainstate.AddToDividendPool(dividend_reward, height);
         }
         // The block must be signed by the coinstake input
         if (!CheckBlockSignature(block)) {
