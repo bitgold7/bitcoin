@@ -31,11 +31,11 @@ static RPCHelpMan claimdividends()
 {
     return RPCHelpMan{
         "claimdividends",
-        "Claim pending dividends for an address.",
+        "Claim pending dividends for an address. Requires -dividendpayouts to be enabled.",
         {
             {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "address claiming dividends"},
         },
-        RPCResult{RPCResult::Type::OBJ, "", "", {{RPCResult::Type::AMOUNT, "claimed", "amount claimed"}, {RPCResult::Type::AMOUNT, "remaining", "remaining pool"}}},
+        RPCResult{RPCResult::Type::OBJ, "", "", {{RPCResult::Type::STR_AMOUNT, "claimed", "amount claimed"}, {RPCResult::Type::STR_AMOUNT, "remaining", "remaining pool"}}},
         RPCExamples{HelpExampleCli("claimdividends", "\"addr\"") + HelpExampleRpc("claimdividends", "[\"addr\"]")},
         [](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
             if (!gArgs.GetBoolArg("-dividendpayouts", false)) {

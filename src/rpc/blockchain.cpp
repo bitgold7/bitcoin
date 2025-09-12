@@ -3400,7 +3400,7 @@ static RPCHelpMan getdividendinfo()
 {
     return RPCHelpMan{
         "getdividendinfo",
-        "Returns information about the dividend pool and stakes.",
+        "Returns information about the dividend pool, current stakes, and stake snapshots.",
         {},
         RPCResult{RPCResult::Type::OBJ, "", "", {
             {RPCResult::Type::STR_AMOUNT, "pool", "Current dividend pool"},
@@ -3409,6 +3409,7 @@ static RPCHelpMan getdividendinfo()
                 {RPCResult::Type::NUM, "last_payout", "Height of last payout"},
                 {RPCResult::Type::STR_AMOUNT, "pending", "Pending dividend amount"},
             }}}},
+            {RPCResult::Type::OBJ, "snapshots", "Stake weight snapshots by height"},
         }},
         RPCExamples{HelpExampleCli("getdividendinfo", "") + HelpExampleRpc("getdividendinfo", "")},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
@@ -3445,7 +3446,7 @@ static RPCHelpMan claimdividends()
 {
     return RPCHelpMan{
         "claimdividends",
-        "Claim pending dividends for an address.",
+        "Claim pending dividends for an address. Requires -dividendpayouts to be enabled.",
         {
             {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "Address to claim for"},
         },

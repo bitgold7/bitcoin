@@ -47,7 +47,8 @@ static RPCHelpMan setreservebalance()
 {
     return RPCHelpMan{
         "setreservebalance",
-        "Set or get the reserve balance that will not be used for staking.",
+        "Set or get the wallet balance that will not be used for staking.\n"
+        "Without arguments, the current reserved amount is returned.",
         {
             {"reserve", RPCArg::Type::BOOL, RPCArg::Optional::OMITTED, "true to reserve balance, false to disable reserve"},
             {"amount", RPCArg::Type::AMOUNT, RPCArg::Optional::OMITTED, "amount in BGD to reserve"},
@@ -83,7 +84,8 @@ static RPCHelpMan reservebalance()
 {
     return RPCHelpMan{
         "reservebalance",
-        "Deprecated alias for setreservebalance.",
+        "Deprecated alias for setreservebalance.\n"
+        "Provided for backward compatibility.",
         {
             {"reserve", RPCArg::Type::BOOL, RPCArg::Optional::OMITTED, "true to reserve balance, false to disable reserve"},
             {"amount", RPCArg::Type::AMOUNT, RPCArg::Optional::OMITTED, "amount in BGD to reserve"},
@@ -99,7 +101,7 @@ static RPCHelpMan getstakinginfo()
 {
     return RPCHelpMan{
         "getstakinginfo",
-        "Returns the staking status for this wallet.\n",
+        "Alias for getstakingstatus. Returns the staking status for this wallet.\n",
         {},
         RPCResult{
             RPCResult::Type::OBJ, "", "", {
@@ -116,7 +118,8 @@ static RPCHelpMan setstakesplitthreshold()
 {
     return RPCHelpMan{
         "setstakesplitthreshold",
-        "Set or get the stake split threshold.",
+        "Set or get the stake split threshold. Outputs above this amount are\n"
+        "split when staking to keep stakes small. Set to 0 to disable.\n",
         {{"amount", RPCArg::Type::AMOUNT, RPCArg::Optional::OMITTED, "threshold in BGD"}},
         RPCResult{RPCResult::Type::OBJ, "", "", {{RPCResult::Type::NUM, "threshold", "current threshold"}}},
         RPCExamples{HelpExampleCli("setstakesplitthreshold", "100") + HelpExampleRpc("setstakesplitthreshold", "50")},
