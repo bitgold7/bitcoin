@@ -747,7 +747,9 @@ int V1Transport::readHeader(std::span<const uint8_t> msg_bytes)
 
     // Check start string, network magic
     if (hdr.pchMessageStart != m_magic_bytes) {
-        LogDebug(BCLog::NET, "Header error: Wrong MessageStart %s received, peer=%d\n", HexStr(hdr.pchMessageStart), m_node_id);
+        LogPrintLevel(BCLog::NET, BCLog::Level::Warning,
+                      "Header error: Wrong MessageStart %s received, peer=%d\n",
+                      HexStr(hdr.pchMessageStart), m_node_id);
         return -1;
     }
 
