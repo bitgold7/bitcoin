@@ -78,7 +78,9 @@ util::Result<void> ApplyArgsManOptions(const ArgsManager& argsman, const CChainP
         LogPrintf("Increasing minrelaytxfee to %s to match incrementalrelayfee\n", mempool_opts.min_relay_feerate.ToString());
     }
 
-    g_enable_priority = argsman.GetBoolArg("-bgdpriority", false);
+    // Enable the priority-based mempool point system by default. It can be
+    // disabled by passing -bgdpriority=0 at startup.
+    g_enable_priority = argsman.GetBoolArg("-bgdpriority", true);
 
     // Feerate used to define dust.  Shouldn't be changed lightly as old
     // implementations may inadvertently create non-standard transactions

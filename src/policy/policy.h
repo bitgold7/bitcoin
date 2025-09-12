@@ -23,8 +23,9 @@ class CScript;
 extern bool g_enable_priority;
 extern int64_t g_max_priority;
 
-/** Default for -blockmaxweight, which controls the range of block weights the mining code will create **/
-static constexpr unsigned int DEFAULT_BLOCK_MAX_WEIGHT{20000000};
+/** Default for -blockmaxweight, which controls the range of block weights the mining code will create.
+ *  Set to the network's consensus limit of 20,000,000 weight units. */
+static constexpr unsigned int DEFAULT_BLOCK_MAX_WEIGHT{MAX_BLOCK_WEIGHT};
 /** Default for -blockreservedweight **/
 static constexpr unsigned int DEFAULT_BLOCK_RESERVED_WEIGHT{8000};
 /** This accounts for the block header, var_int encoding of the transaction count and a minimally viable
