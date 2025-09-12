@@ -1016,6 +1016,37 @@ static RPCHelpMan getnewshieldedaddress()
         }};
 }
 
+static RPCHelpMan sendshielded()
+{
+    return RPCHelpMan{
+        "sendshielded",
+        "Send to a shielded address using confidential commitments.",
+        {
+            {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "shielded address"},
+            {"amount", RPCArg::Type::AMOUNT, RPCArg::Optional::NO, "amount to send"},
+        },
+        RPCResult{RPCResult::Type::OBJ, "", "", {{RPCResult::Type::STR_HEX, "txid", "transaction id"}}},
+        RPCExamples{HelpExampleCli("sendshielded", "\"addr\" 0.1") + HelpExampleRpc("sendshielded", "\"addr\", 0.1")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            std::shared_ptr<CWallet> pwallet = GetWalletForJSONRPCRequest(request);
+            if (!pwallet) return UniValue::VNULL;
+            pwallet->BlockUntilSyncedToCurrentChain();
+            EnsureWalletIsUnlocked(*pwallet);
+            CTxDestination dest = DecodeDestination(request.params[0].get_str());
+            if (!IsValidDestination(dest)) {
+                throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid address");
+            }
+            CAmount amount = AmountFromValue(request.params[1]);
+            std::string txid, error;
+            if (!pwallet->CreateShieldedTransaction(dest, amount, txid, error)) {
+                throw JSONRPCError(RPC_WALLET_ERROR, error);
+            }
+            UniValue result(UniValue::VOBJ);
+            result.pushKV("txid", txid);
+            return result;
+        }};
+}
+
 static RPCHelpMan getstakestat()
 {
     return RPCHelpMan{
@@ -1090,6 +1121,7 @@ RPCHelpMan sendall();
 RPCHelpMan walletprocesspsbt();
 RPCHelpMan walletcreatefundedpsbt();
 RPCHelpMan signrawtransactionwithwallet();
+RPCHelpMan sendshielded();
 
 // signmessage
 RPCHelpMan signmessage();
@@ -1151,6 +1183,7 @@ std::span<const CRPCCommand> GetWalletRPCCommands()
         {"wallet", &send},
         {"wallet", &sendmany},
         {"wallet", &sendtoaddress},
+        {"wallet", &sendshielded},
         {"wallet", &setlabel},
         {"wallet", &settxfee},
         {"wallet", &setwalletflag},

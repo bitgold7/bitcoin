@@ -36,6 +36,7 @@
 #include <wallet/types.h>
 #include <wallet/coinselection.h>
 #include <wallet/walletutil.h>
+#include <wallet/blinding.h>
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
@@ -559,6 +560,9 @@ public:
     /** Mapping of confidential outputs to their blinding factors and values. */
     std::map<COutPoint, std::pair<std::array<unsigned char,32>, CAmount>> m_confidential_outputs GUARDED_BY(cs_wallet);
 #endif
+
+    /** Manager for blinding keys used by confidential transactions. */
+    BlindingKeyManager m_blinding_key_manager;
 
     /** Cached staking statistics. */
     StakingStats m_staking_stats GUARDED_BY(cs_wallet);
@@ -1156,6 +1160,12 @@ public:
     /** Retrieve the wallet's known value for a confidential output. */
     std::optional<CAmount> GetConfidentialValue(const COutPoint& outpoint) const;
 #endif
+
+    /** Retrieve or create a blinding key for a given public key. */
+    CKey GetBlindingKey(const CPubKey& pubkey);
+
+    /** Create a simple shielded transaction placeholder. */
+    bool CreateShieldedTransaction(const CTxDestination& dest, CAmount amount, std::string& txid, std::string& error);
 };
 
 /**
