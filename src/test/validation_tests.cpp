@@ -17,6 +17,7 @@
 #include <validation.h>
 #include <script/script.h>
 #include <arith_uint256.h>
+#include <dividend/dividend.h>
 #include <cstring>
 
 #ifdef ENABLE_BULLETPROOFS
@@ -579,6 +580,106 @@ BOOST_FIXTURE_TEST_CASE(bulletproof_activation_tests, TestChain100Setup)
     dep.nStartTime = old_start;
 }
 #endif
+
+BOOST_FIXTURE_TEST_CASE(fee_only_block_dividends, TestChain100Setup)
+{
+    Consensus::Params params = Params().GetConsensus();
+    params.fEnablePoS = false; // bypass contextual PoS checks
+    params.nSubsidyHalvingInterval = 1; // eliminate block subsidy
+    params.nMaximumSupply = std::numeric_limits<CAmount>::max();
+
+    const CTransactionRef& stake_coin = m_coinbase_txns[0];
+    const CTransactionRef& fee_coin = m_coinbase_txns[1];
+    COutPoint stake_prevout{stake_coin->GetHash(), 0};
+    COutPoint fee_prevout{fee_coin->GetHash(), 0};
+
+    CAmount stake_value = stake_coin->vout[0].nValue;
+    CAmount fee_input = fee_coin->vout[0].nValue;
+    CAmount fee = 1 * COIN;
+
+    CMutableTransaction coinbase;
+    coinbase.vin.resize(1);
+    coinbase.vin[0].prevout.SetNull();
+    coinbase.vout.resize(1);
+
+    CAmount dividend_reward = fee / 10;
+    CAmount staker_reward = fee - dividend_reward;
+
+    CMutableTransaction coinstake;
+    coinstake.vin.emplace_back(stake_prevout);
+    coinstake.vout.resize(3);
+    coinstake.vout[0].SetNull();
+    coinstake.vout[1].nValue = stake_value + staker_reward;
+    coinstake.vout[2].nValue = dividend_reward;
+    coinstake.vout[2].scriptPubKey = dividend::GetDividendScript();
+
+    CMutableTransaction fee_tx;
+    fee_tx.vin.emplace_back(fee_prevout);
+    fee_tx.vout.resize(1);
+    fee_tx.vout[0].nValue = fee_input - fee;
+
+    CBlock block;
+    block.vtx.emplace_back(MakeTransactionRef(std::move(coinbase)));
+    block.vtx.emplace_back(MakeTransactionRef(std::move(coinstake)));
+    block.vtx.emplace_back(MakeTransactionRef(std::move(fee_tx)));
+    block.hashPrevBlock = Assert(m_node.chainman)->ActiveChain().Tip()->GetBlockHash();
+    block.nTime = Assert(m_node.chainman)->ActiveChain().Tip()->GetBlockTime() + 16;
+    block.hashMerkleRoot = BlockMerkleRoot(block);
+
+    BlockValidationState state;
+    BOOST_CHECK(!CheckBlock(block, state, params));
+    BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-pos-prev");
+}
+
+BOOST_FIXTURE_TEST_CASE(invalid_fee_split, TestChain100Setup)
+{
+    Consensus::Params params = Params().GetConsensus();
+    params.fEnablePoS = false;
+    params.nSubsidyHalvingInterval = 1;
+    params.nMaximumSupply = std::numeric_limits<CAmount>::max();
+
+    const CTransactionRef& stake_coin = m_coinbase_txns[0];
+    const CTransactionRef& fee_coin = m_coinbase_txns[1];
+    COutPoint stake_prevout{stake_coin->GetHash(), 0};
+    COutPoint fee_prevout{fee_coin->GetHash(), 0};
+
+    CAmount stake_value = stake_coin->vout[0].nValue;
+    CAmount fee_input = fee_coin->vout[0].nValue;
+    CAmount fee = 1 * COIN;
+
+    CMutableTransaction coinbase;
+    coinbase.vin.resize(1);
+    coinbase.vin[0].prevout.SetNull();
+    coinbase.vout.resize(1);
+
+    CAmount dividend_reward = fee / 10;
+    CAmount staker_reward = fee - dividend_reward;
+
+    CMutableTransaction coinstake;
+    coinstake.vin.emplace_back(stake_prevout);
+    coinstake.vout.resize(3);
+    coinstake.vout[0].SetNull();
+    coinstake.vout[1].nValue = stake_value + staker_reward;
+    coinstake.vout[2].nValue = dividend_reward + 1; // incorrect split
+    coinstake.vout[2].scriptPubKey = dividend::GetDividendScript();
+
+    CMutableTransaction fee_tx;
+    fee_tx.vin.emplace_back(fee_prevout);
+    fee_tx.vout.resize(1);
+    fee_tx.vout[0].nValue = fee_input - fee;
+
+    CBlock block;
+    block.vtx.emplace_back(MakeTransactionRef(std::move(coinbase)));
+    block.vtx.emplace_back(MakeTransactionRef(std::move(coinstake)));
+    block.vtx.emplace_back(MakeTransactionRef(std::move(fee_tx)));
+    block.hashPrevBlock = Assert(m_node.chainman)->ActiveChain().Tip()->GetBlockHash();
+    block.nTime = Assert(m_node.chainman)->ActiveChain().Tip()->GetBlockTime() + 16;
+    block.hashMerkleRoot = BlockMerkleRoot(block);
+
+    BlockValidationState state;
+    BOOST_CHECK(!CheckBlock(block, state, params));
+    BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-dividend-amount");
+}
 
 BOOST_AUTO_TEST_CASE(pos_target_spacing)
 {
