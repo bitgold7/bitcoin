@@ -97,6 +97,59 @@ static RPCHelpMan getstakesnapshots()
         }};
 }
 
+static RPCHelpMan getdividendhistory()
+{
+    return RPCHelpMan{
+        "getdividendhistory",
+        "Return historical dividend payouts keyed by height.",
+        {},
+        RPCResult{RPCResult::Type::OBJ, "", "", {{RPCResult::Type::OBJ, "<height>", "payouts", {{RPCResult::Type::AMOUNT, "<address>", "payout"}}}}},
+        RPCExamples{HelpExampleCli("getdividendhistory", "") + HelpExampleRpc("getdividendhistory", "")},
+        [](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            ChainstateManager& chainman = EnsureAnyChainman(request.context);
+            LOCK(cs_main);
+            const auto& hist = chainman.ActiveChainstate().GetDividendHistory();
+            UniValue ret(UniValue::VOBJ);
+            for (const auto& [height, payouts] : hist) {
+                UniValue inner(UniValue::VOBJ);
+                for (const auto& [addr, amt] : payouts) {
+                    inner.pushKV(addr, ValueFromAmount(amt));
+                }
+                ret.pushKV(std::to_string(height), inner);
+            }
+            return ret;
+        }};
+}
+
+static RPCHelpMan getnextdividend()
+{
+    return RPCHelpMan{
+        "getnextdividend",
+        "Estimate the next dividend payout.",
+        {},
+        RPCResult{RPCResult::Type::OBJ, "", "", {
+            {RPCResult::Type::NUM, "height", "next payout height"},
+            {RPCResult::Type::OBJ, "payouts", "estimated payouts", {{RPCResult::Type::AMOUNT, "<address>", "payout"}}}
+        }},
+        RPCExamples{HelpExampleCli("getnextdividend", "") + HelpExampleRpc("getnextdividend", "")},
+        [](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            ChainstateManager& chainman = EnsureAnyChainman(request.context);
+            LOCK(cs_main);
+            Chainstate& chainstate = chainman.ActiveChainstate();
+            int height = chainman.ActiveChain().Height();
+            int next_height = ((height / dividend::QUARTER_BLOCKS) + 1) * dividend::QUARTER_BLOCKS;
+            dividend::Payouts payouts = dividend::CalculatePayouts(chainstate.GetStakeInfo(), next_height, chainstate.GetDividendPool());
+            UniValue ret(UniValue::VOBJ);
+            ret.pushKV("height", next_height);
+            UniValue pobj(UniValue::VOBJ);
+            for (const auto& [addr, amt] : payouts) {
+                pobj.pushKV(addr, ValueFromAmount(amt));
+            }
+            ret.pushKV("payouts", pobj);
+            return ret;
+        }};
+}
+
 static RPCHelpMan getdividendschedule()
 {
     return RPCHelpMan{
@@ -143,6 +196,8 @@ static const CRPCCommand commands[] = {
     {"dividend", &getpendingdividends},
     {"dividend", &getstakesnapshots},
     {"dividend", &getdividendschedule},
+    {"dividend", &getdividendhistory},
+    {"dividend", &getnextdividend},
 };
 
 void RegisterDividendRPCCommands(CRPCTable& t)

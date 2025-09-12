@@ -638,6 +638,8 @@ public:
     std::map<std::string, CAmount> m_pending_dividends GUARDED_BY(::cs_main);
     //! Historical snapshots of stakes taken each quarter.
     std::map<int, std::map<std::string, CAmount>> m_stake_snapshots GUARDED_BY(::cs_main);
+    //! Historical dividend payouts keyed by height.
+    std::map<int, dividend::Payouts> m_dividend_history GUARDED_BY(::cs_main);
 
     /**
      * The base of the snapshot this chainstate was created from.
@@ -676,6 +678,7 @@ public:
     const std::map<std::string, StakeInfo>& GetStakeInfo() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_stake_info; }
     const std::map<std::string, CAmount>& GetPendingDividends() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_pending_dividends; }
     const std::map<int, std::map<std::string, CAmount>>& GetStakeSnapshots() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_stake_snapshots; }
+    const std::map<int, dividend::Payouts>& GetDividendHistory() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_dividend_history; }
     void UpdateStakeWeight(const std::string& addr, CAmount weight) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
     CAmount ClaimDividend(const std::string& addr) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 

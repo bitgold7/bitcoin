@@ -2428,6 +2428,7 @@ void Chainstate::LoadDividendPool()
     m_stake_info = CoinsDB().GetStakeInfo();
     m_pending_dividends = CoinsDB().GetPendingDividends();
     m_stake_snapshots = CoinsDB().GetStakeSnapshots();
+    m_dividend_history = CoinsDB().GetDividendHistory();
 }
 
 void Chainstate::AddToDividendPool(CAmount amount, int height)
@@ -2443,6 +2444,7 @@ void Chainstate::AddToDividendPool(CAmount amount, int height)
         for (const auto& [addr, amt] : payouts) {
             m_pending_dividends[addr] += amt;
         }
+        m_dividend_history.emplace(height, payouts);
         for (auto& [addr, info] : m_stake_info) {
             info.last_payout_height = height;
         }
@@ -2457,6 +2459,7 @@ void Chainstate::AddToDividendPool(CAmount amount, int height)
     CoinsDB().WriteStakeInfo(m_stake_info);
     CoinsDB().WritePendingDividends(m_pending_dividends);
     CoinsDB().WriteStakeSnapshots(m_stake_snapshots);
+    CoinsDB().WriteDividendHistory(m_dividend_history);
 }
 
 void Chainstate::UpdateStakeWeight(const std::string& addr, CAmount weight)

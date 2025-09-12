@@ -38,6 +38,7 @@
 #include <wallet/walletutil.h>
 #include <wallet/blinding.h>
 
+class Chainstate;
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
 #endif
@@ -521,6 +522,12 @@ public:
 
     /** Return current dividend pool balance. */
     CAmount GetDividendBalance() const;
+    /** Update indexed dividend history from chainstate. */
+    void UpdateDividendHistory(const Chainstate& chainstate) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+    /** Return indexed dividend history. */
+    std::map<int, std::map<std::string, CAmount>> GetDividendHistory() const;
+    /** Return estimated next dividend payouts for wallet addresses. */
+    std::pair<int, std::map<std::string, CAmount>> GetNextDividend() const;
 
     /** Set the balance to keep reserved from staking. */
     void SetReserveBalance(CAmount amount);
@@ -557,6 +564,8 @@ public:
      * that hasn't confirmed yet. We wouldn't consider the Coin spent already,
      * but also shouldn't try to use it again. */
     std::set<COutPoint> setLockedCoins GUARDED_BY(cs_wallet);
+    //! Dividend history filtered for wallet addresses.
+    std::map<int, std::map<std::string, CAmount>> m_dividend_history GUARDED_BY(cs_wallet);
 
     /** Registered interfaces::Chain::Notifications handler. */
     std::unique_ptr<interfaces::Handler> m_chain_notifications_handler;

@@ -27,6 +27,7 @@ static constexpr uint8_t DB_DIVIDEND_POOL{'D'};
 static constexpr uint8_t DB_STAKE_INFO{'I'};
 static constexpr uint8_t DB_PENDING_DIVIDENDS{'P'};
 static constexpr uint8_t DB_STAKE_SNAPSHOTS{'S'};
+static constexpr uint8_t DB_DIVIDEND_HISTORY{'Y'};
 // Keys used in previous version that might still be found in the DB:
 static constexpr uint8_t DB_COINS{'c'};
 
@@ -141,6 +142,18 @@ std::map<int, std::map<std::string, CAmount>> CCoinsViewDB::GetStakeSnapshots() 
 bool CCoinsViewDB::WriteStakeSnapshots(const std::map<int, std::map<std::string, CAmount>>& snaps)
 {
     return m_db->Write(DB_STAKE_SNAPSHOTS, snaps);
+}
+
+std::map<int, dividend::Payouts> CCoinsViewDB::GetDividendHistory() const
+{
+    std::map<int, dividend::Payouts> hist;
+    m_db->Read(DB_DIVIDEND_HISTORY, hist);
+    return hist;
+}
+
+bool CCoinsViewDB::WriteDividendHistory(const std::map<int, dividend::Payouts>& hist)
+{
+    return m_db->Write(DB_DIVIDEND_HISTORY, hist);
 }
 
 bool CCoinsViewDB::BatchWrite(CoinsViewCacheCursor& cursor, const uint256 &hashBlock) {

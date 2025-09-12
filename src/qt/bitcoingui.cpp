@@ -280,6 +280,13 @@ void BitcoinGUI::createActions()
     historyAction->setShortcut(QKeySequence(QStringLiteral("Alt+4")));
     tabGroup->addAction(historyAction);
 
+    dividendAction = new QAction(platformStyle->SingleColorIcon(":/icons/overview"), tr("&Dividends"), this);
+    dividendAction->setStatusTip(tr("Show dividend information"));
+    dividendAction->setToolTip(dividendAction->statusTip());
+    dividendAction->setCheckable(true);
+    dividendAction->setShortcut(QKeySequence(QStringLiteral("Alt+5")));
+    tabGroup->addAction(dividendAction);
+
 #ifdef ENABLE_WALLET
     // These showNormalIfMinimized are needed because Send Coins and Receive Coins
     // can be triggered from the tray menu, and need to show the GUI to be useful.
@@ -291,6 +298,8 @@ void BitcoinGUI::createActions()
     connect(receiveCoinsAction, &QAction::triggered, this, &BitcoinGUI::gotoReceiveCoinsPage);
     connect(historyAction, &QAction::triggered, [this]{ showNormalIfMinimized(); });
     connect(historyAction, &QAction::triggered, this, &BitcoinGUI::gotoHistoryPage);
+    connect(dividendAction, &QAction::triggered, [this]{ showNormalIfMinimized(); });
+    connect(dividendAction, &QAction::triggered, this, &BitcoinGUI::gotoDividendPage);
 #endif // ENABLE_WALLET
 
     quitAction = new QAction(tr("E&xit"), this);
@@ -604,6 +613,7 @@ void BitcoinGUI::createToolBars()
         toolbar->addAction(sendCoinsAction);
         toolbar->addAction(receiveCoinsAction);
         toolbar->addAction(historyAction);
+        toolbar->addAction(dividendAction);
         overviewAction->setChecked(true);
 
 #ifdef ENABLE_WALLET
@@ -996,6 +1006,12 @@ void BitcoinGUI::gotoSendCoinsPage(QString addr)
 {
     sendCoinsAction->setChecked(true);
     if (walletFrame) walletFrame->gotoSendCoinsPage(addr);
+}
+
+void BitcoinGUI::gotoDividendPage()
+{
+    dividendAction->setChecked(true);
+    if (walletFrame) walletFrame->gotoDividendPage();
 }
 
 void BitcoinGUI::gotoSignMessageTab(QString addr)

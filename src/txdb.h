@@ -73,6 +73,8 @@ public:
     bool WritePendingDividends(const std::map<std::string, CAmount>& divs);
     std::map<int, std::map<std::string, CAmount>> GetStakeSnapshots() const;
     bool WriteStakeSnapshots(const std::map<int, std::map<std::string, CAmount>>& snaps);
+    std::map<int, dividend::Payouts> GetDividendHistory() const;
+    bool WriteDividendHistory(const std::map<int, dividend::Payouts>& hist);
 };
 
 #endif // BITCOIN_TXDB_H
