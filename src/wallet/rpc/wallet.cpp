@@ -1136,6 +1136,10 @@ RPCHelpMan abandontransaction();
 RPCHelpMan rescanblockchain();
 RPCHelpMan abortrescan();
 
+// dividend
+RPCHelpMan getwalletdividends();
+RPCHelpMan claimwalletdividends();
+
 std::span<const CRPCCommand> GetWalletRPCCommands()
 {
     static const CRPCCommand commands[]{
@@ -1207,6 +1211,8 @@ std::span<const CRPCCommand> GetWalletRPCCommands()
         {"wallet", &getstakingrewards},
         {"wallet", &walletstaking},
         {"wallet", &getstakestat},
+        {"wallet", &getwalletdividends},
+        {"wallet", &claimwalletdividends},
     };
     return commands;
 }

@@ -2392,8 +2392,15 @@ void Chainstate::LoadDividendPool()
 void Chainstate::AddToDividendPool(CAmount amount, int height)
 {
     m_dividend_pool += amount;
-    static constexpr int QUARTER_BLOCKS{16200};
-    if (gArgs.GetBoolArg("-dividendpayouts", false) && height > 0 && height % QUARTER_BLOCKS == 0) {
+    if (gArgs.GetBoolArg("-dividendpayouts", false) && height > 0 && height % dividend::QUARTER_BLOCKS == 0) {
+        std::map<std::string, CAmount> snap;
+        for (const auto& [addr, info] : m_stake_info) {
+            snap.emplace(addr, info.weight);
+        }
+        m_stake_snapshots.emplace(height, std::move(snap));
+        for (auto& [addr, info] : m_stake_info) {
+            info.last_payout_height = height;
+        }
         m_dividend_pool = 0;
     }
     CoinsDB().WriteDividendPool(m_dividend_pool);
