@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test address and WIF prefixes on main network."""
+"""Test address prefixes on main, test, and reg networks."""
 
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import assert_equal
@@ -22,30 +22,56 @@ def b58decode(s: str) -> bytes:
 
 class AddressPrefixesTest(BitcoinTestFramework):
     def set_test_params(self):
-        self.chain = ''  # run on main network
-        self.num_nodes = 1
+        self.num_nodes = 3
         self.setup_clean_chain = True
 
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
 
+    def setup_network(self):
+        self.add_nodes(self.num_nodes)
+        # Configure node0 for main network
+        self.nodes[0].chain = ''
+        self.nodes[0].replace_in_config([('regtest=1\n', ''), ('[regtest]\n', '')])
+        self.nodes[0].extra_args = ['-maxconnections=0']
+        # Configure node1 for testnet
+        self.nodes[1].chain = 'testnet4'
+        self.nodes[1].replace_in_config([('regtest=1\n', 'testnet4=1\n'), ('[regtest]\n', '[testnet4]\n')])
+        self.nodes[1].extra_args = ['-maxconnections=0']
+        # Configure node2 for regtest (default)
+        self.nodes[2].extra_args = ['-maxconnections=0']
+        self.start_nodes()
+
     def run_test(self):
-        node = self.nodes[0]
-        # Legacy P2PKH address
-        legacy_addr = node.getnewaddress(address_type='legacy')
-        assert legacy_addr[0] == 'B'
-        # P2SH address
-        script_addr = node.getnewaddress(address_type='p2sh-segwit')
-        assert script_addr[0] == 'G'
-
-        # Bech32 address
-        bech32_addr = node.getnewaddress("", "bech32")
-        assert bech32_addr.startswith('bg1')
-
-        # Dump private key and verify secret key prefix
-        wif = node.dumpprivkey(legacy_addr)
+        # Main network checks
+        main = self.nodes[0]
+        legacy = main.getnewaddress(address_type='legacy')
+        assert legacy[0] == 'B'
+        script = main.getnewaddress(address_type='p2sh-segwit')
+        assert script[0] == 'G'
+        bech32 = main.getnewaddress("", "bech32")
+        assert bech32.startswith('bg1')
+        wif = main.dumpprivkey(legacy)
         decoded = b58decode(wif)
-        assert_equal(decoded[0], 153)  # base58Prefixes[SECRET_KEY]
+        assert_equal(decoded[0], 153)
+
+        # Testnet checks
+        test = self.nodes[1]
+        t_legacy = test.getnewaddress(address_type='legacy')
+        assert_equal(b58decode(t_legacy)[0], 65)
+        t_script = test.getnewaddress(address_type='p2sh-segwit')
+        assert_equal(b58decode(t_script)[0], 78)
+        t_bech32 = test.getnewaddress("", "bech32")
+        assert t_bech32.startswith('tbg1')
+
+        # Regtest checks
+        reg = self.nodes[2]
+        r_legacy = reg.getnewaddress(address_type='legacy')
+        assert_equal(b58decode(r_legacy)[0], 111)
+        r_script = reg.getnewaddress(address_type='p2sh-segwit')
+        assert_equal(b58decode(r_script)[0], 196)
+        r_bech32 = reg.getnewaddress("", "bech32")
+        assert r_bech32.startswith('rbg1')
 
 if __name__ == '__main__':
     AddressPrefixesTest(__file__).main()
