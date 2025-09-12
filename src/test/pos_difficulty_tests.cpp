@@ -64,15 +64,15 @@ BOOST_AUTO_TEST_CASE(stake_timestamp_mask)
 
     // Valid timestamp: divisible by mask, after previous block, and not far in the future
     header.nTime = prev_time + params.nStakeTargetSpacing;
-    BOOST_CHECK(kernel::CheckStakeTimestamp(header, prev_time, params));
+    BOOST_CHECK(kernel::CheckStakeTimestamp(header, prev_time, params) == kernel::StakeTimeValidationResult::OK);
 
     // Fails mask divisibility
     header.nTime |= 1;
-    BOOST_CHECK(!kernel::CheckStakeTimestamp(header, prev_time, params));
+    BOOST_CHECK(kernel::CheckStakeTimestamp(header, prev_time, params) == kernel::StakeTimeValidationResult::MASK);
 
     // Valid mask but too far in the future
     header.nTime = (GetTime() + 16) & ~params.nStakeTimestampMask;
-    BOOST_CHECK(!kernel::CheckStakeTimestamp(header, prev_time, params));
+    BOOST_CHECK(kernel::CheckStakeTimestamp(header, prev_time, params) == kernel::StakeTimeValidationResult::FUTURE);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

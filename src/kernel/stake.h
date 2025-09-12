@@ -38,13 +38,21 @@ bool ContextualCheckProofOfStake(const CBlock& block,
                                  const CChain& chain,
                                  const Consensus::Params& params);
 
+/** Result codes for stake timestamp validation. */
+enum class StakeTimeValidationResult {
+    OK = 0,
+    MASK,    //!< timestamp not aligned to nStakeTimestampMask
+    FUTURE,  //!< timestamp too far in the future
+    SPACING, //!< timestamp earlier than nStakeTargetSpacing after prev block
+};
+
 /** Basic timestamp checks for a staked block. */
-inline bool CheckStakeTimestamp(const CBlockHeader& h, unsigned int prev_time, const Consensus::Params& p)
+inline StakeTimeValidationResult CheckStakeTimestamp(const CBlockHeader& h, unsigned int prev_time, const Consensus::Params& p)
 {
-    if ((h.nTime & p.nStakeTimestampMask) != 0) return false;
-    if (h.nTime > GetTime() + 15) return false;
-    if (h.nTime < prev_time + p.nStakeTargetSpacing) return false;
-    return true;
+    if ((h.nTime & p.nStakeTimestampMask) != 0) return StakeTimeValidationResult::MASK;
+    if (h.nTime > GetTime() + 15) return StakeTimeValidationResult::FUTURE;
+    if (h.nTime < prev_time + p.nStakeTargetSpacing) return StakeTimeValidationResult::SPACING;
+    return StakeTimeValidationResult::OK;
 }
 
 } // namespace kernel

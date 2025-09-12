@@ -8,11 +8,13 @@ spacing.
 ## Consensus rules and activation
 
 - **Activation** – Nodes begin enforcing PoS v3.1 at the agreed block height
-  (set in `chainparams.cpp`). Prior releases continue to follow legacy rules
-  but fall out of consensus after activation.
-- **Timestamp granularity** – Block timestamps must be multiples of 16 seconds.
+   (set in `chainparams.cpp`). Prior releases continue to follow legacy rules
+   but fall out of consensus after activation.
+- **Timestamp rules** – Block timestamps must satisfy `(nTime & nStakeTimestampMask) == 0`,
+   enforcing 16‑second granularity, and be at least `nStakeTargetSpacing`
+   seconds after the previous block.
 - **Stake eligibility** – Inputs must contain at least 1&nbsp;BG and mature for one
-  hour before they can stake.
+   hour before they can stake.
 - **Block structure** – Each block contains a zero‑value coinbase followed by the
   coinstake transaction, which pays the input amount plus subsidy.
 - **Block signature** – The staking node signs the block header hash with the key

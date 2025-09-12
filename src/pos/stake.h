@@ -50,12 +50,19 @@ bool IsProofOfStake(const CBlock& block);
 /** Verify the signature on a proof-of-stake block. */
 bool CheckBlockSignature(const CBlock& block);
 
-inline bool CheckStakeTimestamp(const CBlockHeader& h, unsigned int prev_time, const Consensus::Params& p)
+enum class StakeTimeValidationResult {
+    OK = 0,
+    MASK,
+    FUTURE,
+    SPACING,
+};
+
+inline StakeTimeValidationResult CheckStakeTimestamp(const CBlockHeader& h, unsigned int prev_time, const Consensus::Params& p)
 {
-    if ((h.nTime & p.nStakeTimestampMask) != 0) return false;
-    if (h.nTime > GetTime() + 15) return false;
-    if (h.nTime < prev_time + p.nStakeTargetSpacing) return false;
-    return true;
+    if ((h.nTime & p.nStakeTimestampMask) != 0) return StakeTimeValidationResult::MASK;
+    if (h.nTime > GetTime() + 15) return StakeTimeValidationResult::FUTURE;
+    if (h.nTime < prev_time + p.nStakeTargetSpacing) return StakeTimeValidationResult::SPACING;
+    return StakeTimeValidationResult::OK;
 }
 
 #endif // BITCOIN_POS_STAKE_H

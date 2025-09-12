@@ -269,8 +269,15 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "expected proof-of-stake block");
         }
         // Timestamp must respect the network's stake mask, drift, and spacing limits
-        if (!CheckStakeTimestamp(block, pindexPrev->GetBlockTime(), params)) {
-            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time", "invalid proof-of-stake timestamp");
+        switch (CheckStakeTimestamp(block, pindexPrev->GetBlockTime(), params)) {
+        case kernel::StakeTimeValidationResult::OK:
+            break;
+        case kernel::StakeTimeValidationResult::MASK:
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time-mask", "stake timestamp not masked");
+        case kernel::StakeTimeValidationResult::FUTURE:
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time-future", "stake timestamp too far in future");
+        case kernel::StakeTimeValidationResult::SPACING:
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time-spacing", "stake timestamp violates spacing");
         }
         {
             LOCK(cs_main);
