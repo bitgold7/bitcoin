@@ -633,15 +633,27 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     }
     if (!stake_out) return false;
 
+    // Gather transactions from the mempool
+    CTxMemPool* mempool = node_context->mempool.get();
+    BlockAssembler::Options options;
+    ApplyArgsManOptions(gArgs, options);
+    BlockAssembler assembler{chainstate, mempool, options};
+    std::unique_ptr<CBlockTemplate> pblocktemplate = assembler.CreateNewBlock();
+    CAmount fees{0};
+    for (const CAmount& fee : pblocktemplate->vTxFees) {
+        fees += fee;
+    }
+
     // Construct coinstake transaction
     CMutableTransaction coinstake;
     coinstake.nLockTime = height;
     coinstake.vin.emplace_back(stake_out->outpoint);
     coinstake.vin[0].nSequence = CTxIn::SEQUENCE_FINAL;
     int64_t coin_age_weight = consensus.nStakeMinAge; // Placeholder until wallet provides age
-    CAmount reward = GetProofOfStakeReward(height, /*fees=*/0, coin_age_weight, consensus);
-    CAmount validator_reward = reward * 9 / 10;
-    CAmount dividend_reward = reward - validator_reward;
+    CAmount subsidy = GetProofOfStakeReward(height, /*fees=*/0, coin_age_weight, consensus);
+    CAmount total_reward = subsidy + fees;
+    CAmount validator_reward = total_reward * 9 / 10;
+    CAmount dividend_reward = total_reward - validator_reward;
     static constexpr int QUARTER_BLOCKS{16200};
     dividend::Payouts payouts;
     CAmount pool = chainstate.GetDividendPool() + dividend_reward;
@@ -680,6 +692,9 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     CBlock block;
     block.vtx.emplace_back(MakeTransactionRef(std::move(coinbase)));
     block.vtx.emplace_back(MakeTransactionRef(std::move(coinstake)));
+    for (size_t i = 1; i < pblocktemplate->block.vtx.size(); ++i) {
+        block.vtx.emplace_back(pblocktemplate->block.vtx[i]);
+    }
 
     block.hashPrevBlock = pindexPrev->GetBlockHash();
     block.nVersion = chainman.m_versionbitscache.ComputeBlockVersion(pindexPrev, consensus);
