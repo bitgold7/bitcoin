@@ -5,6 +5,7 @@
 
 #include <wallet/wallet.h>
 #include <wallet/spend.h>
+#include <wallet/blinding.h>
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
@@ -3324,7 +3325,10 @@ CAmount CWallet::GetReserveBalance() const
 std::string CWallet::GetNewShieldedAddress()
 {
     LOCK(cs_wallet);
-    // Placeholder shielded address generation using random hash with "sbg" prefix
+    // Generate a new key pair for blinding purposes and return a pseudo shielded address
+    CKey key;
+    key.MakeNewKey(true);
+    m_blinding_key_manager.GetOrCreateBlindingKey(key.GetPubKey());
     return std::string("sbg") + GetRandHash().ToString();
 }
 
@@ -3338,6 +3342,33 @@ bool CWallet::IsUnlockedForStakingOnly() const
 {
     LOCK(cs_wallet);
     return m_staking_only;
+}
+
+CKey CWallet::GetBlindingKey(const CPubKey& pubkey)
+{
+    LOCK(cs_wallet);
+    return m_blinding_key_manager.GetOrCreateBlindingKey(pubkey);
+}
+
+bool CWallet::CreateShieldedTransaction(const CTxDestination& dest, CAmount amount, std::string& txid, std::string& error)
+{
+    LOCK(cs_wallet);
+    CMutableTransaction mtx;
+    CScript script = GetScriptForDestination(dest);
+    mtx.vout.emplace_back(amount, script);
+#ifdef ENABLE_BULLETPROOFS
+    std::vector<CBulletproof> proofs;
+    if (!CreateBulletproofProof(*this, mtx, proofs)) {
+        error = "Failed to create bulletproof";
+        return false;
+    }
+    if (!VerifyBulletproofProof(CTransaction(mtx), proofs)) {
+        error = "Bulletproof verification failed";
+        return false;
+    }
+#endif
+    txid = mtx.GetHash().GetHex();
+    return true;
 }
 
 bool CWallet::BackupWallet(const std::string& strDest) const

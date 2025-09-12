@@ -58,8 +58,18 @@ CTxOut::CTxOut(const CAmount& nValueIn, CScript scriptPubKeyIn)
     scriptPubKey = scriptPubKeyIn;
 }
 
+CTxOut::CTxOut(const std::vector<unsigned char>& commitmentIn, CScript scriptPubKeyIn)
+{
+    nValue = 0;
+    commitment = commitmentIn;
+    scriptPubKey = scriptPubKeyIn;
+}
+
 std::string CTxOut::ToString() const
 {
+    if (!commitment.empty()) {
+        return strprintf("CTxOut(commitment=%s, scriptPubKey=%s)", HexStr(commitment).substr(0, 30), HexStr(scriptPubKey).substr(0, 30));
+    }
     return strprintf("CTxOut(nValue=%d.%08d, scriptPubKey=%s)", nValue / COIN, nValue % COIN, HexStr(scriptPubKey).substr(0, 30));
 }
 
