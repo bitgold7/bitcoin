@@ -33,6 +33,8 @@
 
 #include <boost/test/unit_test.hpp>
 #include <univalue.h>
+#include <streams.h>
+#include <clientversion.h>
 
 using node::MAX_BLOCKFILE_SIZE;
 
@@ -700,6 +702,34 @@ BOOST_FIXTURE_TEST_CASE(CreateWalletWithoutChain, BasicTestingSetup)
     auto wallet = TestLoadWallet(context);
     BOOST_CHECK(wallet);
     WaitForDeleteWallet(std::move(wallet));
+}
+
+BOOST_FIXTURE_TEST_CASE(TxVariantsPersist, TestingSetup)
+{
+    CWallet wallet(m_node.chain.get(), "", CreateMockableWalletDatabase());
+    {
+        LOCK(wallet.cs_wallet);
+        CMutableTransaction mtx;
+        mtx.vin.resize(1);
+        mtx.vout.emplace_back(1, CScript());
+        CTransactionRef no_wit = MakeTransactionRef(mtx);
+        wallet.AddToWallet(no_wit, TxStateInactive{});
+        mtx.vin[0].scriptWitness.stack.emplace_back(std::vector<unsigned char>{1});
+        CTransactionRef wit = MakeTransactionRef(mtx);
+        wallet.AddToWallet(wit, TxStateInactive{});
+        const CWalletTx& wtx = wallet.mapWallet.at(no_wit->GetHash());
+        BOOST_CHECK_EQUAL(wtx.m_variants.size(), 2U);
+        BOOST_CHECK(wtx.m_variants.count(no_wit->GetWitnessHash()));
+        BOOST_CHECK(wtx.m_variants.count(wit->GetWitnessHash()));
+
+        CDataStream ss(SER_DISK, CLIENT_VERSION);
+        ss << wtx;
+        CWalletTx copy(nullptr, TxStateInactive{});
+        ss >> copy;
+        BOOST_CHECK_EQUAL(copy.m_variants.size(), 2U);
+        BOOST_CHECK(copy.m_variants.count(no_wit->GetWitnessHash()));
+        BOOST_CHECK(copy.m_variants.count(wit->GetWitnessHash()));
+    }
 }
 
 BOOST_FIXTURE_TEST_CASE(RemoveTxs, TestChain100Setup)

@@ -704,6 +704,14 @@ RPCHelpMan gettransaction()
                             }},
                         }},
                         {RPCResult::Type::STR_HEX, "hex", "Raw data for transaction"},
+                        {RPCResult::Type::ARR, "variants", /*optional=*/true, "Additional known transaction variants",
+                        {
+                            {RPCResult::Type::OBJ, "", "",
+                            {
+                                {RPCResult::Type::STR_HEX, "wtxid", "Witness transaction id of the variant"},
+                                {RPCResult::Type::STR_HEX, "hex", "Raw data for the variant"},
+                            }},
+                        }},
                         {RPCResult::Type::OBJ, "decoded", /*optional=*/true, "The decoded transaction (only present when `verbose` is passed)",
                         {
                             {RPCResult::Type::ELISION, "", "Equivalent to the RPC decoderawtransaction method, or the RPC getrawtransaction method when `verbose` is passed."},
@@ -757,6 +765,18 @@ RPCHelpMan gettransaction()
     entry.pushKV("details", std::move(details));
 
     entry.pushKV("hex", EncodeHexTx(*wtx.tx));
+
+    if (wtx.m_variants.size() > 1) {
+        UniValue vars(UniValue::VARR);
+        for (const auto& [wtxid, vtx] : wtx.m_variants) {
+            if (wtxid == wtx.GetWitnessHash()) continue;
+            UniValue obj(UniValue::VOBJ);
+            obj.pushKV("wtxid", wtxid.GetHex());
+            obj.pushKV("hex", EncodeHexTx(*vtx));
+            vars.push_back(std::move(obj));
+        }
+        if (vars.size() > 0) entry.pushKV("variants", std::move(vars));
+    }
 
     if (verbose) {
         UniValue decoded(UniValue::VOBJ);
