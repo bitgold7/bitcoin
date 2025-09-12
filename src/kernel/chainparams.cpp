@@ -185,7 +185,9 @@ public:
         // service bits we want, but we should get them updated to support all service bits wanted by any
         // release ASAP to avoid it where possible.
 
+        // Addresses using the public key prefix 25 begin with the Base58 character 'B'
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,25);
+        // Script addresses use prefix 40 which corresponds to Base58 'G'
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,40);
         base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,153);
 
