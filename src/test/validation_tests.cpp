@@ -18,6 +18,11 @@
 #include <script/script.h>
 #include <arith_uint256.h>
 
+#ifdef ENABLE_BULLETPROOFS
+#include <bulletproofs.h>
+#include <random.h>
+#endif
+
 #include <string>
 #include <limits>
 
@@ -375,6 +380,24 @@ BOOST_AUTO_TEST_CASE(block_malleation)
 }
 
 #ifdef ENABLE_BULLETPROOFS
+static CBulletproof MakeBulletproof(CAmount value)
+{
+    static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
+    CBulletproof bp;
+    unsigned char blind[32];
+    GetRandBytes({blind, 32});
+
+    BOOST_REQUIRE(secp256k1_pedersen_commit(ctx, &bp.commitment, blind, value, &secp256k1_generator_h) == 1);
+
+    bp.proof.resize(SECP256K1_RANGE_PROOF_MAX_LENGTH);
+    size_t proof_len = bp.proof.size();
+    BOOST_REQUIRE(secp256k1_rangeproof_sign(ctx, bp.proof.data(), &proof_len, 0, &bp.commitment, blind,
+                                           nullptr, 0, 0, value, &secp256k1_generator_h) == 1);
+    bp.proof.resize(proof_len);
+    bp.extra.assign(blind, blind + 32);
+    return bp;
+}
+
 BOOST_AUTO_TEST_CASE(bulletproof_validation_tests)
 {
     // Craft transaction with a Bulletproof opcode carrying an empty proof.
@@ -404,6 +427,49 @@ BOOST_AUTO_TEST_CASE(bulletproof_validation_tests)
     TxValidationState state2;
     BOOST_CHECK(!CheckBulletproofs(tx2, state2));
     BOOST_CHECK_EQUAL(state2.GetRejectReason(), "bad-bulletproof-missing");
+
+    // Output with non-zero value should be rejected.
+    CMutableTransaction mtx3;
+    mtx3.version = CTransaction::CURRENT_VERSION | CTransaction::BULLETPROOF_VERSION;
+    mtx3.vin.emplace_back();
+    mtx3.vout.emplace_back(CAmount{1}, CScript());
+    CBulletproof bp3 = MakeBulletproof(/*value=*/1);
+    CScript bp_script3;
+    bp_script3 << OP_BULLETPROOF
+               << std::vector<unsigned char>(bp3.commitment.data,
+                                              bp3.commitment.data + sizeof(bp3.commitment.data))
+               << bp3.proof;
+    mtx3.vout[0].scriptPubKey = bp_script3;
+    const CTransaction tx3{mtx3};
+    TxValidationState state3;
+    BOOST_CHECK(!CheckBulletproofs(tx3, state3));
+    BOOST_CHECK_EQUAL(state3.GetRejectReason(), "bad-bulletproof-value");
+
+    // Imbalanced input and output commitments should be rejected.
+    CMutableTransaction mtx4;
+    mtx4.version = CTransaction::CURRENT_VERSION | CTransaction::BULLETPROOF_VERSION;
+    mtx4.vin.emplace_back();
+    CBulletproof bp_in = MakeBulletproof(/*value=*/5);
+    CScript in_script;
+    in_script << OP_BULLETPROOF
+              << std::vector<unsigned char>(bp_in.commitment.data,
+                                             bp_in.commitment.data + sizeof(bp_in.commitment.data))
+              << bp_in.proof;
+    mtx4.vin[0].scriptSig = in_script;
+
+    mtx4.vout.emplace_back(CAmount{0}, CScript());
+    CBulletproof bp_out = MakeBulletproof(/*value=*/6);
+    CScript out_script;
+    out_script << OP_BULLETPROOF
+               << std::vector<unsigned char>(bp_out.commitment.data,
+                                              bp_out.commitment.data + sizeof(bp_out.commitment.data))
+               << bp_out.proof;
+    mtx4.vout[0].scriptPubKey = out_script;
+
+    const CTransaction tx4{mtx4};
+    TxValidationState state4;
+    BOOST_CHECK(!CheckBulletproofs(tx4, state4));
+    BOOST_CHECK_EQUAL(state4.GetRejectReason(), "bad-bulletproof-balance");
 }
 
 BOOST_FIXTURE_TEST_CASE(bulletproof_activation_tests, TestChain100Setup)
