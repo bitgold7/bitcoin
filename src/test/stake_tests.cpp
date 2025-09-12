@@ -148,12 +148,18 @@ BOOST_AUTO_TEST_CASE(kernel_hash_matches_expectation)
     Consensus::Params params;
     node::StakeModifierManager man;
     man.UpdateOnConnect(&prev_index, params);
-    uint256 stake_mod = man.GetCurrentModifier();
+    // Advance modifier to include tx time as ContextualCheckProofOfStake would
+    man.GetDynamicModifier(&prev_index, nTimeTx, params);
+    uint256 prev_mod = man.GetCurrentModifier();
+    uint256 stake_mod = man.GetDynamicModifier(&prev_index, nTimeTx, params);
+    HashWriter ss_mod;
+    ss_mod << prev_mod << stake_mod;
+    uint256 entropy = ss_mod.GetHash();
 
     uint256 expected_hash;
     {
         HashWriter ss_kernel;
-        ss_kernel << stake_mod << prevout.hash << prevout.n << nTimeBlockFrom << nTimeTx;
+        ss_kernel << entropy << hash_block_from << prevout.hash << prevout.n << nTimeBlockFrom << nTimeTx;
         expected_hash = ss_kernel.GetHash();
     }
 

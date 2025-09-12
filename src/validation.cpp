@@ -337,6 +337,14 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
         if (!IsProofOfStake(block)) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "expected proof-of-stake block");
         }
+        // Reject non-monotonic or misaligned timestamps before contextual PoS checks
+        if (block.nTime <= pindexPrev->GetBlockTime()) {
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time-order", "stake timestamp not increasing");
+        }
+        unsigned int step = params.nStakeTimestampMask + 1;
+        if ((block.nTime - pindexPrev->GetBlockTime()) % step != 0) {
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time-interval", "stake timestamp interval invalid");
+        }
         // Timestamp must respect the network's stake mask, drift, and spacing limits
         switch (CheckStakeTimestamp(block, pindexPrev->GetBlockTime(), params)) {
         case kernel::StakeTimeValidationResult::OK:

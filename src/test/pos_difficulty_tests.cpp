@@ -2,9 +2,12 @@
 #include <boost/test/unit_test.hpp>
 #include <chain.h>
 #include <chainparams.h>
+#include <consensus/amount.h>
 #include <consensus/params.h>
 #include <kernel/stake.h>
 #include <pos/difficulty.h>
+#include <pos/stake.h>
+#include <primitives/transaction.h>
 #include <primitives/block.h>
 #include <random>
 #include <test/util/setup_common.h>
@@ -73,6 +76,40 @@ BOOST_AUTO_TEST_CASE(stake_timestamp_mask)
     // Valid mask but too far in the future
     header.nTime = (GetTime() + 16) & ~params.nStakeTimestampMask;
     BOOST_CHECK(kernel::CheckStakeTimestamp(header, prev_time, params) == kernel::StakeTimeValidationResult::FUTURE);
+
+    // Too early relative to previous block
+    header.nTime = prev_time;
+    BOOST_CHECK(kernel::CheckStakeTimestamp(header, prev_time, params) == kernel::StakeTimeValidationResult::SPACING);
+}
+
+BOOST_AUTO_TEST_CASE(kernel_hash_interval_rejection)
+{
+    uint256 prev_hash{1};
+    CBlockIndex prev_index;
+    prev_index.nHeight = 1;
+    prev_index.nTime = 100;
+    prev_index.phashBlock = &prev_hash;
+
+    uint256 hash_block_from{2};
+    unsigned int nTimeBlockFrom = 0;
+    CAmount amount = 100 * COIN;
+    COutPoint prevout{Txid::FromUint256(uint256{3}), 0};
+
+    uint256 hash_proof;
+    unsigned int nBits = 0x207fffff;
+    unsigned int good_time = MIN_STAKE_AGE;
+    Consensus::Params params;
+    params.fEnforceStakeTimeInterval = true;
+
+    node::StakeModifierManager man;
+    man.UpdateOnConnect(&prev_index, params);
+
+    BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
+                                     amount, prevout, good_time, man, hash_proof, false, params));
+
+    unsigned int bad_time = good_time + (params.nStakeTimestampMask + 1);
+    BOOST_CHECK(!CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
+                                      amount, prevout, bad_time, man, hash_proof, false, params));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
