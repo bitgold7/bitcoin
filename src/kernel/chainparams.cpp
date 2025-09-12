@@ -167,12 +167,10 @@ public:
         consensus.nMinimumChainWork = uint256{"0000000000000000000000000000000000000000000000000000000000200020"};
         assert(consensus.hashGenesisBlock == uint256{"00000fa682dacac2311173aa140199f3039f118539ba4bb1403900d05a99bfe9"});
         assert(genesis.hashMerkleRoot == uint256{"66c868e09d6a774ca6019e4f757f1d4e9aafe9633151111451c8767db6d8dd62"});
-        // Ensure DNS entries are coordinated externally before release.
-        vSeeds.emplace_back("seed.bitgold.org");
-        vSeeds.emplace_back("seed.bitgold.net");
-        vSeeds.emplace_back("seed.bitgold.co");
-        vSeeds.emplace_back("seed.bitgold.io");
-        vSeeds.emplace_back("seed.bitgold.info");
+        // Default seed nodes
+        vSeeds.clear();
+        vSeeds.emplace_back("seed.example.org");
+        vSeeds.emplace_back("seed.example.net");
 
         // Note that of those which support the service bits prefix, most only support a subset of
         // possible options.
@@ -217,7 +215,6 @@ public:
 
         checkpointData = {{
             {0, consensus.hashGenesisBlock},
-            {1, uint256{"00000a43320aba706548e7babb8ab22d73fb89ad5777a5e57e3ca62324e66ff8"}},
         }};
     }
 };
@@ -305,9 +302,8 @@ public:
         assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
         vFixedSeeds.clear();
         vSeeds.clear();
-        // BitGold-specific testnet seeds
-        vSeeds.emplace_back("testnet-seed.bitgold.org");
-        vSeeds.emplace_back("seed-testnet.bitgold.org");
+        vSeeds.emplace_back("testnet-seed.example.org");
+        vSeeds.emplace_back("seed-testnet.example.org");
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 65);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 78);
@@ -339,7 +335,6 @@ public:
 
         checkpointData = {{
             {0, consensus.hashGenesisBlock},
-            {1, uint256{"000004c95338080549b0d383ae10b3435e39db6555a8671cdd24a5b0145ad887"}},
         }};
     }
 };
@@ -581,7 +576,9 @@ public:
         consensus.defaultAssumeValid = consensus.hashGenesisBlock;
         assert(consensus.hashGenesisBlock == uint256{"000000c42955cec380a7570b65b05346ba5c2c38891e35811623a7db1650998e"});
         assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
-        // No DNS seeds for BitGold
+        // Signet seed nodes
+        vSeeds.clear();
+        vSeeds.emplace_back("signet-seed.example.org");
 
         m_assumeutxo_data = {
             {
@@ -604,7 +601,6 @@ public:
 
         checkpointData = {{
             {0, consensus.hashGenesisBlock},
-            {269000, uint256{"0000000f098e8a6d5dc2c8e6240eb87699395a1a18bb40437fcf278a3985e551"}},
         }};
     }
 };
@@ -713,10 +709,11 @@ public:
         consensus.hashGenesisBlock = genesis.GetHash();
         assert(consensus.hashGenesisBlock == uint256{"0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"});
         assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
-        // No DNS seeds for BitGold
+        // Regtest seed nodes
+        vSeeds.clear();
+        vSeeds.emplace_back("regtest-seed.example.org");
 
         vFixedSeeds.clear(); //!< Regtest mode doesn't have any fixed seeds.
-        vSeeds.clear();
 
         fDefaultConsistencyChecks = true;
         m_is_mockable_chain = true;
