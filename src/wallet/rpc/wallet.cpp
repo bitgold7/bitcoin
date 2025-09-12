@@ -12,9 +12,7 @@
 #include <rpc/util.h>
 #include <univalue.h>
 #include <util/translation.h>
-#include <script/script.h>
 #include <util/strencodings.h>
-#include <addresstype.h>
 #include <wallet/context.h>
 #include <wallet/receive.h>
 #include <wallet/rpc/util.h>
