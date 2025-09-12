@@ -18,6 +18,15 @@
 
 BOOST_FIXTURE_TEST_SUITE(stake_tests, BasicTestingSetup)
 
+BOOST_AUTO_TEST_CASE(target_weight_multiplication)
+{
+    arith_uint256 target{1};
+    BOOST_CHECK(MultiplyStakeTarget(target, 2) == arith_uint256{2});
+
+    arith_uint256 max_target = ~arith_uint256();
+    BOOST_CHECK(MultiplyStakeTarget(max_target, 2) == ~arith_uint256());
+}
+
 BOOST_AUTO_TEST_CASE(valid_kernel)
 {
     // Construct a dummy previous block index
