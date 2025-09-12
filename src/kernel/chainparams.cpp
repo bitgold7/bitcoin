@@ -178,7 +178,7 @@ public:
                uint256{"00000e0d7a3cf8b8575c119de4e59064a8feecb36a38f1b64f64533f969a4a6b"});
         assert(genesis.hashMerkleRoot ==
                uint256{"fda596d1084a6101c2901ca6737eeebf91f726ea9517c2be5968e834601e4c11"});
-        // Ensure DNS entries are coordinated externally before release.
+        // DNS seeders for the BitGold main network
         vSeeds.emplace_back("seed.bitgold.org");
         vSeeds.emplace_back("seed.bitgold.net");
         vSeeds.emplace_back("seed.bitgold.co");
@@ -488,7 +488,7 @@ public:
     {
         std::vector<uint8_t> bin;
         vFixedSeeds.clear();
-        vSeeds.clear();
+        vSeeds.clear(); // No DNS seeds available for BitGold signet
 
         if (!options.challenge) {
             // BitGold signet challenge (1-of-1 multisig)
@@ -584,7 +584,6 @@ public:
         consensus.defaultAssumeValid = consensus.hashGenesisBlock;
         assert(consensus.hashGenesisBlock == uint256{"000000c42955cec380a7570b65b05346ba5c2c38891e35811623a7db1650998e"});
         assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
-        // No DNS seeds for BitGold
 
         m_assumeutxo_data = {
             {
@@ -716,10 +715,9 @@ public:
         consensus.hashGenesisBlock = genesis.GetHash();
         assert(consensus.hashGenesisBlock == uint256{"0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"});
         assert(genesis.hashMerkleRoot == uint256{"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"});
-        // No DNS seeds for BitGold
 
         vFixedSeeds.clear(); //!< Regtest mode doesn't have any fixed seeds.
-        vSeeds.clear();
+        vSeeds.clear(); // No DNS seeds for BitGold regtest
 
         fDefaultConsistencyChecks = true;
         m_is_mockable_chain = true;
