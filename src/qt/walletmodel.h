@@ -158,6 +158,10 @@ public:
 
     wallet::StakingStats getStakingStats() const;
 
+    bool startStaking();
+    bool stopStaking();
+    bool isStaking() const;
+
 private:
     std::unique_ptr<interfaces::Wallet> m_wallet;
     std::unique_ptr<interfaces::Handler> m_handler_unload;

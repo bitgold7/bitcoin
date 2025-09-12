@@ -21,6 +21,9 @@
 #include <QDateTime>
 #include <QPainter>
 #include <QStatusTipEvent>
+#include <QCheckBox>
+#include <QProgressBar>
+
 
 #include <algorithm>
 #include <map>
@@ -142,6 +145,10 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     ui->labelTransactionsStatus->setIcon(icon);
     ui->labelWalletStatus->setIcon(icon);
 
+    ui->progressStake->setRange(0, 100);
+
+    connect(ui->checkAutoStake, &QCheckBox::toggled, this, &OverviewPage::toggleAutoStake);
+
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);
     ui->listTransactions->setIconSize(QSize(DECORATION_SIZE, DECORATION_SIZE));
@@ -209,6 +216,7 @@ void OverviewPage::setStakingStats(const wallet::StakingStats& stats)
     } else {
         ui->labelNextReward->setText(QString("--"));
     }
+    ui->progressStake->setValue(static_cast<int>(stats.progress * 100));
 }
 
 void OverviewPage::setClientModel(ClientModel *model)
@@ -247,6 +255,7 @@ void OverviewPage::setWalletModel(WalletModel *model)
         // Keep up to date with wallet
         setBalance(model->getCachedBalance());
         setStakingStats(model->getStakingStats());
+        ui->checkAutoStake->setChecked(model->isStaking());
         connect(model, &WalletModel::balanceChanged, this, &OverviewPage::setBalance);
 
         connect(model->getOptionsModel(), &OptionsModel::displayUnitChanged, this, &OverviewPage::updateDisplayUnit);
@@ -310,4 +319,14 @@ void OverviewPage::setMonospacedFont(const QFont& f)
     ui->labelUnconfirmed->setFont(f);
     ui->labelImmature->setFont(f);
     ui->labelTotal->setFont(f);
+}
+
+void OverviewPage::toggleAutoStake(bool checked)
+{
+    if (!walletModel) return;
+    if (checked) {
+        walletModel->startStaking();
+    } else {
+        walletModel->stopStaking();
+    }
 }

@@ -112,6 +112,29 @@ static RPCHelpMan getstakinginfo()
         }};
 }
 
+static RPCHelpMan setstakesplitthreshold()
+{
+    return RPCHelpMan{
+        "setstakesplitthreshold",
+        "Set or get the stake split threshold.",
+        {{"amount", RPCArg::Type::AMOUNT, RPCArg::Optional::OMITTED, "threshold in BGD"}},
+        RPCResult{RPCResult::Type::OBJ, "", "", {{RPCResult::Type::NUM, "threshold", "current threshold"}}},
+        RPCExamples{HelpExampleCli("setstakesplitthreshold", "100") + HelpExampleRpc("setstakesplitthreshold", "50")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            std::shared_ptr<CWallet> pwallet = GetWalletForJSONRPCRequest(request);
+            if (!pwallet) return UniValue::VNULL;
+            pwallet->BlockUntilSyncedToCurrentChain();
+            if (!request.params.empty()) {
+                CAmount amount = AmountFromValue(request.params[0]);
+                pwallet->SetStakeSplitThreshold(amount);
+            }
+            UniValue ret(UniValue::VOBJ);
+            ret.pushKV("threshold", ValueFromAmount(pwallet->GetStakeSplitThreshold()));
+            return ret;
+        }
+    };
+}
+
 static RPCHelpMan startstaking()
 {
     return RPCHelpMan{
@@ -168,6 +191,7 @@ static const CRPCCommand commands[] = {
     {"wallet", &setreservebalance},
     {"wallet", &reservebalance},
     {"wallet", &getstakinginfo},
+    {"wallet", &setstakesplitthreshold},
     {"wallet", &startstaking},
     {"wallet", &stopstaking},
     {"wallet", &priorityengine},
