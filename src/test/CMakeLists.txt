@@ -19,6 +19,7 @@ add_executable(test_bitcoin
   bip32_tests.cpp
   bip324_tests.cpp
   bitgold_regressions_tests.cpp
+  regressions_tests.cpp
   blockchain_tests.cpp
   blockencodings_tests.cpp
   blockfilter_index_tests.cpp
@@ -146,6 +147,10 @@ target_json_data_sources(test_bitcoin
 )
 target_raw_data_sources(test_bitcoin NAMESPACE test::data
   data/asmap.raw
+)
+
+target_raw_data_sources(test_bitcoin NAMESPACE test::data::regressions
+  data/regressions/invalid_tx_extra_junk.hex
 )
 
 add_windows_application_manifest(test_bitcoin)
