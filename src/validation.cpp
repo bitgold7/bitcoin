@@ -8,6 +8,7 @@
 #include <common/args.h>
 #include <pow.h>
 #include <kernel/stake.h>
+#include <pos/slashing.h>
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -101,6 +102,8 @@ using node::BlockMap;
 using node::CBlockIndexHeightOnlyComparator;
 using node::CBlockIndexWorkComparator;
 using node::SnapshotMetadata;
+
+static pos::SlashingTracker g_slashing;
 
 #ifdef ENABLE_BULLETPROOFS
 /** Extract a Bulletproof commitment and proof from a script.
@@ -337,6 +340,22 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
         // The block must be signed by the coinstake input
         if (!CheckBlockSignature(block)) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-signature", "invalid proof of stake block signature");
+        }
+        // Penalize validators that sign multiple competing blocks at the same height.
+        std::string validator_id;
+        const CTransaction& stake_tx{*block.vtx[1]};
+        if (!stake_tx.vin.empty()) {
+            const CScript& scriptSig{stake_tx.vin[0].scriptSig};
+            CScript::const_iterator it = scriptSig.begin();
+            opcodetype op;
+            std::vector<unsigned char> vchSig;
+            std::vector<unsigned char> vchPub;
+            if (scriptSig.GetOp(it, op, vchSig) && scriptSig.GetOp(it, op, vchPub)) {
+                validator_id = HexStr(vchPub);
+            }
+        }
+        if (!validator_id.empty() && g_slashing.DetectDoubleSign(next_height, validator_id)) {
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-double-sign", "validator produced multiple blocks");
         }
     } else {
         if (IsProofOfStake(block)) {
