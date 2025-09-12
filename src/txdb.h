@@ -75,6 +75,8 @@ public:
     bool WriteStakeSnapshots(const std::map<int, std::map<std::string, CAmount>>& snaps);
     std::map<int, dividend::Payouts> GetDividendHistory() const;
     bool WriteDividendHistory(const std::map<int, dividend::Payouts>& hist);
+    std::map<int, uint256> GetPaidSnapshots() const;
+    bool WritePaidSnapshots(const std::map<int, uint256>& snaps);
 };
 
 #endif // BITCOIN_TXDB_H

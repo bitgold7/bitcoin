@@ -35,6 +35,7 @@
 #include <util/translation.h>
 #include <versionbits.h>
 #include <dividend/dividend.h>
+#include <consensus/dividends/schedule.h>
 
 #include <atomic>
 #include <cstdint>
@@ -631,6 +632,8 @@ public:
     std::map<int, std::map<std::string, CAmount>> m_stake_snapshots GUARDED_BY(::cs_main);
     //! Historical dividend payouts keyed by height.
     std::map<int, dividend::Payouts> m_dividend_history GUARDED_BY(::cs_main);
+    //! Snapshot heights already paid, mapped to block hash.
+    std::map<int, uint256> m_paid_snapshots GUARDED_BY(::cs_main);
 
     /**
      * The base of the snapshot this chainstate was created from.
@@ -664,7 +667,7 @@ public:
     }
 
     void LoadDividendPool() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
-    void AddToDividendPool(CAmount amount, int height) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+    void AddToDividendPool(CAmount amount, int height, const uint256& block_hash) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
     CAmount GetDividendPool() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_dividend_pool; }
     const std::map<std::string, StakeInfo>& GetStakeInfo() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_stake_info; }
     const std::map<std::string, CAmount>& GetPendingDividends() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_pending_dividends; }

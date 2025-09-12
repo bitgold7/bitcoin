@@ -2,6 +2,7 @@
 #define BITCOIN_DIVIDEND_DIVIDEND_H
 
 #include <consensus/amount.h>
+#include <consensus/dividends/schedule.h>
 #include <serialize.h>
 #include <primitives/transaction.h>
 #include <map>
@@ -22,7 +23,7 @@ namespace dividend {
 using Payouts = std::map<std::string, CAmount>;
 
 //! Number of blocks in a quarter and year for dividend calculations.
-inline constexpr int QUARTER_BLOCKS{16200};
+inline constexpr int QUARTER_BLOCKS{consensus::dividends::SNAPSHOT_INTERVAL};
 inline constexpr int YEAR_BLOCKS{QUARTER_BLOCKS * 4};
 inline constexpr int BASIS_POINTS{10000};
 

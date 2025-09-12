@@ -1,5 +1,7 @@
 #include <boost/test/unit_test.hpp>
 #include <dividend/dividend.h>
+#include <consensus/dividends/schedule.h>
+#include <uint256.h>
 #include <primitives/transaction.h>
 #include <test/util/setup_common.h>
 #include <vector>
@@ -117,6 +119,27 @@ BOOST_AUTO_TEST_CASE(empty_pool)
     BOOST_CHECK(payouts1 == payouts2);
     CMutableTransaction tx = BuildPayoutTx(stakes, QUARTER_BLOCKS, 0);
     BOOST_CHECK(tx.vout.empty());
+}
+
+BOOST_AUTO_TEST_CASE(no_staker_quarter)
+{
+    using namespace dividend;
+    std::map<std::string, StakeInfo> stakes;
+    CAmount pool{100 * COIN};
+    auto payouts{CalculatePayouts(stakes, QUARTER_BLOCKS, pool)};
+    BOOST_CHECK(payouts.empty());
+}
+
+BOOST_AUTO_TEST_CASE(reorg_no_double_payout)
+{
+    using namespace consensus::dividends;
+    std::map<int, uint256> paid;
+    uint256 hash1{1};
+    uint256 hash2{2};
+    BOOST_CHECK(ScheduleSnapshot(SNAPSHOT_INTERVAL, hash1, paid));
+    BOOST_CHECK(!ScheduleSnapshot(SNAPSHOT_INTERVAL, hash2, paid));
+    BOOST_CHECK_EQUAL(paid.size(), 1);
+    BOOST_CHECK(paid.count(SNAPSHOT_INTERVAL));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -9,6 +9,7 @@
 #include <kernel/stake.h>
 #include <pos/slashing.h>
 #include <dividend/dividend.h>
+#include <consensus/dividends/schedule.h>
 #include <pow.h>
 #include <validation.h>
 
@@ -387,7 +388,8 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
                 return false;
             }
 
-            if (gArgs.GetBoolArg("-dividendpayouts", false) && next_height % dividend::QUARTER_BLOCKS == 0) {
+            if (gArgs.GetBoolArg("-dividendpayouts", false) &&
+                consensus::dividends::IsSnapshotHeight(next_height)) {
                 CAmount pool = chainstate.GetDividendPool() + block.vtx[1]->vout[2].nValue;
                 const CTransactionRef payout_tx{block.vtx.size() > 2 ? block.vtx[2] : nullptr};
                 dividend::Payouts expected = dividend::CalculatePayouts(chainstate.GetStakeInfo(), next_height, pool);
@@ -513,7 +515,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
     if (!fJustCheck && pindex != nullptr && block.vtx.size() > 1) {
         const auto& stake_tx = *block.vtx[1];
         if (stake_tx.vout.size() > 2 && stake_tx.vout[2].scriptPubKey == dividend::GetDividendScript()) {
-            AddToDividendPool(stake_tx.vout[2].nValue, pindex->nHeight);
+            AddToDividendPool(stake_tx.vout[2].nValue, pindex->nHeight, block.GetHash());
         }
     }
     return true;
@@ -2521,12 +2523,14 @@ void Chainstate::LoadDividendPool()
     m_pending_dividends = CoinsDB().GetPendingDividends();
     m_stake_snapshots = CoinsDB().GetStakeSnapshots();
     m_dividend_history = CoinsDB().GetDividendHistory();
+    m_paid_snapshots = CoinsDB().GetPaidSnapshots();
 }
 
-void Chainstate::AddToDividendPool(CAmount amount, int height)
+void Chainstate::AddToDividendPool(CAmount amount, int height, const uint256& block_hash)
 {
     m_dividend_pool += amount;
-    if (gArgs.GetBoolArg("-dividendpayouts", false) && height > 0 && height % dividend::QUARTER_BLOCKS == 0) {
+    if (gArgs.GetBoolArg("-dividendpayouts", false) &&
+        consensus::dividends::ScheduleSnapshot(height, block_hash, m_paid_snapshots)) {
         std::map<std::string, CAmount> snap;
         for (const auto& [addr, info] : m_stake_info) {
             snap.emplace(addr, info.weight);
@@ -2552,6 +2556,7 @@ void Chainstate::AddToDividendPool(CAmount amount, int height)
     CoinsDB().WritePendingDividends(m_pending_dividends);
     CoinsDB().WriteStakeSnapshots(m_stake_snapshots);
     CoinsDB().WriteDividendHistory(m_dividend_history);
+    CoinsDB().WritePaidSnapshots(m_paid_snapshots);
 }
 
 void Chainstate::UpdateStakeWeight(const std::string& addr, CAmount weight)
