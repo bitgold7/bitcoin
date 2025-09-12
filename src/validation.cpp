@@ -6,8 +6,8 @@
 #include <bitcoin-build-config.h> // IWYU pragma: keep
 
 #include <common/args.h>
-#include <pos/difficulty.h>
-#include <pos/stake.h>
+#include <pow.h>
+#include <kernel/stake.h>
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -90,6 +90,10 @@ using kernel::CCoinsStats;
 using kernel::CoinStatsHashType;
 using kernel::ComputeUTXOStats;
 using kernel::Notifications;
+using kernel::CheckBlockSignature;
+using kernel::ContextualCheckProofOfStake;
+using kernel::IsProofOfStake;
+using kernel::CheckStakeTimestamp;
 
 using fsbridge::FopenFn;
 using node::BlockManager;
@@ -2264,7 +2268,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast,
     assert(pindexLast);
 
     if (params.fEnablePoS && pindexLast->nHeight + 1 >= params.posActivationHeight) {
-        return GetPoSNextTargetRequired(pindexLast, pblock->GetBlockTime(), params);
+        return GetPoSNextWorkRequired(pindexLast, pblock->GetBlockTime(), params);
     }
 
     // With proof-of-work removed, keep the previous difficulty for premine blocks.
