@@ -164,20 +164,22 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     coinbaseTx.vin.resize(1);
     coinbaseTx.vin[0].prevout.SetNull();
     coinbaseTx.vin[0].nSequence = CTxIn::MAX_SEQUENCE_NONFINAL; // Make sure timelock is enforced.
-    CAmount validator_fee = nFees * 9 / 10;
-    CAmount dividend_fee = nFees - validator_fee;
+    CAmount block_subsidy = GetBlockSubsidy(nHeight, chainparams.GetConsensus());
+    CAmount total_reward = block_subsidy + nFees;
+    CAmount validator_reward = total_reward * 9 / 10;
+    CAmount dividend_reward = total_reward - validator_reward;
     static constexpr int QUARTER_BLOCKS{16200};
     dividend::Payouts payouts;
-    CAmount pool = m_chainstate.GetDividendPool() + dividend_fee;
+    CAmount pool = m_chainstate.GetDividendPool() + dividend_reward;
     const bool payouts_enabled = gArgs.GetBoolArg("-dividendpayouts", false);
     if (payouts_enabled && nHeight > 0 && nHeight % QUARTER_BLOCKS == 0 && pool > 0) {
         payouts = dividend::CalculatePayouts(m_chainstate.GetStakeInfo(), nHeight, pool);
     }
     coinbaseTx.vout.resize(2 + payouts.size());
     coinbaseTx.vout[0].scriptPubKey = m_options.coinbase_output_script;
-    coinbaseTx.vout[0].nValue = validator_fee + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
+    coinbaseTx.vout[0].nValue = validator_reward;
     coinbaseTx.vout[1].scriptPubKey = CScript() << OP_TRUE;
-    coinbaseTx.vout[1].nValue = dividend_fee;
+    coinbaseTx.vout[1].nValue = dividend_reward;
     size_t idx = 2;
     for (const auto& [addr, amt] : payouts) {
         (void)addr; // address handling omitted
@@ -636,12 +638,30 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     coinstake.nLockTime = height;
     coinstake.vin.emplace_back(stake_out->outpoint);
     coinstake.vin[0].nSequence = CTxIn::SEQUENCE_FINAL;
-    coinstake.vout.resize(2);
-    coinstake.vout[0].SetNull();
     int64_t coin_age_weight = consensus.nStakeMinAge; // Placeholder until wallet provides age
-    coinstake.vout[1].nValue = stake_out->txout.nValue +
-                               GetProofOfStakeReward(height, /*fees=*/0, coin_age_weight, consensus);
+    CAmount reward = GetProofOfStakeReward(height, /*fees=*/0, coin_age_weight, consensus);
+    CAmount validator_reward = reward * 9 / 10;
+    CAmount dividend_reward = reward - validator_reward;
+    static constexpr int QUARTER_BLOCKS{16200};
+    dividend::Payouts payouts;
+    CAmount pool = chainstate.GetDividendPool() + dividend_reward;
+    const bool payouts_enabled = gArgs.GetBoolArg("-dividendpayouts", false);
+    if (payouts_enabled && height > 0 && height % QUARTER_BLOCKS == 0 && pool > 0) {
+        payouts = dividend::CalculatePayouts(chainstate.GetStakeInfo(), height, pool);
+    }
+    coinstake.vout.resize(3 + payouts.size());
+    coinstake.vout[0].SetNull();
+    coinstake.vout[1].nValue = stake_out->txout.nValue + validator_reward;
     coinstake.vout[1].scriptPubKey = stake_out->txout.scriptPubKey;
+    coinstake.vout[2].scriptPubKey = CScript() << OP_TRUE;
+    coinstake.vout[2].nValue = dividend_reward;
+    size_t pay_idx = 3;
+    for (const auto& [addr, amt] : payouts) {
+        (void)addr;
+        coinstake.vout[pay_idx].scriptPubKey = CScript() << OP_TRUE;
+        coinstake.vout[pay_idx].nValue = amt;
+        ++pay_idx;
+    }
     {
         LOCK(wallet.cs_wallet);
         if (!wallet.SignTransaction(coinstake)) return false;

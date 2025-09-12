@@ -519,6 +519,9 @@ public:
     /** Return cumulative staking rewards. */
     CAmount GetStakingRewards() const;
 
+    /** Return current dividend pool balance. */
+    CAmount GetDividendBalance() const;
+
     /** Set the balance to keep reserved from staking. */
     void SetReserveBalance(CAmount amount);
     /** Get the currently reserved balance. */
