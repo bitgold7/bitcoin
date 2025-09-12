@@ -178,7 +178,7 @@ public:
                uint256{"00000e0d7a3cf8b8575c119de4e59064a8feecb36a38f1b64f64533f969a4a6b"});
         assert(genesis.hashMerkleRoot ==
                uint256{"fda596d1084a6101c2901ca6737eeebf91f726ea9517c2be5968e834601e4c11"});
-        // DNS seeders for the BitGold main network
+        // Ensure DNS entries are coordinated externally before release.
         vSeeds.emplace_back("seed.bitgold.org");
         vSeeds.emplace_back("seed.bitgold.net");
         vSeeds.emplace_back("seed.bitgold.co");
