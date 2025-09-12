@@ -147,9 +147,9 @@ struct Params {
     uint256 posLimitLower;
     // Target spacing between staked blocks (seconds)
     int64_t nStakeTargetSpacing{8 * 60};
-    // Maximum allowed coin supply (satoshis)
+    //! Total coin supply allowed by consensus (including genesis block)
     CAmount nMaximumSupply{0};
-    // Reward paid in the genesis block (satoshis)
+    //! Reward paid in the genesis block (satoshis)
     CAmount genesis_reward{0};
     /** The best chain should have at least this much work */
     uint256 nMinimumChainWork;
