@@ -19,6 +19,7 @@
 #include <logging.h>
 #include <node/context.h>
 #include <node/kernel_notifications.h>
+#include <node/stake_modifier_manager.h>
 #include <policy/feerate.h>
 #include <policy/policy.h>
 #include <pos/stake.h>
@@ -611,6 +612,7 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     if (!node_context || !node_context->chainman) return false;
     ChainstateManager& chainman = *node_context->chainman;
     Chainstate& chainstate = chainman.ActiveChainstate();
+    node::StakeModifierManager& stake_modman = *Assert(node_context->stake_modman);
 
     LOCK(::cs_main);
     CBlockIndex* pindexPrev = chainstate.m_chain.Tip();
@@ -693,7 +695,7 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     block.hashMerkleRoot = BlockMerkleRoot(block);
 
     if (!ContextualCheckProofOfStake(block, pindexPrev, chainstate.CoinsTip(),
-                                     chainstate.m_chain, consensus)) {
+                                     chainstate.m_chain, stake_modman, consensus)) {
         return false;
     }
 

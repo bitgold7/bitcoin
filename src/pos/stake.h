@@ -35,6 +35,7 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev, unsigned int nBits,
  */
 bool ContextualCheckProofOfStake(const CBlock& block, const CBlockIndex* pindexPrev,
                                  const CCoinsViewCache& view, const CChain& chain,
+                                 node::StakeModifierManager& stake_modman,
                                  const Consensus::Params& params);
 
 /**
