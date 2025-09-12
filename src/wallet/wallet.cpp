@@ -9,6 +9,7 @@
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
+#include <wallet/secp256k1_context.h>
 #endif
 
 #include <addresstype.h>
@@ -4665,7 +4666,7 @@ std::optional<CAmount> CWallet::GetConfidentialValue(const COutPoint& outpoint) 
 #ifdef ENABLE_BULLETPROOFS
 bool CreateBulletproofProof(CWallet& wallet, CMutableTransaction& tx, std::vector<CBulletproof>& proofs)
 {
-    static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
+    static const secp256k1_context_holder ctx(SECP256K1_CONTEXT_SIGN);
 
     proofs.clear();
     proofs.reserve(tx.vout.size());
@@ -4677,13 +4678,13 @@ bool CreateBulletproofProof(CWallet& wallet, CMutableTransaction& tx, std::vecto
         unsigned char blind[32];
         GetRandBytes({blind, 32});
 
-        if (secp256k1_pedersen_commit(ctx, &bp.commitment, blind, txout.nValue, &secp256k1_generator_h) != 1) {
+        if (secp256k1_pedersen_commit(ctx.get(), &bp.commitment, blind, txout.nValue, &secp256k1_generator_h) != 1) {
             return false;
         }
 
         bp.proof.resize(SECP256K1_RANGE_PROOF_MAX_LENGTH);
         size_t proof_len = bp.proof.size();
-        if (secp256k1_rangeproof_sign(ctx, bp.proof.data(), &proof_len, 0, &bp.commitment, blind,
+        if (secp256k1_rangeproof_sign(ctx.get(), bp.proof.data(), &proof_len, 0, &bp.commitment, blind,
                                       nullptr, 0, 0, txout.nValue, &secp256k1_generator_h) != 1) {
             return false;
         }

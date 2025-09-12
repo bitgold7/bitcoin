@@ -71,6 +71,7 @@
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
+#include <wallet/secp256k1_context.h>
 #endif
 
 #include <algorithm>
@@ -163,8 +164,8 @@ bool CheckBulletproofs(const CTransaction& tx, TxValidationState& state)
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof-missing");
     }
     if (tx.UsesBulletproofs()) {
-        static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
-        if (secp256k1_pedersen_verify_tally(ctx, input_comms.data(), input_comms.size(),
+        static const secp256k1_context_holder ctx(SECP256K1_CONTEXT_VERIFY);
+        if (secp256k1_pedersen_verify_tally(ctx.get(), input_comms.data(), input_comms.size(),
                                             output_comms.data(), output_comms.size()) != 1) {
             return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof-balance");
         }
