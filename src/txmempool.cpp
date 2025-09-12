@@ -422,11 +422,23 @@ void CTxMemPoolEntry::UpdateAncestorState(int32_t modifySize, CAmount modifyFee,
 
 HybridScore CTxMemPoolEntry::GetHybridScore() const
 {
-    HybridScore score{FeeFrac(GetFee(), GetTxSize()),
-                      static_cast<uint64_t>(GetTx().vin.size()),
-                      ::GetTime() - nTime,
-                      0};
-    return score;
+    // Fee band is the truncated satoshi-per-vbyte feerate capped at 255
+    const CAmount fee_per_k = GetFee() * 1000 / GetTxSize();
+    const int fee_band = std::min<int>(fee_per_k / 1000, 255);
+
+    // Stake weight is approximated by the total output value
+    uint64_t stake_weight{0};
+    for (const CTxOut& out : GetTx().vout) {
+        stake_weight += out.nValue;
+    }
+
+    // Elapsed time since the transaction entered the mempool
+    const int64_t time_in_mempool = ::GetTime() - nTime;
+
+    // Congestion metric is derived from the number of ancestors and descendants
+    const size_t congestion = static_cast<size_t>(GetCountWithAncestors() + GetCountWithDescendants());
+
+    return {fee_band, stake_weight, time_in_mempool, congestion};
 }
 
 //! Clamp option values and populate the error if options are not valid.

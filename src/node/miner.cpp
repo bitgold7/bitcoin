@@ -378,10 +378,16 @@ void BlockAssembler::addPackageTxs(int& nPackagesSelected, int& nDescendantsUpda
         } else {
             // Try to compare the mapTx entry to the mapModifiedTx entry
             iter = mempool.mapTx.project<0>(mi);
-            if (modit != mapModifiedTx.get<ancestor_score>().end() &&
-                CompareTxMemPoolEntryByAncestorFee()(*modit, CTxMemPoolModifiedEntry(iter))) {
-                // The best entry in mapModifiedTx has higher priority or fee rate
-                // than the one from mapTx.
+            bool use_modified = false;
+            if (modit != mapModifiedTx.get<ancestor_score>().end()) {
+                if (g_hybrid_mempool) {
+                    use_modified = CompareTxMemPoolEntryByHybridScore()(*modit, CTxMemPoolModifiedEntry(iter));
+                } else {
+                    use_modified = CompareTxMemPoolEntryByAncestorFee()(*modit, CTxMemPoolModifiedEntry(iter));
+                }
+            }
+            if (use_modified) {
+                // The best entry in mapModifiedTx has higher score than the one from mapTx.
                 // Switch which transaction (package) to consider
                 iter = modit->iter;
                 fUsingModified = true;
