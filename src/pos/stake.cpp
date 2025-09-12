@@ -122,7 +122,9 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
     bnTargetWeight *= bnWeight;
 
     uint256 stake_modifier;
-    if (params.nStakeModifierVersion >= 1) {
+    if (params.nStakeModifierVersion >= 3) {
+        stake_modifier = stake_modman.GetDynamicModifier(pindexPrev, nTimeTx, params);
+    } else if (params.nStakeModifierVersion >= 1) {
         stake_modifier = stake_modman.GetCurrentModifier();
     } else {
         stake_modifier = GetStakeModifier(pindexPrev, nTimeTx, params);

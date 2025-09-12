@@ -226,6 +226,33 @@ BOOST_AUTO_TEST_CASE(stake_modifier_refresh)
     BOOST_CHECK(mod3 != mod1);
 }
 
+BOOST_AUTO_TEST_CASE(stake_modifier_dynamic_refresh)
+{
+    uint256 prev_hash{1};
+    CBlockIndex prev_index;
+    prev_index.nHeight = 10;
+    prev_index.nTime = 1000;
+    prev_index.phashBlock = &prev_hash;
+
+    Consensus::Params params;
+    params.nStakeModifierInterval = 60; // short interval for test
+    params.nStakeModifierVersion = 3;
+
+    node::StakeModifierManager man;
+    man.UpdateOnConnect(&prev_index, params);
+    uint256 mod1 = man.GetCurrentModifier();
+
+    // Within interval, modifier remains the same
+    uint256 mod2 = man.GetDynamicModifier(&prev_index, 1030, params);
+    BOOST_CHECK_EQUAL(mod1, mod2);
+
+    // After interval passes, modifier refreshes
+    uint256 mod3 = man.GetDynamicModifier(&prev_index, 1101, params);
+    uint256 exp3 = ComputeStakeModifier(&prev_index, mod1);
+    BOOST_CHECK_EQUAL(mod3, exp3);
+    BOOST_CHECK(mod3 != mod1);
+}
+
 BOOST_AUTO_TEST_CASE(stake_modifier_reorg)
 {
     // Verify modifier rolls back correctly on reorg
@@ -557,16 +584,30 @@ BOOST_AUTO_TEST_CASE(stake_modifier_version_selection)
     // Version 1 pulls the modifier from the manager
     Consensus::Params params1;
     params1.nStakeModifierVersion = 1;
-    node::StakeModifierManager man;
-    man.UpdateOnConnect(&prev_index, params1);
-    uint256 mod1 = man.GetCurrentModifier();
+    node::StakeModifierManager man1;
+    man1.UpdateOnConnect(&prev_index, params1);
+    uint256 mod1 = man1.GetCurrentModifier();
     HashWriter ss1;
     ss1 << mod1 << prevout.hash << prevout.n << nTimeBlockFrom << nTimeTx;
     uint256 expect1 = ss1.GetHash();
     uint256 proof1;
     BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
-                                     amount, prevout, nTimeTx, man, proof1, false, params1));
+                                     amount, prevout, nTimeTx, man1, proof1, false, params1));
     BOOST_CHECK_EQUAL(proof1, expect1);
+
+    // Version 3 refreshes the modifier based on time
+    Consensus::Params params3;
+    params3.nStakeModifierVersion = 3;
+    node::StakeModifierManager man3;
+    man3.UpdateOnConnect(&prev_index, params3);
+    uint256 mod3 = man3.GetDynamicModifier(&prev_index, nTimeTx, params3);
+    HashWriter ss3;
+    ss3 << mod3 << prevout.hash << prevout.n << nTimeBlockFrom << nTimeTx;
+    uint256 expect3 = ss3.GetHash();
+    uint256 proof3;
+    BOOST_CHECK(CheckStakeKernelHash(&prev_index, nBits, hash_block_from, nTimeBlockFrom,
+                                     amount, prevout, nTimeTx, man3, proof3, false, params3));
+    BOOST_CHECK_EQUAL(proof3, expect3);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
