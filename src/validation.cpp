@@ -306,7 +306,20 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
             CAmount block_subsidy = GetBlockSubsidy(height, params);
             CAmount total_reward = fees + block_subsidy;
             CAmount dividend_reward = total_reward / 10;
+            CAmount validator_reward = total_reward - dividend_reward;
             const CTransaction& reward_tx{*block.vtx[1]};
+            CAmount stake_input_total{0};
+            for (const auto& in : reward_tx.vin) {
+                const Coin& coin{view.AccessCoin(in.prevout)};
+                if (coin.IsSpent()) {
+                    return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-inputs-missingorspent");
+                }
+                stake_input_total += coin.out.nValue;
+            }
+            if (reward_tx.vout.size() < 2 ||
+                reward_tx.vout[1].nValue != stake_input_total + validator_reward) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-validator-amount");
+            }
             if (reward_tx.vout.size() < 3) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-dividend-missing");
             }

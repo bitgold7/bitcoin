@@ -173,8 +173,8 @@ void BitGoldStaker::ThreadStakeMiner()
                         CAmount subsidy = GetProofOfStakeReward(pindexPrev->nHeight + 1, /*fees=*/0,
                                                                 coin_age_weight, consensus);
                         CAmount total_reward = subsidy + fees;
-                        CAmount validator_reward = total_reward * 9 / 10;
-                        CAmount dividend_reward = total_reward - validator_reward;
+                        CAmount dividend_reward = total_reward / 10;
+                        CAmount validator_reward = total_reward - dividend_reward;
                         CAmount input_total = stake_out.txout.nValue;
                         CAmount total = input_total + validator_reward;
                         CAmount split_threshold = 2 * MIN_STAKE_AMOUNT;
@@ -189,17 +189,26 @@ void BitGoldStaker::ThreadStakeMiner()
                                 if (total >= split_threshold) break;
                             }
                         }
-                        if (total > split_threshold * 2) {
-                            CAmount half = total / 2;
-                            coinstake.vout.emplace_back(half, stake_out.txout.scriptPubKey);
-                            coinstake.vout.emplace_back(total - half, stake_out.txout.scriptPubKey);
-                            coinstake.vout.emplace_back(dividend_reward, dividend::GetDividendScript());
-                        } else {
-                            coinstake.vout[1].nValue = total;
-                            coinstake.vout[1].scriptPubKey = stake_out.txout.scriptPubKey;
-                            coinstake.vout[2].nValue = dividend_reward;
-                            coinstake.vout[2].scriptPubKey = dividend::GetDividendScript();
-                        }
+// Keep vout[0] (coinstake marker) intact, rebuild the rest deterministically.
+CScript dividendScript = dividend::GetDividendScript();  // or: CScript() << OP_TRUE
+
+// Ensure we start from a known state: only the marker output at index 0.
+if (coinstake.vout.size() > 1) {
+    coinstake.vout.resize(1);
+}
+
+// Build stake outputs (split if large enough), then append the dividend output.
+if (total > split_threshold * 2) {
+    const CAmount half = total / 2;
+    coinstake.vout.emplace_back(half,            stake_out.txout.scriptPubKey);
+    coinstake.vout.emplace_back(total - half,    stake_out.txout.scriptPubKey);
+} else {
+    coinstake.vout.emplace_back(total,           stake_out.txout.scriptPubKey);
+}
+
+// Dividend output last.
+coinstake.vout.emplace_back(dividend_reward, dividendScript);
+
                         {
                             LOCK(m_wallet.cs_wallet);
                             if (!m_wallet.SignTransaction(coinstake)) {
