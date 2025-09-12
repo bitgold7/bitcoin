@@ -1,16 +1,16 @@
-#include <pos/stake.h>
-#include <pos/difficulty.h>
-#include <pos/stakemodifier.h>
 #include <node/stake_modifier_manager.h>
+#include <pos/difficulty.h>
+#include <pos/stake.h>
+#include <pos/stakemodifier.h>
 
+#include <algorithm>
 #include <arith_uint256.h>
 #include <hash.h>
+#include <logging.h>
 #include <primitives/transaction.h>
 #include <pubkey.h>
 #include <util/overflow.h>
-#include <logging.h>
 #include <validation.h>
-#include <algorithm>
 
 #include <cassert>
 #include <set>
@@ -91,6 +91,20 @@ static uint256 ComputeKernelHash(const uint256& stake_modifier,
     return ss.GetHash();
 }
 
+arith_uint256 SaturatingMultiply(const arith_uint256& a, uint64_t b)
+{
+    if (a == arith_uint256{0} || b == 0) return arith_uint256{0};
+
+    arith_uint256 bn_b{b};
+    arith_uint256 max_val{~arith_uint256{0}};
+    arith_uint256 limit = max_val / bn_b;
+    if (a > limit) return max_val;
+
+    arith_uint256 result{a};
+    result *= bn_b;
+    return result;
+}
+
 bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
                           unsigned int nBits,
                           uint256 hashBlockFrom,
@@ -104,7 +118,7 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
                           const Consensus::Params& params)
 {
     if (!pindexPrev) return false;
-    if (nTimeTx <= nTimeBlockFrom) return false; // must move forward in time
+    if (nTimeTx <= nTimeBlockFrom) return false;                   // must move forward in time
     if ((nTimeTx & params.nStakeTimestampMask) != 0) return false; // enforce mask alignment
 
     // Derive target from nBits
@@ -114,12 +128,8 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
     bnTarget.SetCompact(nBits, &fNegative, &fOverflow);
     if (fNegative || fOverflow || bnTarget == 0) return false;
 
-    // Amount scaling: target * amount (bounded to prevent overflow)
-    arith_uint256 bnWeight = arith_uint256(amount);
-    // Avoid overflow by shifting if necessary
-    // (Simplistic; in future incorporate 64-bit safe multiply or cap amount)
-    arith_uint256 bnTargetWeight = bnTarget;
-    bnTargetWeight *= bnWeight;
+    // Amount scaling: target * amount with overflow handled by saturation
+    arith_uint256 bnTargetWeight = SaturatingMultiply(bnTarget, amount);
 
     uint256 stake_modifier;
     if (params.nStakeModifierVersion >= 1) {
@@ -227,14 +237,16 @@ bool ContextualCheckProofOfStake(const CBlock& block,
             in_val += incoin.out.nValue;
         }
         CAmount out_val = 0;
-        for (const auto& o : tx.vout) out_val += o.nValue;
+        for (const auto& o : tx.vout)
+            out_val += o.nValue;
         if (in_val < out_val) return false;
         fees += in_val - out_val;
     }
 
     // Determine maximum allowed coinstake output value
     CAmount output_value = 0;
-    for (const auto& o : coinstake.vout) output_value += o.nValue;
+    for (const auto& o : coinstake.vout)
+        output_value += o.nValue;
 
     CAmount reward = GetProofOfStakeReward(spend_height, fees, coin_age, params);
     CAmount max_allowed = input_value + reward;

@@ -1,21 +1,38 @@
-#include <pos/stake.h>
-#include <pos/stakemodifier.h>
-#include <node/stake_modifier_manager.h>
-#include <pos/difficulty.h>
+#include <boost/test/unit_test.hpp>
 #include <chain.h>
+#include <chainparams.h>
 #include <consensus/amount.h>
 #include <consensus/merkle.h>
-#include <chainparams.h>
+#include <hash.h>
+#include <limits>
+#include <memory>
+#include <node/stake_modifier_manager.h>
+#include <pos/difficulty.h>
+#include <pos/stake.h>
+#include <pos/stakemodifier.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
-#include <hash.h>
 #include <script/script.h>
-#include <validation.h>
 #include <test/util/setup_common.h>
-#include <boost/test/unit_test.hpp>
-#include <memory>
+#include <validation.h>
 
 BOOST_FIXTURE_TEST_SUITE(stake_tests, BasicTestingSetup)
+
+BOOST_AUTO_TEST_CASE(target_weight_multiplication_no_overflow)
+{
+    arith_uint256 target{1000};
+    CAmount amount = 2;
+    arith_uint256 expected{target};
+    expected *= arith_uint256{static_cast<uint64_t>(amount)};
+    BOOST_CHECK_EQUAL(SaturatingMultiply(target, amount), expected);
+}
+
+BOOST_AUTO_TEST_CASE(target_weight_multiplication_overflow)
+{
+    arith_uint256 target{~arith_uint256{0}};
+    CAmount amount = std::numeric_limits<CAmount>::max();
+    BOOST_CHECK_EQUAL(SaturatingMultiply(target, amount), ~arith_uint256{0});
+}
 
 BOOST_AUTO_TEST_CASE(valid_kernel)
 {
@@ -32,7 +49,7 @@ BOOST_AUTO_TEST_CASE(valid_kernel)
     COutPoint prevout{Txid::FromUint256(uint256{3}), 0};
 
     uint256 hash_proof;
-    unsigned int nBits = 0x207fffff; // very low difficulty
+    unsigned int nBits = 0x207fffff;                       // very low difficulty
     unsigned int nTimeTx = nTimeBlockFrom + MIN_STAKE_AGE; // exactly minimum age
     Consensus::Params params;
 
@@ -82,8 +99,8 @@ BOOST_AUTO_TEST_CASE(invalid_kernel_target)
     COutPoint prevout{Txid::FromUint256(uint256{3}), 0};
 
     uint256 hash_proof;
-    unsigned int nBits = 0x1;     // extremely high difficulty
-    unsigned int nTimeTx = MIN_STAKE_AGE;    // minimal age
+    unsigned int nBits = 0x1;             // extremely high difficulty
+    unsigned int nTimeTx = MIN_STAKE_AGE; // minimal age
     Consensus::Params params;
 
     node::StakeModifierManager man;
@@ -230,11 +247,23 @@ BOOST_AUTO_TEST_CASE(stake_modifier_reorg)
 {
     // Verify modifier rolls back correctly on reorg
     uint256 h1{1}, h2{2}, h3{3};
-    CBlockIndex b1; b1.nHeight = 1; b1.nTime = 1000; b1.phashBlock = &h1;
-    CBlockIndex b2; b2.nHeight = 2; b2.nTime = 1020; b2.pprev = &b1; b2.phashBlock = &h2;
-    CBlockIndex b3; b3.nHeight = 3; b3.nTime = 1100; b3.pprev = &b2; b3.phashBlock = &h3;
+    CBlockIndex b1;
+    b1.nHeight = 1;
+    b1.nTime = 1000;
+    b1.phashBlock = &h1;
+    CBlockIndex b2;
+    b2.nHeight = 2;
+    b2.nTime = 1020;
+    b2.pprev = &b1;
+    b2.phashBlock = &h2;
+    CBlockIndex b3;
+    b3.nHeight = 3;
+    b3.nTime = 1100;
+    b3.pprev = &b2;
+    b3.phashBlock = &h3;
 
-    Consensus::Params params; params.nStakeModifierInterval = 60;
+    Consensus::Params params;
+    params.nStakeModifierInterval = 60;
     node::StakeModifierManager man;
 
     man.UpdateOnConnect(&b1, params);
@@ -456,8 +485,8 @@ BOOST_FIXTURE_TEST_CASE(reject_pow_after_height1, ChainTestingSetup)
         LOCK(cs_main);
         auto& map = g_chainman->BlockIndex();
         auto [it, inserted] = map.emplace(std::piecewise_construct,
-                                         std::forward_as_tuple(prev_hash),
-                                         std::forward_as_tuple());
+                                          std::forward_as_tuple(prev_hash),
+                                          std::forward_as_tuple());
         it->second.nHeight = 1;
         it->second.nBits = 0x207fffff;
         it->second.phashBlock = &prev_hash;
@@ -495,8 +524,8 @@ BOOST_FIXTURE_TEST_CASE(process_new_block_rejects_pow_height2, ChainTestingSetup
         LOCK(cs_main);
         auto& map = g_chainman->BlockIndex();
         auto [it, inserted] = map.emplace(std::piecewise_construct,
-                                         std::forward_as_tuple(prev_hash),
-                                         std::forward_as_tuple());
+                                          std::forward_as_tuple(prev_hash),
+                                          std::forward_as_tuple());
         it->second.nHeight = 1;
         it->second.nBits = 0x207fffff;
         it->second.phashBlock = &prev_hash;
