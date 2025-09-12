@@ -73,6 +73,34 @@ static RPCHelpMan getpendingdividends()
         }};
 }
 
+static RPCHelpMan getdividendinfo()
+{
+    return RPCHelpMan{
+        "getdividendinfo",
+        "Return current dividend pool and estimated next dividend payout.",
+        {},
+        RPCResult{RPCResult::Type::OBJ, "", "", {{RPCResult::Type::AMOUNT, "pool", "current dividend pool"}, {RPCResult::Type::NUM, "next_height", "next payout height"}, {RPCResult::Type::OBJ, "payouts", "estimated payouts", {{RPCResult::Type::AMOUNT, "<address>", "payout"}}}}},
+        RPCExamples{HelpExampleCli("getdividendinfo", "") + HelpExampleRpc("getdividendinfo", "")},
+        [](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            ChainstateManager& chainman = EnsureAnyChainman(request.context);
+            LOCK(cs_main);
+            Chainstate& chainstate = chainman.ActiveChainstate();
+            CAmount pool = chainstate.GetDividendPool();
+            int height = chainman.ActiveChain().Height();
+            int next_height = ((height / dividend::QUARTER_BLOCKS) + 1) * dividend::QUARTER_BLOCKS;
+            dividend::Payouts payouts = dividend::CalculatePayouts(chainstate.GetStakeInfo(), next_height, pool);
+            UniValue ret(UniValue::VOBJ);
+            ret.pushKV("pool", ValueFromAmount(pool));
+            ret.pushKV("next_height", next_height);
+            UniValue pobj(UniValue::VOBJ);
+            for (const auto& [addr, amt] : payouts) {
+                pobj.pushKV(addr, ValueFromAmount(amt));
+            }
+            ret.pushKV("payouts", pobj);
+            return ret;
+        }};
+}
+
 static RPCHelpMan getstakesnapshots()
 {
     return RPCHelpMan{
@@ -127,10 +155,7 @@ static RPCHelpMan getnextdividend()
         "getnextdividend",
         "Estimate the next dividend payout.",
         {},
-        RPCResult{RPCResult::Type::OBJ, "", "", {
-            {RPCResult::Type::NUM, "height", "next payout height"},
-            {RPCResult::Type::OBJ, "payouts", "estimated payouts", {{RPCResult::Type::AMOUNT, "<address>", "payout"}}}
-        }},
+        RPCResult{RPCResult::Type::OBJ, "", "", {{RPCResult::Type::NUM, "height", "next payout height"}, {RPCResult::Type::OBJ, "payouts", "estimated payouts", {{RPCResult::Type::AMOUNT, "<address>", "payout"}}}}},
         RPCExamples{HelpExampleCli("getnextdividend", "") + HelpExampleRpc("getnextdividend", "")},
         [](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
             ChainstateManager& chainman = EnsureAnyChainman(request.context);
@@ -195,6 +220,7 @@ static const CRPCCommand commands[] = {
     {"dividend", &claimdividends},
     {"dividend", &getpendingdividends},
     {"dividend", &getstakesnapshots},
+    {"dividend", &getdividendinfo},
     {"dividend", &getdividendschedule},
     {"dividend", &getdividendhistory},
     {"dividend", &getnextdividend},
