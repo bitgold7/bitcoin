@@ -39,10 +39,11 @@ bool ContextualCheckProofOfStake(const CBlock& block,
                                  const Consensus::Params& params);
 
 /** Basic timestamp checks for a staked block. */
-inline bool CheckStakeTimestamp(const CBlockHeader& h, const Consensus::Params& p)
+inline bool CheckStakeTimestamp(const CBlockHeader& h, unsigned int prev_time, const Consensus::Params& p)
 {
     if ((h.nTime & p.nStakeTimestampMask) != 0) return false;
     if (h.nTime > GetTime() + 15) return false;
+    if (h.nTime < prev_time + p.nStakeTargetSpacing) return false;
     return true;
 }
 

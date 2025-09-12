@@ -16,6 +16,7 @@ from test_framework.script import CScript
 from test_framework.util import assert_equal
 
 STAKE_TIMESTAMP_MASK = None
+STAKE_TARGET_SPACING = None
 MIN_STAKE_AGE = 60 * 60
 
 
@@ -50,8 +51,10 @@ class PosInvalidTimestampTest(BitcoinTestFramework):
 
     def run_test(self):
         node = self.nodes[0]
-        global STAKE_TIMESTAMP_MASK
-        STAKE_TIMESTAMP_MASK = node.getblockchaininfo()["pos_timestamp_mask"]
+        global STAKE_TIMESTAMP_MASK, STAKE_TARGET_SPACING
+        info = node.getblockchaininfo()
+        STAKE_TIMESTAMP_MASK = info["pos_timestamp_mask"]
+        STAKE_TARGET_SPACING = info["pos_target_spacing"]
         addr = node.getnewaddress()
         node.generatetoaddress(150, addr)
 
@@ -71,6 +74,25 @@ class PosInvalidTimestampTest(BitcoinTestFramework):
         stake_time = node.getblock(stake_block_hash)["time"]
 
         ntime = prev_time + 16
+        ntime_invalid = None
+        while ntime < prev_time + STAKE_TARGET_SPACING:
+            if check_kernel(
+                prev_hash,
+                prev_height,
+                prev_time,
+                nbits,
+                stake_block_hash,
+                stake_time,
+                amount,
+                prevout,
+                ntime,
+            ):
+                ntime_invalid = ntime
+                break
+            ntime += 16
+        assert ntime_invalid is not None
+
+        ntime = max(prev_time + STAKE_TARGET_SPACING, ntime_invalid + 16)
         while not check_kernel(
             prev_hash,
             prev_height,
@@ -83,6 +105,7 @@ class PosInvalidTimestampTest(BitcoinTestFramework):
             ntime,
         ):
             ntime += 16
+        ntime_valid = ntime
 
         script = CScript(bytes.fromhex(unspent["scriptPubKey"]))
 
@@ -100,8 +123,21 @@ class PosInvalidTimestampTest(BitcoinTestFramework):
 
         coinbase = create_coinbase(prev_height + 1, nValue=0)
 
-        # Case 1: coinstake first output non-empty
-        bad_cs = make_coinstake(ntime)
+        # Case 1: block timestamp too early
+        bad_cs = make_coinstake(ntime_invalid)
+        block = create_block(
+            int(prev_hash, 16),
+            coinbase,
+            ntime_invalid,
+            tmpl={"bits": prev_block["bits"], "height": prev_height + 1},
+            txlist=[bad_cs],
+        )
+        block.hashMerkleRoot = block.calc_merkle_root()
+        assert node.submitblock(block.serialize().hex()) is not None
+        assert_equal(node.getblockcount(), prev_height)
+
+        # Case 2: coinstake first output non-empty
+        bad_cs = make_coinstake(ntime_valid)
         bad_cs.vout[0] = CTxOut(1, script)
         bad_hex = node.signrawtransactionwithwallet(bad_cs.serialize().hex())["hex"]
         bad_cs = CTransaction()
@@ -109,7 +145,7 @@ class PosInvalidTimestampTest(BitcoinTestFramework):
         block = create_block(
             int(prev_hash, 16),
             coinbase,
-            ntime,
+            ntime_valid,
             tmpl={"bits": prev_block["bits"], "height": prev_height + 1},
             txlist=[bad_cs],
         )
@@ -117,12 +153,12 @@ class PosInvalidTimestampTest(BitcoinTestFramework):
         assert node.submitblock(block.serialize().hex()) is not None
         assert_equal(node.getblockcount(), prev_height)
 
-        # Case 2: coinstake timestamp mismatch
-        bad_cs = make_coinstake(ntime + 16)
+        # Case 3: coinstake timestamp mismatch
+        bad_cs = make_coinstake(ntime_valid + 16)
         block = create_block(
             int(prev_hash, 16),
             coinbase,
-            ntime,
+            ntime_valid,
             tmpl={"bits": prev_block["bits"], "height": prev_height + 1},
             txlist=[bad_cs],
         )
@@ -130,12 +166,12 @@ class PosInvalidTimestampTest(BitcoinTestFramework):
         assert node.submitblock(block.serialize().hex()) is not None
         assert_equal(node.getblockcount(), prev_height)
 
-        # Case 3: block timestamp not multiple of 16 seconds
-        bad_cs = make_coinstake(ntime + 1)
+        # Case 4: block timestamp not multiple of 16 seconds
+        bad_cs = make_coinstake(ntime_valid + 1)
         block = create_block(
             int(prev_hash, 16),
             coinbase,
-            ntime + 1,
+            ntime_valid + 1,
             tmpl={"bits": prev_block["bits"], "height": prev_height + 1},
             txlist=[bad_cs],
         )
@@ -143,13 +179,13 @@ class PosInvalidTimestampTest(BitcoinTestFramework):
         assert node.submitblock(block.serialize().hex()) is not None
         assert_equal(node.getblockcount(), prev_height)
 
-        # Case 4: block timestamp too far in the future
+        # Case 5: block timestamp too far in the future
         node.setmocktime(prev_time - 100)
-        bad_cs = make_coinstake(ntime)
+        bad_cs = make_coinstake(ntime_valid)
         block = create_block(
             int(prev_hash, 16),
             coinbase,
-            ntime,
+            ntime_valid,
             tmpl={"bits": prev_block["bits"], "height": prev_height + 1},
             txlist=[bad_cs],
         )

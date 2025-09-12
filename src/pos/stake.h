@@ -50,10 +50,11 @@ bool IsProofOfStake(const CBlock& block);
 /** Verify the signature on a proof-of-stake block. */
 bool CheckBlockSignature(const CBlock& block);
 
-inline bool CheckStakeTimestamp(const CBlockHeader& h, const Consensus::Params& p)
+inline bool CheckStakeTimestamp(const CBlockHeader& h, unsigned int prev_time, const Consensus::Params& p)
 {
     if ((h.nTime & p.nStakeTimestampMask) != 0) return false;
     if (h.nTime > GetTime() + 15) return false;
+    if (h.nTime < prev_time + p.nStakeTargetSpacing) return false;
     return true;
 }
 
