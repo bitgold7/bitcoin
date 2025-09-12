@@ -1,4 +1,4 @@
-#include <bitcoin-build-config.h> // IWYU pragma: keep
+#include <bitgold-build-config.h> // IWYU pragma: keep
 
 #include <common/args.h>
 #include <dividend/dividend.h>
