@@ -24,6 +24,24 @@ class DividendPayoutTest(BitcoinTestFramework):
         node0.startstaking()
         node1.startstaking()
 
+        # Send a mempool transaction and ensure it is included in the staked block
+        txid = node0.sendtoaddress(addr1, 1)
+        start_height = node0.getblockcount()
+        node0.waitforblockheight(start_height + 1)
+        blockhash = node0.getblockhash(start_height + 1)
+        block = node0.getblock(blockhash, 2)
+        assert txid in [tx["txid"] for tx in block["tx"][2:]]
+
+        coinstake = block["tx"][1]
+        input_total = Decimal("0")
+        for vin in coinstake["vin"]:
+            prev = node0.getrawtransaction(vin["txid"], True)
+            input_total += prev["vout"][vin["vout"]]["value"]
+        validator_value = sum(vout["value"] for vout in coinstake["vout"][1:-1])
+        dividend_value = coinstake["vout"][-1]["value"]
+        validator_reward = validator_value - input_total
+        assert_equal(validator_reward, dividend_value * 9)
+
         remaining = QUARTER_BLOCKS - node0.getblockcount()
         node0.generatetoaddress(remaining, addr0)
 

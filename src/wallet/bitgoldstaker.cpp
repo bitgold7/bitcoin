@@ -7,6 +7,7 @@
 #include <key.h>
 #include <node/context.h>
 #include <node/stake_modifier_manager.h>
+#include <node/miner.h>
 #include <pos/stake.h>
 #include <pos/difficulty.h>
 #include <script/standard.h>
@@ -151,17 +152,31 @@ void BitGoldStaker::ThreadStakeMiner()
                             continue;
                         }
 
+                        // Assemble block transactions and calculate fees
+                        CTxMemPool* mempool = node_context->mempool.get();
+                        BlockAssembler::Options options;
+                        ApplyArgsManOptions(gArgs, options);
+                        BlockAssembler assembler{chainman.ActiveChainstate(), mempool, options};
+                        std::unique_ptr<CBlockTemplate> pblocktemplate = assembler.CreateNewBlock();
+                        CAmount fees{0};
+                        for (const CAmount& fee : pblocktemplate->vTxFees) {
+                            fees += fee;
+                        }
+
                         CMutableTransaction coinstake;
                         coinstake.nLockTime = nTimeTx;
                         coinstake.vin.emplace_back(stake_out.outpoint);
                         coinstake.vin[0].nSequence = CTxIn::SEQUENCE_FINAL;
-                        coinstake.vout.resize(2);
+                        coinstake.vout.resize(3);
                         coinstake.vout[0].SetNull();
                         int64_t coin_age_weight = int64_t(nTimeTx) - int64_t(pindexFrom->GetBlockTime());
-                        CAmount reward = GetProofOfStakeReward(pindexPrev->nHeight + 1, /*fees=*/0,
+                        CAmount subsidy = GetProofOfStakeReward(pindexPrev->nHeight + 1, /*fees=*/0,
                                                                coin_age_weight, consensus);
+                        CAmount total_reward = subsidy + fees;
+                        CAmount validator_reward = total_reward * 9 / 10;
+                        CAmount dividend_reward = total_reward - validator_reward;
                         CAmount input_total = stake_out.txout.nValue;
-                        CAmount total = input_total + reward;
+                        CAmount total = input_total + validator_reward;
                         CAmount split_threshold = 2 * MIN_STAKE_AMOUNT;
                         if (total < split_threshold) {
                             for (const COutput& merge_out : candidates) {
@@ -170,7 +185,7 @@ void BitGoldStaker::ThreadStakeMiner()
                                 coinstake.vin.emplace_back(merge_out.outpoint);
                                 coinstake.vin.back().nSequence = CTxIn::SEQUENCE_FINAL;
                                 input_total += merge_out.txout.nValue;
-                                total = input_total + reward;
+                                total = input_total + validator_reward;
                                 if (total >= split_threshold) break;
                             }
                         }
@@ -178,9 +193,12 @@ void BitGoldStaker::ThreadStakeMiner()
                             CAmount half = total / 2;
                             coinstake.vout.emplace_back(half, stake_out.txout.scriptPubKey);
                             coinstake.vout.emplace_back(total - half, stake_out.txout.scriptPubKey);
+                            coinstake.vout.emplace_back(dividend_reward, CScript() << OP_TRUE);
                         } else {
                             coinstake.vout[1].nValue = total;
                             coinstake.vout[1].scriptPubKey = stake_out.txout.scriptPubKey;
+                            coinstake.vout[2].nValue = dividend_reward;
+                            coinstake.vout[2].scriptPubKey = CScript() << OP_TRUE;
                         }
                         {
                             LOCK(m_wallet.cs_wallet);
@@ -210,6 +228,9 @@ void BitGoldStaker::ThreadStakeMiner()
                         CBlock block;
                         block.vtx.emplace_back(MakeTransactionRef(std::move(coinbase)));
                         block.vtx.emplace_back(MakeTransactionRef(std::move(coinstake)));
+                        for (size_t i = 1; i < pblocktemplate->block.vtx.size(); ++i) {
+                            block.vtx.emplace_back(pblocktemplate->block.vtx[i]);
+                        }
                         block.hashPrevBlock = pindexPrev->GetBlockHash();
                         block.nVersion = chainman.m_versionbitscache.ComputeBlockVersion(pindexPrev, consensus);
                         block.nTime = nTimeTx;
@@ -256,8 +277,8 @@ void BitGoldStaker::ThreadStakeMiner()
                         LogPrintLevel(BCLog::STAKING, BCLog::Level::Info,
                                       "ThreadStakeMiner: staked block %s\n",
                                       block.GetHash().ToString());
-                        RecordSuccess(reward);
-                        m_wallet.AddStakingReward(reward);
+                        RecordSuccess(validator_reward);
+                        m_wallet.AddStakingReward(validator_reward);
                         staked = true;
                         break;
                     }
