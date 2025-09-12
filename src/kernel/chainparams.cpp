@@ -163,11 +163,11 @@ public:
         const char* genesis_timestamp =
             "The Times 01/Jan/2024 BitGold unveils the digital gold standard";
         const CScript genesis_script =
-            CScript() <<
-            "04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f"_hex
-            << OP_CHECKSIG;
+            CScript() << OP_DUP << OP_HASH160
+            << "91b24bf9f5288532960ac687abb035127b1d28a5"_hex
+            << OP_EQUALVERIFY << OP_CHECKSIG;
         genesis = CreateGenesisBlock(genesis_timestamp, genesis_script,
-                                     1704067200, 206523, 0x1e0ffff0, 1,
+                                     1704067200, 1106766, 0x1e0ffff0, 1,
                                      3'000'000 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.defaultAssumeValid =
@@ -175,9 +175,9 @@ public:
         consensus.nMinimumChainWork =
             uint256{"0000000000000000000000000000000000000000000000000000000000200020"};
         assert(consensus.hashGenesisBlock ==
-               uint256{"00000e0d7a3cf8b8575c119de4e59064a8feecb36a38f1b64f64533f969a4a6b"});
+               uint256{"0000072775275721f1a3aebb47f462aca90027230a88ceb29f4aad95446acd9d"});
         assert(genesis.hashMerkleRoot ==
-               uint256{"fda596d1084a6101c2901ca6737eeebf91f726ea9517c2be5968e834601e4c11"});
+               uint256{"66c3315af5839b587720eaac8e0966dd93a7211a39c633deba4c0625ac86623b"});
         // Ensure DNS entries are coordinated externally before release.
         vSeeds.emplace_back("seed.bitgold.org");
         vSeeds.emplace_back("seed.bitgold.net");
