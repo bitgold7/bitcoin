@@ -38,6 +38,10 @@ class AddressPrefixesTest(BitcoinTestFramework):
         script_addr = node.getnewaddress(address_type='p2sh-segwit')
         assert script_addr[0] == 'G'
 
+        # Bech32 address
+        bech32_addr = node.getnewaddress("", "bech32")
+        assert bech32_addr.startswith('bg1')
+
         # Dump private key and verify secret key prefix
         wif = node.dumpprivkey(legacy_addr)
         decoded = b58decode(wif)
