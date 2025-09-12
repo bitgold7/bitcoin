@@ -8,6 +8,7 @@
 #include <node/stake_modifier_manager.h>
 #include <primitives/block.h>
 #include <uint256.h>
+#include <arith_uint256.h>
 #include <util/time.h>
 
 class CBlockIndex;
@@ -17,6 +18,8 @@ static constexpr unsigned int STAKE_TIMESTAMP_MASK = 0xF;
 // Default minimum coin age for staking (8 hours, PoSV3.1)
 // Network-specific values are provided via consensus parameters
 static constexpr int64_t MIN_STAKE_AGE = 8 * 60 * 60;
+
+arith_uint256 MultiplyStakeTarget(const arith_uint256& bnTarget, CAmount amount);
 
 /** Check that the kernel for a stake meets the required target */
 bool CheckStakeKernelHash(const CBlockIndex* pindexPrev, unsigned int nBits,

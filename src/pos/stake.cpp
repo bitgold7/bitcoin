@@ -91,6 +91,19 @@ static uint256 ComputeKernelHash(const uint256& stake_modifier,
     return ss.GetHash();
 }
 
+static arith_uint256 MultiplyStakeTarget(const arith_uint256& bnTarget, CAmount amount)
+{
+    if (amount <= 0 || bnTarget == 0) {
+        return arith_uint256();
+    }
+    arith_uint256 bnWeight{static_cast<uint64_t>(amount)};
+    arith_uint256 bnMax = ~arith_uint256();
+    if (bnTarget > bnMax / bnWeight) {
+        return bnMax;
+    }
+    return bnTarget * bnWeight;
+}
+
 bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
                           unsigned int nBits,
                           uint256 hashBlockFrom,
@@ -115,11 +128,7 @@ bool CheckStakeKernelHash(const CBlockIndex* pindexPrev,
     if (fNegative || fOverflow || bnTarget == 0) return false;
 
     // Amount scaling: target * amount (bounded to prevent overflow)
-    arith_uint256 bnWeight = arith_uint256(amount);
-    // Avoid overflow by shifting if necessary
-    // (Simplistic; in future incorporate 64-bit safe multiply or cap amount)
-    arith_uint256 bnTargetWeight = bnTarget;
-    bnTargetWeight *= bnWeight;
+    arith_uint256 bnTargetWeight = MultiplyStakeTarget(bnTarget, amount);
 
     uint256 stake_modifier;
     if (params.nStakeModifierVersion >= 1) {
