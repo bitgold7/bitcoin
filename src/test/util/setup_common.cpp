@@ -275,6 +275,7 @@ ChainTestingSetup::ChainTestingSetup(const ChainType chainType, TestOpts opts)
         };
         m_node.chainman = std::make_unique<ChainstateManager>(*Assert(m_node.shutdown_signal), chainman_opts, blockman_opts);
         m_node.stake_modman = std::make_unique<node::StakeModifierManager>();
+        Assert(m_node.validation_signals)->RegisterValidationInterface(m_node.stake_modman.get());
     };
     m_make_chainman();
 }
@@ -283,6 +284,9 @@ ChainTestingSetup::~ChainTestingSetup()
 {
     if (m_node.scheduler) m_node.scheduler->stop();
     if (m_node.validation_signals) m_node.validation_signals->FlushBackgroundCallbacks();
+    if (m_node.stake_modman && m_node.validation_signals) {
+        m_node.validation_signals->UnregisterValidationInterface(m_node.stake_modman.get());
+    }
     m_node.connman.reset();
     m_node.banman.reset();
     m_node.addrman.reset();
@@ -291,6 +295,7 @@ ChainTestingSetup::~ChainTestingSetup()
     m_node.mempool.reset();
     Assert(!m_node.fee_estimator); // Each test must create a local object, if they wish to use the fee_estimator
     m_node.chainman.reset();
+    m_node.stake_modman.reset();
     m_node.validation_signals.reset();
     m_node.scheduler.reset();
 }

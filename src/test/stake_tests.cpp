@@ -3,6 +3,7 @@
 #include <node/stake_modifier_manager.h>
 #include <pos/difficulty.h>
 #include <chain.h>
+#include <kernel/chain.h>
 #include <consensus/amount.h>
 #include <consensus/merkle.h>
 #include <chainparams.h>
@@ -250,6 +251,36 @@ BOOST_AUTO_TEST_CASE(stake_modifier_reorg)
     BOOST_CHECK_EQUAL(man.GetCurrentModifier(), mod2);
     man.RemoveOnDisconnect(&b2);
     BOOST_CHECK_EQUAL(man.GetCurrentModifier(), mod1);
+}
+
+BOOST_AUTO_TEST_CASE(stake_modifier_tip_after_reorg)
+{
+    const Consensus::Params& params = Params().GetConsensus();
+    node::StakeModifierManager man;
+
+    uint256 h1{1}, h2{2}, h3{3}, h2a{4}, h3a{5};
+    CBlockIndex b1; b1.nHeight = 1; b1.nTime = 1000; b1.phashBlock = &h1;
+    CBlockIndex b2; b2.nHeight = 2; b2.nTime = 1000 + params.nStakeModifierInterval / 2; b2.pprev = &b1; b2.phashBlock = &h2;
+    CBlockIndex b3; b3.nHeight = 3; b3.nTime = 1000 + params.nStakeModifierInterval + 10; b3.pprev = &b2; b3.phashBlock = &h3;
+
+    // Alternate branch
+    CBlockIndex b2a; b2a.nHeight = 2; b2a.nTime = 1000 + params.nStakeModifierInterval / 3; b2a.pprev = &b1; b2a.phashBlock = &h2a;
+    CBlockIndex b3a; b3a.nHeight = 3; b3a.nTime = 1000 + params.nStakeModifierInterval * 2; b3a.pprev = &b2a; b3a.phashBlock = &h3a;
+
+    // Connect initial chain
+    man.BlockConnected(ChainstateRole::NORMAL, nullptr, &b1);
+    uint256 mod1 = man.GetCurrentModifier();
+    man.BlockConnected(ChainstateRole::NORMAL, nullptr, &b2);
+    man.BlockConnected(ChainstateRole::NORMAL, nullptr, &b3);
+
+    // Reorg to alternative branch
+    man.BlockDisconnected(nullptr, &b3);
+    man.BlockDisconnected(nullptr, &b2);
+    man.BlockConnected(ChainstateRole::NORMAL, nullptr, &b2a);
+    man.BlockConnected(ChainstateRole::NORMAL, nullptr, &b3a);
+
+    uint256 expected = ComputeStakeModifier(&b2a, mod1);
+    BOOST_CHECK_EQUAL(man.GetCurrentModifier(), expected);
 }
 
 BOOST_AUTO_TEST_CASE(coinstake_structure)

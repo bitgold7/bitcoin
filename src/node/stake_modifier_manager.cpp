@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chain.h>
+#include <chainparams.h>
 #include <consensus/params.h>
 #include <pos/stakemodifier.h>
 #include <validation.h>
@@ -122,6 +123,17 @@ bool StakeModifierManager::ProcessStakeModifier(ChainstateManager& chainman, con
 
     m_modifiers[block_hash] = ModifierEntry{modifier, index->nTime};
     return true;
+}
+
+void StakeModifierManager::BlockConnected(ChainstateRole role, const std::shared_ptr<const CBlock>&, const CBlockIndex* pindex)
+{
+    if (role == ChainstateRole::BACKGROUND) return;
+    UpdateOnConnect(pindex, Params().GetConsensus());
+}
+
+void StakeModifierManager::BlockDisconnected(const std::shared_ptr<const CBlock>&, const CBlockIndex* pindex)
+{
+    RemoveOnDisconnect(pindex);
 }
 
 } // namespace node
