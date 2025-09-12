@@ -15,7 +15,7 @@
 #endif
 
 #include <addresstype.h>
-#include <bitcoin-build-config.h> // IWYU pragma: keep
+#include <bitgold-build-config.h> // IWYU pragma: keep
 #include <blockfilter.h>
 #include <chain.h>
 #include <coins.h>
