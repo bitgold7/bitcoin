@@ -686,7 +686,7 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     unsigned int nTime = std::max<int64_t>(
         GetMinimumTime(pindexPrev, consensus.DifficultyAdjustmentInterval()),
         TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()));
-    nTime &= ~STAKE_TIMESTAMP_MASK;
+    nTime &= ~consensus.nStakeTimestampMask;
     block.nTime = nTime;
     block.nBits = pindexPrev->nBits;
     block.nNonce = 0;

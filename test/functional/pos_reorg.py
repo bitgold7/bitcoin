@@ -15,7 +15,7 @@ from test_framework.messages import (
 from test_framework.script import CScript
 from test_framework.util import assert_equal
 
-STAKE_TIMESTAMP_MASK = 0xF
+STAKE_TIMESTAMP_MASK = None
 MIN_STAKE_AGE = 60 * 60
 
 
@@ -108,6 +108,8 @@ class PosReorgTest(BitcoinTestFramework):
 
     def run_test(self):
         node0, node1 = self.nodes
+        global STAKE_TIMESTAMP_MASK
+        STAKE_TIMESTAMP_MASK = node0.getblockchaininfo()["pos_timestamp_mask"]
         addr0 = node0.getnewaddress()
         node0.generatetoaddress(150, addr0)
         self.sync_all()

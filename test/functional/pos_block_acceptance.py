@@ -15,7 +15,7 @@ from test_framework.messages import (
 from test_framework.script import CScript
 from test_framework.util import assert_equal
 
-STAKE_TIMESTAMP_MASK = 0xF
+STAKE_TIMESTAMP_MASK = None
 MIN_STAKE_AGE = 60 * 60
 
 
@@ -50,6 +50,8 @@ class PosBlockAcceptanceTest(BitcoinTestFramework):
 
     def run_test(self):
         node = self.nodes[0]
+        global STAKE_TIMESTAMP_MASK
+        STAKE_TIMESTAMP_MASK = node.getblockchaininfo()["pos_timestamp_mask"]
         addr = node.getnewaddress()
         node.generatetoaddress(150, addr)
 

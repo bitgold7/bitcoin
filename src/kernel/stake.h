@@ -12,9 +12,6 @@
 
 namespace kernel {
 
-/** Default timestamp mask used by proof-of-stake blocks */
-static constexpr unsigned int STAKE_TIMESTAMP_MASK = 0xF;
-
 /** Compute stake modifier version 3.
  *  The modifier mixes the previous modifier with key fields from the
  *  previous block to make staking deterministic while preventing grinding.
