@@ -82,6 +82,9 @@ typedef enum ScriptError_t
     SCRIPT_ERR_OP_CODESEPARATOR,
     SCRIPT_ERR_SIG_FINDANDDELETE,
 
+    /** Bulletproof verification failed */
+    SCRIPT_ERR_BULLETPROOF_VERIFY,
+
     SCRIPT_ERR_ERROR_COUNT
 } ScriptError;
 

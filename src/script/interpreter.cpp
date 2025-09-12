@@ -8,6 +8,9 @@
 #include <crypto/ripemd160.h>
 #include <crypto/sha1.h>
 #include <crypto/sha256.h>
+#ifdef ENABLE_BULLETPROOFS
+#include <bulletproofs.h>
+#endif
 #include <pubkey.h>
 #include <script/script.h>
 #include <uint256.h>
@@ -1212,6 +1215,27 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     }
                 }
                 break;
+
+#ifdef ENABLE_BULLETPROOFS
+                case OP_BULLETPROOF:
+                {
+                    // (commitment proof -- bool)
+                    if (stack.size() < 2) return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+                    valtype commitment = stacktop(-2);
+                    valtype proof = stacktop(-1);
+                    CBulletproof bp;
+                    if (commitment.size() <= sizeof(bp.commitment.data)) {
+                        memcpy(bp.commitment.data, commitment.data(), commitment.size());
+                    }
+                    bp.proof = proof;
+                    bool ok = VerifyBulletproof(bp);
+                    popstack(stack);
+                    popstack(stack);
+                    stack.push_back(ok ? vchTrue : vchFalse);
+                    if (!ok) return set_error(serror, SCRIPT_ERR_BULLETPROOF_VERIFY);
+                }
+                break;
+#endif
 
                 default:
                     return set_error(serror, SCRIPT_ERR_BAD_OPCODE);
