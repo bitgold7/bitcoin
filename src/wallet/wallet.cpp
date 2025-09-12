@@ -9,6 +9,7 @@
 
 #include <dividend/dividend.h>
 #include <wallet/receive.h>
+#include <policy/policy.h>
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
 #include <util/secp256k1_context.h>
@@ -2015,6 +2016,16 @@ void CWallet::ResubmitWalletTransactions(bool relay, bool force)
     // Don't attempt to resubmit if the wallet is configured to not broadcast,
     // even if forcing.
     if (!fBroadcastTransactions) return;
+    // Determine feerate threshold for rebroadcasting
+    CFeeRate threshold;
+    bool have_threshold = false;
+    if (m_resend_feerate_filter) {
+        threshold = *m_resend_feerate_filter;
+        have_threshold = threshold.GetFeePerK() > 0;
+    } else if (m_chain) {
+        threshold = m_chain->estimateSmartFee(/*num_blocks=*/1, /*conservative=*/false);
+        have_threshold = threshold.GetFeePerK() > 0;
+    }
 
     int submitted_tx_count = 0;
 
@@ -2031,6 +2042,13 @@ void CWallet::ResubmitWalletTransactions(bool relay, bool force)
             // Attempt to rebroadcast all txes more than 5 minutes older than
             // the last block, or all txs if forcing.
             if (!force && wtx.nTimeReceived > m_best_block_time - 5 * 60) continue;
+
+            if (have_threshold) {
+                CAmount debit = CachedTxGetDebit(*this, wtx, ISMINE_ALL);
+                if (debit <= 0) continue; // Don't rebroadcast if fee can't be determined
+                CAmount fee = debit - wtx.tx->GetValueOut();
+                if (fee <= 0 || CFeeRate(fee, GetVirtualTransactionSize(*wtx.tx)) < threshold) continue;
+            }
             to_submit.insert(&wtx);
         }
         // Now try submitting the transactions to the memory pool and (optionally) relay them.
@@ -3014,6 +3032,15 @@ std::shared_ptr<CWallet> CWallet::Create(WalletContext& context, const std::stri
             walletInstance->m_consolidate_feerate = CFeeRate(*consolidate_feerate);
         } else {
             error = AmountErrMsg("consolidatefeerate", *arg);
+            return nullptr;
+        }
+    }
+
+    if (const auto arg{args.GetArg("-walletrebroadcastfeerate")}) {
+        if (std::optional<CAmount> resend_feerate = ParseMoney(*arg)) {
+            walletInstance->m_resend_feerate_filter = CFeeRate(*resend_feerate);
+        } else {
+            error = AmountErrMsg("walletrebroadcastfeerate", *arg);
             return nullptr;
         }
     }
