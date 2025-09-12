@@ -1,4 +1,4 @@
-#include <dividend/dividend.h>
+#include <consensus/dividends/dividend.h>
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 

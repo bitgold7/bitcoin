@@ -17,7 +17,7 @@
 #include <validation.h>
 #include <script/script.h>
 #include <arith_uint256.h>
-#include <dividend/dividend.h>
+#include <consensus/dividends/dividend.h>
 #include <cstring>
 
 #ifdef ENABLE_BULLETPROOFS

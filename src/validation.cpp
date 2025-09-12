@@ -8,7 +8,7 @@
 #include <common/args.h>
 #include <kernel/stake.h>
 #include <pos/slashing.h>
-#include <dividend/dividend.h>
+#include <consensus/dividends/dividend.h>
 #include <consensus/dividends/schedule.h>
 #include <pow.h>
 #include <validation.h>
