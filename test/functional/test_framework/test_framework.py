@@ -78,7 +78,7 @@ class Binaries:
 
     def node_argv(self):
         "Return argv array that should be used to invoke bitgoldd"
-        return self._argv("node", self.paths.bitgoldd)
+        return self._argv("node", self.paths.bitcoind)
 
     def rpc_argv(self):
         "Return argv array that should be used to invoke bitgold-cli"
