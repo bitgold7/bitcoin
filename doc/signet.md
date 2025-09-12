@@ -14,6 +14,6 @@ requires blocks to include a signature that satisfies a fixed challenge.
 * Faucet: <https://signetfaucet.com/>
 * Block explorer: <https://mempool.space/signet>
 
-To join signet with a node built from this repository, start `bitcoind` with the
+To join signet with a node built from this repository, start `bitgoldd` with the
 `-signet` option. The fixed challenge above is compiled in by default.
 

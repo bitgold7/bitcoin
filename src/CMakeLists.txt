@@ -229,7 +229,7 @@ if(ENABLE_WALLET)
 endif()
 
 
-# P2P and RPC server functionality used by `bitcoind` and `bitcoin-qt` executables.
+# P2P and RPC server functionality used by `bitgoldd` and `bitcoin-qt` executables.
 add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   addrdb.cpp
   addrman.cpp
@@ -367,24 +367,24 @@ if(BUILD_BITCOIN_BIN)
   install_binary_component(bitcoin)
 endif()
 
-# Bitcoin Core bitcoind.
+# Bitcoin Core bitgoldd.
 if(BUILD_DAEMON)
-  add_executable(bitcoind
-    bitcoind.cpp
-    init/bitcoind.cpp
+  add_executable(bitgoldd
+    bitgoldd.cpp
+    init/bitgoldd.cpp
   )
-  add_windows_resources(bitcoind bitcoind-res.rc)
-  add_windows_application_manifest(bitcoind)
-  target_link_libraries(bitcoind
+  add_windows_resources(bitgoldd bitgoldd-res.rc)
+  add_windows_application_manifest(bitgoldd)
+  target_link_libraries(bitgoldd
     core_interface
     bitcoin_node
     $<TARGET_NAME_IF_EXISTS:bitcoin_wallet>
   )
-  install_binary_component(bitcoind HAS_MANPAGE)
+  install_binary_component(bitgoldd HAS_MANPAGE)
 endif()
 if(ENABLE_IPC AND BUILD_DAEMON)
   add_executable(bitcoin-node
-    bitcoind.cpp
+    bitgoldd.cpp
     init/bitcoin-node.cpp
   )
   target_link_libraries(bitcoin-node
@@ -426,10 +426,10 @@ target_link_libraries(bitcoin_cli
 
 # Bitcoin Core RPC client
 if(BUILD_CLI)
-  add_executable(bitcoin-cli bitcoin-cli.cpp)
-  add_windows_resources(bitcoin-cli bitcoin-cli-res.rc)
-  add_windows_application_manifest(bitcoin-cli)
-  target_link_libraries(bitcoin-cli
+  add_executable(bitgold-cli bitgold-cli.cpp)
+  add_windows_resources(bitgold-cli bitgold-cli-res.rc)
+  add_windows_application_manifest(bitgold-cli)
+  target_link_libraries(bitgold-cli
     core_interface
     bitcoin_cli
     bitcoin_common
@@ -437,7 +437,7 @@ if(BUILD_CLI)
     libevent::core
     libevent::extra
   )
-  install_binary_component(bitcoin-cli HAS_MANPAGE)
+  install_binary_component(bitgold-cli HAS_MANPAGE)
 endif()
 
 
