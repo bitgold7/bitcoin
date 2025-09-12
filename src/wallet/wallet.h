@@ -527,6 +527,11 @@ public:
     /** Get the currently reserved balance. */
     CAmount GetReserveBalance() const;
 
+    /** Set the stake split threshold. */
+    void SetStakeSplitThreshold(CAmount amount);
+    /** Get the stake split threshold. */
+    CAmount GetStakeSplitThreshold() const;
+
     /** Generate a new shielded address for confidential payments. */
     std::string GetNewShieldedAddress();
 
@@ -575,6 +580,9 @@ public:
 
     /** Amount of balance reserved from staking. */
     CAmount m_reserve_balance GUARDED_BY(cs_wallet){0};
+
+    /** Threshold for splitting stake outputs. */
+    CAmount m_stake_split_threshold GUARDED_BY(cs_wallet){0};
 
     /** True if wallet is unlocked only for staking, not for spending. */
     bool m_staking_only GUARDED_BY(cs_wallet){false};

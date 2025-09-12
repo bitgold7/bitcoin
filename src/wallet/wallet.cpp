@@ -3233,6 +3233,15 @@ void CWallet::postInitProcess()
         }
     }
 
+    if (gArgs.IsArgSet("-stakesplitthreshold")) {
+        CAmount amount{0};
+        if (ParseMoney(gArgs.GetArg("-stakesplitthreshold", "0"), amount)) {
+            SetStakeSplitThreshold(amount);
+        } else {
+            LogPrintf("Invalid -stakesplitthreshold amount, ignoring\n");
+        }
+    }
+
     // Start staking thread if enabled
     if (gArgs.GetBoolArg("-staker", false) || gArgs.GetBoolArg("-staking", false)) {
         StartStakeMiner();
@@ -3334,6 +3343,18 @@ CAmount CWallet::GetReserveBalance() const
 {
     LOCK(cs_wallet);
     return m_reserve_balance;
+}
+
+void CWallet::SetStakeSplitThreshold(CAmount amount)
+{
+    LOCK(cs_wallet);
+    m_stake_split_threshold = amount;
+}
+
+CAmount CWallet::GetStakeSplitThreshold() const
+{
+    LOCK(cs_wallet);
+    return m_stake_split_threshold;
 }
 
 std::string CWallet::GetNewShieldedAddress()

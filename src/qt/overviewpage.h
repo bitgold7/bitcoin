@@ -66,6 +66,7 @@ private Q_SLOTS:
     void handleTransactionClicked(const QModelIndex &index);
     void updateAlerts(const QString &warnings);
     void setMonospacedFont(const QFont&);
+    void toggleAutoStake(bool checked);
 };
 
 #endif // BITCOIN_QT_OVERVIEWPAGE_H

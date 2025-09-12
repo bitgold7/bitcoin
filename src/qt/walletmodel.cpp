@@ -24,6 +24,7 @@
 #include <util/translation.h>
 #include <wallet/coincontrol.h>
 #include <wallet/wallet.h>
+#include <univalue.h>
 
 #include <cstdint>
 #include <functional>
@@ -34,6 +35,7 @@
 #include <QMessageBox>
 #include <QSet>
 #include <QTimer>
+#include <QUrl>
 
 using wallet::CCoinControl;
 using wallet::CRecipient;
@@ -611,4 +613,57 @@ CAmount WalletModel::getAvailableBalance(const CCoinControl* control)
 wallet::StakingStats WalletModel::getStakingStats() const
 {
     return m_wallet->getStakingStats();
+}
+
+bool WalletModel::startStaking()
+{
+    UniValue params(UniValue::VARR);
+    std::string uri;
+    QString name = getWalletName();
+    if (!name.isEmpty()) {
+        QByteArray encoded = QUrl::toPercentEncoding(name);
+        uri = "/wallet/" + std::string(encoded.constData(), encoded.length());
+    }
+    try {
+        m_node.executeRpc("startstaking", params, uri);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+bool WalletModel::stopStaking()
+{
+    UniValue params(UniValue::VARR);
+    std::string uri;
+    QString name = getWalletName();
+    if (!name.isEmpty()) {
+        QByteArray encoded = QUrl::toPercentEncoding(name);
+        uri = "/wallet/" + std::string(encoded.constData(), encoded.length());
+    }
+    try {
+        m_node.executeRpc("stopstaking", params, uri);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+bool WalletModel::isStaking() const
+{
+    UniValue params(UniValue::VARR);
+    std::string uri;
+    QString name = getWalletName();
+    if (!name.isEmpty()) {
+        QByteArray encoded = QUrl::toPercentEncoding(name);
+        uri = "/wallet/" + std::string(encoded.constData(), encoded.length());
+    }
+    try {
+        UniValue res = m_node.executeRpc("getstakingstatus", params, uri);
+        if (res.isObject() && res.exists("staking")) {
+            return res["staking"].get_bool();
+        }
+    } catch (const std::exception&) {
+    }
+    return false;
 }
