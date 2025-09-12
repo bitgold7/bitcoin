@@ -10,6 +10,7 @@ extern "C" {
 #include <secp256k1_rangeproof.h>
 }
 #include <cstring>
+#include <consensus/consensus.h>
 #include <serialize.h>
 #include <util/secp256k1_context.h>
 #endif
@@ -44,6 +45,7 @@ inline bool VerifyBulletproof(const CBulletproof& proof)
 {
 #ifdef ENABLE_BULLETPROOFS
     if (proof.proof.empty() || proof.proof.size() > SECP256K1_RANGE_PROOF_MAX_LENGTH) return false;
+    if (proof.proof.size() * WITNESS_SCALE_FACTOR > MAX_BULLETPROOF_WEIGHT) return false;
 
     static const secp256k1_context_holder ctx(SECP256K1_CONTEXT_NONE);
 
