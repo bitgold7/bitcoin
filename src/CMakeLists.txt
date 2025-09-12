@@ -298,6 +298,7 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   policy/fees.cpp
   policy/fees_args.cpp
   policy/packages.cpp
+  policy/hybrid_comparator.cpp
   policy/rbf.cpp
   policy/settings.cpp
   policy/priority.cpp

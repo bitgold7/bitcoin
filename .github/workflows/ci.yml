@@ -464,3 +464,15 @@ jobs:
 
       - name: CI script
         run: ./ci/test_run_all.sh
+
+  hybrid-mempool-sim:
+    name: 'Hybrid mempool simulator'
+    runs-on: ubuntu-24.04
+    if: ${{ vars.SKIP_BRANCH_PUSH != 'true' || github.event_name == 'pull_request' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run simulator scenarios
+        run: |
+          python3 test/util/hybrid_mempool_sim.py small medium large
