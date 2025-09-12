@@ -28,7 +28,7 @@
 #include <util/time.h>
 #include <util/transaction_identifier.h>
 #include <util/ui_change_type.h>
-#include <wallet/stake.h>
+#include <wallet/bitgoldstaker.h>
 #include <wallet/crypter.h>
 #include <wallet/db.h>
 #include <wallet/scriptpubkeyman.h>
@@ -562,7 +562,7 @@ public:
     std::unique_ptr<interfaces::Handler> m_chain_notifications_handler;
 
     /** Proof-of-stake staker thread. */
-    std::unique_ptr<Stake> m_staker;
+    std::unique_ptr<BitGoldStaker> m_staker;
 
 #ifdef ENABLE_BULLETPROOFS
     /** Mapping of confidential outputs to their blinding factors and values. */
