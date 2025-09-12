@@ -11,7 +11,7 @@ unsigned int GetPoSNextWorkRequired(const CBlockIndex* pindexLast, int64_t nBloc
         return bnLimit.GetCompact();
     }
 
-    int64_t target_spacing = 8 * 60; // 8 minutes
+    int64_t target_spacing = params.nStakeTargetSpacing;
     int64_t interval = params.DifficultyAdjustmentInterval();
     int64_t actual_spacing = nBlockTime - pindexLast->GetBlockTime();
     if (actual_spacing < 0) actual_spacing = target_spacing;
