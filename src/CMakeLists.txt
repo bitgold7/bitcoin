@@ -302,6 +302,8 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   policy/settings.cpp
   policy/priority.cpp
   policy/truc_policy.cpp
+  pow.cpp
+  kernel/stake.cpp
   pos/stake.cpp
   pos/stakemodifier.cpp
   pos/difficulty.cpp
