@@ -2231,18 +2231,18 @@ PackageMempoolAcceptResult ProcessNewPackage(Chainstate& active_chainstate, CTxM
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
-    if (nHeight <= 0) return 0;
-    if (nHeight == 1) return consensusParams.genesis_reward;
+    if (nHeight < 0) return 0;
+    if (nHeight == 0) return consensusParams.genesis_reward;
 
     const CAmount max_subsidy{consensusParams.nMaximumSupply - consensusParams.genesis_reward};
 
-    int halvings = (nHeight - 2) / consensusParams.nSubsidyHalvingInterval;
+    int halvings = (nHeight - 1) / consensusParams.nSubsidyHalvingInterval;
     if (halvings >= 64) return 0;
     CAmount subsidy = 50 * COIN;
     subsidy >>= halvings;
 
     CAmount minted{0};
-    int height = nHeight - 2;
+    int height = nHeight - 1;
     CAmount current_subsidy = 50 * COIN;
     while (height > 0 && current_subsidy > 0) {
         int blocks = std::min(height, consensusParams.nSubsidyHalvingInterval);
