@@ -15,7 +15,6 @@ add_library(bitcoin_wallet STATIC EXCLUDE_FROM_ALL
   feebumper.cpp
   fees.cpp
   bitgoldstaker.cpp
-  stake.cpp
   interfaces.cpp
   load.cpp
   migrate.cpp
