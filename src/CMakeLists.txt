@@ -426,10 +426,10 @@ target_link_libraries(bitcoin_cli
 
 # Bitcoin Core RPC client
 if(BUILD_CLI)
-  add_executable(bitcoin-cli bitcoin-cli.cpp)
-  add_windows_resources(bitcoin-cli bitcoin-cli-res.rc)
-  add_windows_application_manifest(bitcoin-cli)
-  target_link_libraries(bitcoin-cli
+  add_executable(bitgold-cli bitgold-cli.cpp)
+  add_windows_resources(bitgold-cli bitgold-cli-res.rc)
+  add_windows_application_manifest(bitgold-cli)
+  target_link_libraries(bitgold-cli
     core_interface
     bitcoin_cli
     bitcoin_common
@@ -437,7 +437,7 @@ if(BUILD_CLI)
     libevent::core
     libevent::extra
   )
-  install_binary_component(bitcoin-cli HAS_MANPAGE)
+  install_binary_component(bitgold-cli HAS_MANPAGE)
 endif()
 
 

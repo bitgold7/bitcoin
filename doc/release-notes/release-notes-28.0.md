@@ -28,8 +28,8 @@ wallet versions of Bitcoin Core are generally supported.
 Running Bitcoin Core binaries on macOS requires self signing.
 ```
 cd /path/to/bitcoin-28.0/bin
-xattr -d com.apple.quarantine bitcoin-cli bitcoin-qt bitcoin-tx bitcoin-util bitcoin-wallet bitcoind test_bitcoin
-codesign -s - bitcoin-cli bitcoin-qt bitcoin-tx bitcoin-util bitcoin-wallet bitcoind test_bitcoin
+xattr -d com.apple.quarantine bitgold-cli bitcoin-qt bitcoin-tx bitcoin-util bitcoin-wallet bitcoind test_bitcoin
+codesign -s - bitgold-cli bitcoin-qt bitcoin-tx bitcoin-util bitcoin-wallet bitcoind test_bitcoin
 ```
 
 Compatibility
