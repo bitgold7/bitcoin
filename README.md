@@ -11,8 +11,7 @@ What is BitGold?
 
 BitGold connects to the BitGold peer-to-peer network to download and fully
 validate blocks and transactions. The protocol targets 8-minute block times and
-the block subsidy halves every 90 000 blocks. In addition to proof-of-work,
-BitGold implements proof-of-stake staking so holders can help secure the
+the block subsidy halves every 90 000 blocks. BitGold implements proof-of-stake staking so holders can help secure the
 network. The software also includes a wallet and graphical user interface,
 which can be optionally built. The current release implements
 Proof-of-Stake 3.1, adding dynamic stake weighting and cold staking support.
@@ -25,13 +24,8 @@ Development Process
 -------------------
 
 The `master` branch is regularly built (see `doc/build-*.md` for instructions) and tested, but it is not guaranteed to be
-completely stable. [Tags](https://github.com/bitcoin/bitcoin/tags) are created
+completely stable. [Tags](https://github.com/bitgold/bitgold/tags) are created
 regularly from release branches to indicate new official, stable release versions of BitGold.
-
-The https://github.com/bitcoin-core/gui repository is used exclusively for the
-development of the GUI. Its master branch is identical in all monotree
-repositories. Release branches and tags do not exist, so please do not fork
-that repository unless it is for development reasons.
 
 The contribution workflow is described in [CONTRIBUTING.md](CONTRIBUTING.md)
 and useful hints for developers can be found in [doc/developer-notes.md](doc/developer-notes.md).
@@ -79,7 +73,7 @@ Translations
 ------------
 
 Changes to translations as well as new translations can be submitted to
-[BitGold's Transifex page](https://explore.transifex.com/bitcoin/bitcoin/).
+[BitGold's Transifex page](https://explore.transifex.com/bitgold/bitgold/).
 
 Translations are periodically pulled from Transifex and merged into the git repository. See the
 [translation process](doc/translation_process.md) for details on how this works.

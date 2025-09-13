@@ -37,6 +37,26 @@
 TRACEPOINT_SEMAPHORE(mempool, added);
 TRACEPOINT_SEMAPHORE(mempool, removed);
 
+namespace {
+// Compare two mempool entries using the priority point system. If priorities
+// are equal, fall back to feerate ordering (using modified fees) for
+// tie-breaking.
+bool CompareTxByPoints(const CTxMemPoolEntry& a, const CTxMemPoolEntry& b)
+{
+    if (a.GetPriority() != b.GetPriority()) {
+        return a.GetPriority() > b.GetPriority();
+    }
+    // Use modified fees so that fee deltas applied via policy are respected
+    // when comparing transactions with the same priority points.
+    FeeFrac f1(a.GetModifiedFee(), a.GetTxSize());
+    FeeFrac f2(b.GetModifiedFee(), b.GetTxSize());
+    if (FeeRateCompare(f1, f2) == 0) {
+        return b.GetTx().GetHash() < a.GetTx().GetHash();
+    }
+    return f1 > f2;
+}
+} // namespace
+
 bool TestLockPointValidity(CChain& active_chain, const LockPoints& lp)
 {
     AssertLockHeld(cs_main);
@@ -398,6 +418,32 @@ void CTxMemPoolEntry::UpdateAncestorState(int32_t modifySize, CAmount modifyFee,
     assert(m_count_with_ancestors > 0);
     nSigOpCostWithAncestors += modifySigOps;
     assert(int(nSigOpCostWithAncestors) >= 0);
+}
+
+HybridScore CTxMemPoolEntry::GetHybridScore() const
+{
+    static constexpr uint8_t MAX_BAND{255};
+
+    // Fee band is the truncated satoshi-per-vbyte feerate capped at 255
+    const CAmount fee_per_k = GetFee() * 1000 / GetTxSize();
+    const uint8_t fee_band{static_cast<uint8_t>(std::min<CAmount>(fee_per_k / 1000, MAX_BAND))};
+
+    // Stake weight is approximated by total output value and capped
+    uint64_t stake_weight{0};
+    for (const CTxOut& out : GetTx().vout) {
+        stake_weight += out.nValue;
+    }
+    const uint8_t stake_band{static_cast<uint8_t>(std::min<uint64_t>(stake_weight / COIN, MAX_BAND))};
+
+    // Elapsed time since the transaction entered the mempool, capped in seconds
+    const int64_t time_elapsed{::GetTime() - nTime};
+    const uint8_t time_band{static_cast<uint8_t>(std::min<int64_t>(time_elapsed, MAX_BAND))};
+
+    // Congestion metric is the number of ancestors and descendants, capped
+    const size_t congestion_count{GetCountWithAncestors() + GetCountWithDescendants()};
+    const uint8_t congestion_band{static_cast<uint8_t>(std::min<size_t>(congestion_count, MAX_BAND))};
+
+    return {fee_band, stake_band, time_band, congestion_band};
 }
 
 //! Clamp option values and populate the error if options are not valid.
@@ -809,7 +855,7 @@ bool CTxMemPool::CompareDepthAndScore(const GenTxid& hasha, const GenTxid& hashb
     uint64_t counta = i.value()->GetCountWithAncestors();
     uint64_t countb = j.value()->GetCountWithAncestors();
     if (counta == countb) {
-        return CompareTxMemPoolEntryByScore()(*i.value(), *j.value());
+        return CompareTxByPoints(*i.value(), *j.value());
     }
     return counta < countb;
 }
@@ -823,7 +869,7 @@ public:
         uint64_t counta = a->GetCountWithAncestors();
         uint64_t countb = b->GetCountWithAncestors();
         if (counta == countb) {
-            return CompareTxMemPoolEntryByScore()(*a, *b);
+            return CompareTxByPoints(*a, *b);
         }
         return counta < countb;
     }
@@ -1145,6 +1191,9 @@ void CTxMemPool::TrimToSize(size_t sizelimit, std::vector<COutPoint>* pvNoSpends
     unsigned nTxnRemoved = 0;
     CFeeRate maxFeeRateRemoved(0);
     while (!mapTx.empty() && DynamicMemoryUsage() > sizelimit) {
+        // The descendant_score index sorts transactions by priority (ascending)
+        // and then by fee rate, so begin() returns the lowest priority candidate
+        // for eviction.
         indexed_transaction_set::index<descendant_score>::type::iterator it = mapTx.get<descendant_score>().begin();
 
         // We set the new mempool min fee to the feerate of the removed set, plus the

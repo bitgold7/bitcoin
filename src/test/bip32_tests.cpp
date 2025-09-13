@@ -202,4 +202,19 @@ BOOST_AUTO_TEST_CASE(bip32_max_depth) {
     BOOST_CHECK(!pubkey_parent.Derive(pubkey_child, 0));
 }
 
+BOOST_AUTO_TEST_CASE(bip32_bgd_prefixes) {
+    SelectParams(ChainType::MAIN);
+    std::vector<std::byte> seed(32, std::byte{0});
+    CExtKey key;
+    key.SetSeed(seed);
+    const std::string priv = EncodeExtKey(key);
+    const std::string pub = EncodeExtPubKey(key.Neuter());
+    BOOST_CHECK(priv.rfind("xprv", 0) != 0);
+    BOOST_CHECK(priv.rfind("tprv", 0) != 0);
+    BOOST_CHECK(pub.rfind("xpub", 0) != 0);
+    BOOST_CHECK(pub.rfind("tpub", 0) != 0);
+    BOOST_CHECK(priv.rfind("Bgd", 0) == 0);
+    BOOST_CHECK(pub.rfind("Bgd", 0) == 0);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

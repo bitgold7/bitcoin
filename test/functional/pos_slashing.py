@@ -1,54 +1,154 @@
 #!/usr/bin/env python3
-"""Exercise the slashing tracker to detect double-signing."""
-
-import ctypes
-import subprocess
-from pathlib import Path
+"""Exercise slashing by submitting competing PoS blocks from the same validator."""
 
 from test_framework.test_framework import BitcoinTestFramework
+from test_framework.blocktools import create_block, create_coinbase
+from test_framework.messages import (
+    CBlock,
+    CBlockHeader,
+    CTransaction,
+    CTxIn,
+    CTxOut,
+    COutPoint,
+    COIN,
+    hash256,
+    ser_compact_size,
+    uint256_from_compact,
+)
+from test_framework.script import CScript
+from test_framework.address import base58_to_byte
+from test_framework.key import ECKey
 from test_framework.util import assert_equal
+
+STAKE_TIMESTAMP_MASK = 0xF
+MIN_STAKE_AGE = 60 * 60
+
+
+def check_kernel(prev_hash, prev_height, prev_time, nbits, stake_hash, stake_time, amount, prevout, ntime):
+    if ntime & STAKE_TIMESTAMP_MASK:
+        return False
+    if ntime <= stake_time or ntime - stake_time < MIN_STAKE_AGE:
+        return False
+    stake_modifier = hash256(
+        bytes.fromhex(prev_hash)[::-1]
+        + prev_height.to_bytes(4, "little")
+        + prev_time.to_bytes(4, "little")
+    )
+    ntime_masked = ntime & ~STAKE_TIMESTAMP_MASK
+    stake_time_masked = stake_time & ~STAKE_TIMESTAMP_MASK
+    data = (
+        stake_modifier
+        + bytes.fromhex(stake_hash)[::-1]
+        + stake_time_masked.to_bytes(4, "little")
+        + bytes.fromhex(prevout["txid"])[::-1]
+        + prevout["vout"].to_bytes(4, "little")
+        + ntime_masked.to_bytes(4, "little")
+    )
+    proof = hash256(data)
+    target = uint256_from_compact(nbits) * (amount // COIN)
+    return int.from_bytes(proof[::-1], "big") <= target
+
+
+class CPosBlock(CBlock):
+    __slots__ = CBlock.__slots__ + ("vchBlockSig",)
+
+    def serialize(self, with_witness=True):
+        r = super().serialize(with_witness)
+        r += ser_compact_size(len(self.vchBlockSig))
+        r += self.vchBlockSig
+        return r
 
 
 class PosSlashingTest(BitcoinTestFramework):
     def set_test_params(self):
-        self.num_nodes = 0
+        self.num_nodes = 1
 
     def run_test(self):
-        repo_root = Path(__file__).resolve().parents[2]
-        workdir = Path(self.options.tmpdir)
-        wrapper = workdir / "slashing_wrap.cpp"
-        sofile = workdir / "libslashing.so"
-        wrapper.write_text(
-            '#include "pos/slashing.h"\n'
-            "extern \"C\" {\n"
-            "pos::SlashingTracker* slashing_create(){return new pos::SlashingTracker();}\n"
-            "void slashing_destroy(pos::SlashingTracker* t){delete t;}\n"
-            "bool slashing_detect(pos::SlashingTracker* t,const char* v){return t->DetectDoubleSign(std::string{v});}\n"
-            "}\n"
+        node = self.nodes[0]
+        addr = node.getnewaddress()
+        node.generatetoaddress(150, addr)
+
+        unspent = node.listunspent()[0]
+        txid = unspent["txid"]
+        vout = unspent["vout"]
+        amount = int(unspent["amount"] * COIN)
+        prevout = {"txid": txid, "vout": vout}
+
+        prev_height = node.getblockcount()
+        prev_hash = node.getbestblockhash()
+        prev_block = node.getblock(prev_hash)
+        nbits = int(prev_block["bits"], 16)
+        prev_time = prev_block["time"]
+
+        stake_block_hash = node.gettransaction(txid)["blockhash"]
+        stake_time = node.getblock(stake_block_hash)["time"]
+
+        ntime = prev_time + 16
+        while not check_kernel(
+            prev_hash,
+            prev_height,
+            prev_time,
+            nbits,
+            stake_block_hash,
+            stake_time,
+            amount,
+            prevout,
+            ntime,
+        ):
+            ntime += 16
+
+        script = CScript(bytes.fromhex(unspent["scriptPubKey"]))
+        coinstake = CTransaction()
+        coinstake.nLockTime = ntime
+        coinstake.vin.append(CTxIn(COutPoint(int(txid, 16), vout)))
+        coinstake.vout.append(CTxOut(0, CScript()))
+        reward = 50 * COIN
+        coinstake.vout.append(CTxOut(amount + reward, script))
+        signed_hex = node.signrawtransactionwithwallet(coinstake.serialize().hex())["hex"]
+        coinstake = CTransaction()
+        coinstake.deserialize(bytes.fromhex(signed_hex))
+
+        coinbase = create_coinbase(prev_height + 1, nValue=0)
+        base_block = create_block(
+            int(prev_hash, 16),
+            coinbase,
+            ntime,
+            tmpl={"bits": prev_block["bits"], "height": prev_height + 1},
+            txlist=[coinstake],
         )
-        subprocess.check_call(
-            [
-                "g++",
-                "-std=c++17",
-                "-shared",
-                "-fPIC",
-                str(repo_root / "src/pos/slashing.cpp"),
-                str(wrapper),
-                "-I" + str(repo_root / "src"),
-                "-o",
-                str(sofile),
-            ]
-        )
-        lib = ctypes.CDLL(str(sofile))
-        lib.slashing_create.restype = ctypes.c_void_p
-        lib.slashing_detect.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-        lib.slashing_detect.restype = ctypes.c_bool
-        lib.slashing_destroy.argtypes = [ctypes.c_void_p]
-        tracker = lib.slashing_create()
-        assert_equal(lib.slashing_detect(tracker, b"validator"), False)
-        assert_equal(lib.slashing_detect(tracker, b"validator"), True)
-        lib.slashing_destroy(tracker)
+        base_block.hashMerkleRoot = base_block.calc_merkle_root()
+
+        wif = node.dumpprivkey(addr)
+        keydata, _ = base58_to_byte(wif)
+        compressed = len(keydata) == 33
+        secret = keydata[:32]
+        key = ECKey()
+        key.set(secret, compressed)
+
+        def sign(block):
+            header = CBlockHeader(block)
+            h = hash256(header.serialize())
+            block.vchBlockSig = key.sign_ecdsa(h)
+
+        block1 = CPosBlock()
+        for attr in ["nVersion", "hashPrevBlock", "hashMerkleRoot", "nTime", "nBits", "nNonce"]:
+            setattr(block1, attr, getattr(base_block, attr))
+        block1.vtx = base_block.vtx
+        sign(block1)
+
+        block2 = CPosBlock()
+        for attr in ["nVersion", "hashPrevBlock", "hashMerkleRoot", "nTime", "nBits", "nNonce"]:
+            setattr(block2, attr, getattr(base_block, attr))
+        block2.nNonce += 1
+        block2.vtx = base_block.vtx
+        sign(block2)
+
+        assert_equal(node.submitblock(block1.serialize().hex()), None)
+        assert_equal(node.getblockcount(), prev_height + 1)
+        assert_equal(node.submitblock(block2.serialize().hex()), "bad-pos-double-sign")
+        assert_equal(node.getblockcount(), prev_height + 1)
 
 
 if __name__ == "__main__":
     PosSlashingTest(__file__).main()
+

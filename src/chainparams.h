@@ -8,6 +8,7 @@
 
 #include <kernel/chainparams.h> // IWYU pragma: export
 
+#include <cstdint>
 #include <memory>
 
 class ArgsManager;
@@ -27,5 +28,8 @@ const CChainParams &Params();
  * Sets the params returned by Params() to those for the given chain type.
  */
 void SelectParams(const ChainType chain);
+
+/** SLIP-44 coin type for BitGold (BGD). */
+extern const uint32_t BIP44_COIN_TYPE;
 
 #endif // BITCOIN_CHAINPARAMS_H

@@ -5,7 +5,7 @@ from test_framework.test_framework import BitcoinTestFramework
 from test_framework.messages import COIN, hash256, uint256_from_compact
 from test_framework.util import assert_equal
 
-STAKE_TIMESTAMP_MASK = 0xF
+STAKE_TIMESTAMP_MASK = None
 MIN_STAKE_AGE = 60 * 60
 
 
@@ -56,6 +56,8 @@ class StakeMinerLifecycleTest(BitcoinTestFramework):
 
     def run_test(self):
         node = self.nodes[0]
+        global STAKE_TIMESTAMP_MASK
+        STAKE_TIMESTAMP_MASK = node.getblockchaininfo()["pos_timestamp_mask"]
         addr = node.getnewaddress()
         node.generatetoaddress(200, addr)
 

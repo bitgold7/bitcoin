@@ -41,6 +41,8 @@ public Q_SLOTS:
     void setBalance(const interfaces::WalletBalances& balances);
     void setPrivacy(bool privacy);
     void setStakingStats(const wallet::StakingStats& stats);
+    void updateStakeStatus();
+    void setTestStakeState(const QString& status, const QString& remedy);
 
 Q_SIGNALS:
     void transactionClicked(const QModelIndex &index);
@@ -59,6 +61,7 @@ private:
 
     TxViewDelegate *txdelegate;
     std::unique_ptr<TransactionFilterProxy> filter;
+    QString m_stake_remedy;
 
 private Q_SLOTS:
     void LimitTransactionRows();
@@ -66,6 +69,8 @@ private Q_SLOTS:
     void handleTransactionClicked(const QModelIndex &index);
     void updateAlerts(const QString &warnings);
     void setMonospacedFont(const QFont&);
+    void toggleAutoStake(bool checked);
+    void copyStakeRemedy();
 };
 
 #endif // BITCOIN_QT_OVERVIEWPAGE_H

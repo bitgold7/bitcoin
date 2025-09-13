@@ -5,7 +5,7 @@
 #ifndef BITCOIN_RPC_REGISTER_H
 #define BITCOIN_RPC_REGISTER_H
 
-#include <bitcoin-build-config.h> // IWYU pragma: keep
+#include <bitgold-build-config.h> // IWYU pragma: keep
 
 /** These are in one header file to avoid creating tons of single-function
  * headers for everything under src/rpc/ */
@@ -21,7 +21,12 @@ void RegisterOutputScriptRPCCommands(CRPCTable&);
 void RegisterRawTransactionRPCCommands(CRPCTable &tableRPC);
 void RegisterSignMessageRPCCommands(CRPCTable&);
 void RegisterSignerRPCCommands(CRPCTable &tableRPC);
+void RegisterBulletproofRPCCommands(CRPCTable&);
 void RegisterTxoutProofRPCCommands(CRPCTable&);
+void RegisterDividendRPCCommands(CRPCTable&);
+#ifdef ENABLE_WALLET
+void RegisterStakingRPCCommands(CRPCTable&);
+#endif
 
 static inline void RegisterAllCoreRPCCommands(CRPCTable &t)
 {
@@ -37,7 +42,12 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &t)
 #ifdef ENABLE_EXTERNAL_SIGNER
     RegisterSignerRPCCommands(t);
 #endif // ENABLE_EXTERNAL_SIGNER
+    RegisterBulletproofRPCCommands(t);
     RegisterTxoutProofRPCCommands(t);
+#ifdef ENABLE_WALLET
+    RegisterStakingRPCCommands(t);
+#endif
+    RegisterDividendRPCCommands(t);
 }
 
 #endif // BITCOIN_RPC_REGISTER_H

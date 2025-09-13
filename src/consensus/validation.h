@@ -10,6 +10,7 @@
 #include <consensus/consensus.h>
 #include <primitives/transaction.h>
 #include <primitives/block.h>
+#include <logging.h>
 
 /** Index marker for when no witness commitment is present in a coinbase transaction. */
 static constexpr int NO_WITNESS_COMMITMENT{-1};
@@ -93,6 +94,7 @@ public:
         m_reject_reason = reject_reason;
         m_debug_message = debug_message;
         if (m_mode != ModeState::M_ERROR) m_mode = ModeState::M_INVALID;
+        LogPrintCategory(BCLog::CONSENSUS, m_reject_reason, "%s", m_debug_message.empty() ? m_reject_reason : m_debug_message);
         return false;
     }
     bool Error(const std::string& reject_reason)

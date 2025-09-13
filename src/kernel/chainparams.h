@@ -115,6 +115,8 @@ public:
     const std::vector<std::string>& DNSSeeds() const { return vSeeds; }
     const std::vector<unsigned char>& Base58Prefix(Base58Type type) const { return base58Prefixes[type]; }
     const std::string& Bech32HRP() const { return bech32_hrp; }
+    uint32_t BIP32PubKeyPrefix() const { return m_bip32_pubkey_prefix; }
+    uint32_t BIP32PrivKeyPrefix() const { return m_bip32_privkey_prefix; }
     const std::vector<uint8_t>& FixedSeeds() const { return vFixedSeeds; }
     const CheckpointData& Checkpoints() const { return checkpointData; }
 
@@ -161,6 +163,7 @@ public:
     static std::unique_ptr<const CChainParams> SigNet(const SigNetOptions& options);
     static std::unique_ptr<const CChainParams> Main();
     static std::unique_ptr<const CChainParams> TestNet();
+    static std::unique_ptr<const CChainParams> TestNet4();
     
 
 protected:
@@ -174,6 +177,8 @@ protected:
     uint64_t m_assumed_chain_state_size;
     std::vector<std::string> vSeeds;
     std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];
+    uint32_t m_bip32_pubkey_prefix{0};
+    uint32_t m_bip32_privkey_prefix{0};
     std::string bech32_hrp;
     ChainType m_chain_type;
     CBlock genesis;

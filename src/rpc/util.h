@@ -124,8 +124,8 @@ int ParseVerbosity(const UniValue& arg, int default_verbosity, bool allow_bool);
  */
 CAmount AmountFromValue(const UniValue& value, int decimals = 8);
 /**
- * Parse a json number or string, denoting BTC/kvB, into a CFeeRate (sat/kvB).
- * Reject negative values or rates larger than 1BTC/kvB.
+ * Parse a json number or string, denoting BGD/kvB, into a CFeeRate (sat/kvB).
+ * Reject negative values or rates larger than 1BGD/kvB.
  */
 CFeeRate ParseFeeRate(const UniValue& json);
 
@@ -518,15 +518,5 @@ void PushWarnings(const UniValue& warnings, UniValue& obj);
 void PushWarnings(const std::vector<bilingual_str>& warnings, UniValue& obj);
 
 std::vector<RPCResult> ScriptPubKeyDoc();
-
-/***
- * Get the target for a given block index.
- *
- * @param[in] blockindex    the block
- * @param[in] pow_limit     PoW limit (consensus parameter)
- *
- * @return  the target
- */
-uint256 GetTarget(const CBlockIndex& blockindex, const uint256 pow_limit);
 
 #endif // BITCOIN_RPC_UTIL_H

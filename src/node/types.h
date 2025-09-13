@@ -53,7 +53,7 @@ struct BlockCreateOptions {
      *
      * Should only be used for tests, when the default doesn't suffice.
      *
-     * Note that higher level code like the getblocktemplate RPC may omit the
+     * Note that higher level code may omit the
      * coinbase transaction entirely. It's instead constructed by pool software
      * using fields like coinbasevalue, coinbaseaux and default_witness_commitment.
      * This software typically also controls the payout outputs, even for solo
@@ -92,10 +92,6 @@ struct BlockCheckOptions {
      */
     bool check_merkle_root{true};
 
-    /**
-     * Set false to omit the proof-of-work check
-     */
-    bool check_pow{true};
 };
 } // namespace node
 

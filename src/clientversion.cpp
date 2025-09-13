@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <bitcoin-build-config.h> // IWYU pragma: keep
+#include <bitgold-build-config.h> // IWYU pragma: keep
 
 #include <clientversion.h>
 #include <util/string.h>
@@ -17,10 +17,10 @@ using util::Join;
 
 /**
  * Name of client reported in the 'version' message. Report the same name
- * for both bitcoind and bitcoin-qt, to make it harder for attackers to
+ * for both bitgoldd and bitcoin-qt, to make it harder for attackers to
  * target servers or GUI users specifically.
  */
-const std::string UA_NAME("Satoshi");
+const std::string UA_NAME("BitGold");
 
 
 #include <bitcoin-build-info.h>

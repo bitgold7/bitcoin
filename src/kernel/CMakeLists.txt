@@ -19,6 +19,7 @@ add_library(bitcoinkernel
   disconnected_transactions.cpp
   mempool_removal_reason.cpp
   mempool_priority.cpp
+  ../pow.cpp
   ../arith_uint256.cpp
   ../chain.cpp
   ../coins.cpp
@@ -42,6 +43,7 @@ add_library(bitcoinkernel
   ../policy/policy.cpp
   ../policy/rbf.cpp
   ../policy/settings.cpp
+  ../policy/priority.cpp
   ../policy/truc_policy.cpp
   ../primitives/block.cpp
   ../primitives/transaction.cpp
@@ -80,8 +82,8 @@ add_library(bitcoinkernel
   ../validation.cpp
   ../validationinterface.cpp
   ../versionbits.cpp
-  ../pos/stake.cpp
-  ../pos/stakemodifier.cpp
+  ../consensus/pos/stake.cpp
+  ../consensus/pos/stakemodifier.cpp
 )
 target_link_libraries(bitcoinkernel
   PRIVATE

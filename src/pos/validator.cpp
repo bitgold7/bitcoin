@@ -1,5 +1,4 @@
 #include "pos/validator.h"
-#include "pos/stake.h"
 
 #include <hash.h>
 #include <chain.h>
@@ -11,17 +10,17 @@ Validator::Validator(uint64_t stake_amount)
       m_locked_until(0),
       m_active(false) {}
 
-void Validator::Activate(int64_t current_time)
+void Validator::Activate(int64_t current_time, const Consensus::Params& params)
 {
-    current_time &= ~STAKE_TIMESTAMP_MASK;
+    current_time &= ~params.nStakeTimestampMask;
     if (m_stake_amount >= MIN_STAKE && current_time >= m_locked_until) {
         m_active = true;
     }
 }
 
-void Validator::ScheduleUnstake(int64_t current_time)
+void Validator::ScheduleUnstake(int64_t current_time, const Consensus::Params& params)
 {
-    current_time &= ~STAKE_TIMESTAMP_MASK;
+    current_time &= ~params.nStakeTimestampMask;
     m_locked_until = current_time + UNSTAKE_DELAY;
     m_active = false;
 }

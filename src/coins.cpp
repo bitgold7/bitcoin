@@ -8,6 +8,8 @@
 #include <logging.h>
 #include <random.h>
 #include <util/trace.h>
+#include <validationmetrics.h>
+#include <chrono>
 
 TRACEPOINT_SEMAPHORE(utxocache, add);
 TRACEPOINT_SEMAPHORE(utxocache, spent);
@@ -48,7 +50,13 @@ size_t CCoinsViewCache::DynamicMemoryUsage() const {
 CCoinsMap::iterator CCoinsViewCache::FetchCoin(const COutPoint &outpoint) const {
     const auto [ret, inserted] = cacheCoins.try_emplace(outpoint);
     if (inserted) {
-        if (auto coin{base->GetCoin(outpoint)}) {
+        auto start = std::chrono::steady_clock::now();
+        auto coin = base->GetCoin(outpoint);
+        g_validation_metrics.utxo_fetch_time.fetch_add(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - start).count(),
+            std::memory_order_relaxed);
+        if (coin) {
             ret->second.coin = std::move(*coin);
             cachedCoinsUsage += ret->second.coin.DynamicMemoryUsage();
             if (ret->second.coin.IsSpent()) { // TODO GetCoin cannot return spent coins

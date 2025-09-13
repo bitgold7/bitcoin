@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <bitcoin-build-config.h> // IWYU pragma: keep
+#include <bitgold-build-config.h> // IWYU pragma: keep
 
 #include <qt/optionsmodel.h>
 
@@ -188,13 +188,13 @@ bool OptionsModel::Init(bilingual_str& error)
 
     // Display
     if (!settings.contains("DisplayBitcoinUnit")) {
-        settings.setValue("DisplayBitcoinUnit", QVariant::fromValue(BitcoinUnit::BTC));
+        settings.setValue("DisplayBitcoinUnit", QVariant::fromValue(BitcoinUnit::BGD));
     }
     QVariant unit = settings.value("DisplayBitcoinUnit");
     if (unit.canConvert<BitcoinUnit>()) {
         m_display_bitcoin_unit = unit.value<BitcoinUnit>();
     } else {
-        m_display_bitcoin_unit = BitcoinUnit::BTC;
+        m_display_bitcoin_unit = BitcoinUnit::BGD;
         settings.setValue("DisplayBitcoinUnit", QVariant::fromValue(m_display_bitcoin_unit));
     }
 
@@ -790,6 +790,5 @@ void OptionsModel::checkAndMigrate()
     // parameter interaction code to update other settings. This is particularly
     // important for the -listen setting, which should cause -listenonion
     // and other settings to default to false if it was set to false.
-    // (https://github.com/bitcoin-core/gui/issues/567).
     node().initParameterInteraction();
 }

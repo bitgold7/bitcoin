@@ -36,12 +36,32 @@
 #include <util/syserror.h>
 #include <util/translation.h>
 #include <validation.h>
-#include <pos/stake.h>
+#include <consensus/pos/stake.h>
 
 #include <cstddef>
 #include <map>
 #include <optional>
 #include <unordered_map>
+
+namespace {
+/** Height threshold before block file pruning is permitted. */
+[[maybe_unused]] static constexpr int64_t N_PRUNE_AFTER_HEIGHT{100'000};
+uint64_t NetworkDefaultPruneTarget(ChainType chain)
+{
+    switch (chain) {
+    case ChainType::MAIN:
+        return DEFAULT_PRUNE_TARGET_MAINNET;
+    case ChainType::TESTNET:
+    case ChainType::TESTNET4:
+        return DEFAULT_PRUNE_TARGET_TESTNET;
+    case ChainType::SIGNET:
+        return DEFAULT_PRUNE_TARGET_SIGNET;
+    case ChainType::REGTEST:
+        return DEFAULT_PRUNE_TARGET_REGTEST;
+    }
+    return DEFAULT_PRUNE_TARGET_MAINNET;
+}
+} // namespace
 
 namespace kernel {
 static constexpr uint8_t DB_BLOCK_FILES{'f'};
@@ -131,6 +151,8 @@ bool BlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, s
                 pindexNew->nTime          = diskindex.nTime;
                 pindexNew->nBits          = diskindex.nBits;
                 pindexNew->nNonce         = diskindex.nNonce;
+                pindexNew->fProofOfStake  = diskindex.fProofOfStake;
+                pindexNew->hashProofOfStake = diskindex.hashProofOfStake;
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
 
@@ -307,8 +329,8 @@ void BlockManager::FindFilesToPrune(
 {
     LOCK2(cs_main, cs_LastBlockFile);
     // Distribute our -prune budget over all chainstates.
-    const auto target = std::max(
-        MIN_DISK_SPACE_FOR_BLOCK_FILES, GetPruneTarget() / chainman.GetAll().size());
+    const uint64_t network_min = NetworkDefaultPruneTarget(GetParams().GetChainType());
+    const auto target = std::max(network_min, GetPruneTarget() / chainman.GetAll().size());
     const uint64_t target_sync_height = chainman.m_best_header->nHeight;
 
     if (chain.m_chain.Height() < 0 || target == 0) {

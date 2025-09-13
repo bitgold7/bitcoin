@@ -3,17 +3,18 @@
 
 #include <set>
 #include <string>
+#include <utility>
 
 namespace pos {
 
 // Tracks validator evidence to detect double-signing events.
 class SlashingTracker {
 public:
-    // Returns true if the validator was seen before (double-sign detected).
-    bool DetectDoubleSign(const std::string& validator_id);
+    // Returns true if the validator produced more than one block at the given height.
+    bool DetectDoubleSign(int height, const std::string& validator_id);
 
 private:
-    std::set<std::string> m_seen;
+    std::set<std::pair<int, std::string>> m_seen;
 };
 
 } // namespace pos

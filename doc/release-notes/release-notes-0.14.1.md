@@ -45,15 +45,12 @@ using these calls with named arguments needs to be updated.
 Mining
 ------
 
-In previous versions, getblocktemplate required segwit support from downstream
 clients/miners once the feature activated on the network. In this version, it
 now supports non-segwit clients even after activation, by removing all segwit
 transactions from the returned block template. This allows non-segwit miners to
 continue functioning correctly even after segwit has activated.
 
-Due to the limitations in previous versions, getblocktemplate also recommended
 non-segwit clients to not signal for the segwit version-bit. Since this is no
-longer an issue, getblocktemplate now always recommends signalling segwit for
 all miners. This is safe because ability to enforce the rule is the only
 required criteria for safe activation, not actually producing segwit-enabled
 blocks.
@@ -75,7 +72,7 @@ this parameter.
 
 Additional information relating to running on low-memory systems can be found
 here:
-[reducing-bitcoind-memory-usage.md](https://gist.github.com/laanwj/efe29c7661ce9b6620a7).
+[reducing-bitgoldd-memory-usage.md](https://gist.github.com/laanwj/efe29c7661ce9b6620a7).
 
 0.14.1 Change log
 =================
@@ -108,7 +105,6 @@ git merge commit are mentioned.
 - #10060 `ddc2dd1` Ensure an item exists on the rpcconsole stack before adding (achow101)
 
 ### Mining
-- #9955/#10006 `569596c` Don't require segwit in getblocktemplate for segwit signalling or mining (sdaftuar)
 - #9959/#10127 `b5c3440` Prevent slowdown in CreateNewBlock on large mempools (sdaftuar)
 
 ### Tests and QA

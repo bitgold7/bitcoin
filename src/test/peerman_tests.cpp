@@ -22,14 +22,14 @@ static void mineBlock(const node::NodeContext& node, std::chrono::seconds block_
     CBlock block = node::BlockAssembler{node.chainman->ActiveChainstate(), nullptr, {}}.CreateNewBlock()->block;
     block.fChecked = true; // little speedup
     SetMockTime(curr_time); // process block at current time
-    Assert(node.chainman->ProcessNewBlock(std::make_shared<const CBlock>(block), /*force_processing=*/true, /*min_pow_checked=*/true, nullptr));
+    Assert(node.chainman->ProcessNewBlock(std::make_shared<const CBlock>(block), /*force_processing=*/true, nullptr));
     node.validation_signals->SyncWithValidationInterfaceQueue(); // drain events queue
 }
 
 // Verifying when network-limited peer connections are desirable based on the node's proximity to the tip
 BOOST_AUTO_TEST_CASE(connections_desirable_service_flags)
 {
-    std::unique_ptr<PeerManager> peerman = PeerManager::make(*m_node.connman, *m_node.addrman, nullptr, *m_node.chainman, *m_node.mempool, *m_node.warnings, {});
+    std::unique_ptr<PeerManager> peerman = PeerManager::make(*m_node.connman, *m_node.addrman, nullptr, *m_node.chainman, *m_node.stake_modman, *m_node.mempool, *m_node.warnings, {});
     auto consensus = m_node.chainman->GetParams().GetConsensus();
 
     // Check we start connecting to full nodes

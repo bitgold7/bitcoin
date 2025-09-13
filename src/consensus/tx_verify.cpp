@@ -13,6 +13,9 @@
 #include <script/interpreter.h>
 #include <util/check.h>
 #include <util/moneystr.h>
+#ifdef ENABLE_BULLETPROOFS
+#include <bulletproofs.h>
+#endif
 
 bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime)
 {
@@ -161,6 +164,32 @@ int64_t GetTransactionSigOpCost(const CTransaction& tx, const CCoinsViewCache& i
     return nSigOps;
 }
 
+#ifdef ENABLE_BULLETPROOFS
+/** Extract a Bulletproof commitment and proof from a script.
+ *  Returns true if a Bulletproof was found and successfully extracted.
+ *  Sets @p malformed to true if OP_BULLETPROOF is found but data is missing. */
+static bool ExtractBulletproofFromScript(const CScript& script, CBulletproof& out, bool& malformed)
+{
+    CScript::const_iterator pc{script.begin()};
+    opcodetype opcode;
+    std::vector<unsigned char> data;
+    while (script.GetOp(pc, opcode, data)) {
+        if (opcode != OP_BULLETPROOF) continue;
+        if (!script.GetOp(pc, opcode, data) || data.size() != sizeof(out.commitment.data)) {
+            malformed = true;
+            return false;
+        }
+        std::copy(data.begin(), data.end(), out.commitment.data);
+        if (!script.GetOp(pc, opcode, out.proof)) {
+            malformed = true;
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+#endif
+
 bool Consensus::CheckTxInputs(const CTransaction& tx, TxValidationState& state, const CCoinsViewCache& inputs, int nSpendHeight, CAmount& txfee)
 {
     // are the actual inputs available?
@@ -170,6 +199,27 @@ bool Consensus::CheckTxInputs(const CTransaction& tx, TxValidationState& state, 
     }
 
     CAmount nValueIn = 0;
+#ifdef ENABLE_BULLETPROOFS
+    bool has_bp{false};
+    std::vector<secp256k1_pedersen_commitment> input_comms;
+    std::vector<secp256k1_pedersen_commitment> output_comms;
+    auto check_script = [&](const CScript& script, std::vector<secp256k1_pedersen_commitment>& commits) -> bool {
+        CBulletproof bp;
+        bool malformed{false};
+        bool present = ExtractBulletproofFromScript(script, bp, malformed);
+        if (malformed) {
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
+        }
+        if (present) {
+            has_bp = true;
+            if (!VerifyBulletproof(bp)) {
+                return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
+            }
+            commits.push_back(bp.commitment);
+        }
+        return true;
+    };
+#endif
     for (unsigned int i = 0; i < tx.vin.size(); ++i) {
         const COutPoint &prevout = tx.vin[i].prevout;
         const Coin& coin = inputs.AccessCoin(prevout);
@@ -186,7 +236,28 @@ bool Consensus::CheckTxInputs(const CTransaction& tx, TxValidationState& state, 
         if (!MoneyRange(coin.out.nValue) || !MoneyRange(nValueIn)) {
             return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-inputvalues-outofrange");
         }
+#ifdef ENABLE_BULLETPROOFS
+        if (!check_script(tx.vin[i].scriptSig, input_comms)) return false;
+#endif
     }
+#ifdef ENABLE_BULLETPROOFS
+    for (const auto& txout : tx.vout) {
+        if (!check_script(txout.scriptPubKey, output_comms)) return false;
+        if (tx.UsesBulletproofs() && txout.nValue != 0) {
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof-value");
+        }
+    }
+    if (tx.UsesBulletproofs()) {
+        if (!has_bp) {
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof-missing");
+        }
+        static const secp256k1_context_holder ctx(SECP256K1_CONTEXT_VERIFY);
+        if (secp256k1_pedersen_verify_tally(ctx.get(), input_comms.data(), input_comms.size(),
+                                            output_comms.data(), output_comms.size()) != 1) {
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof-balance");
+        }
+    }
+#endif
 
     const CAmount value_out = tx.GetValueOut();
     if (nValueIn < value_out) {

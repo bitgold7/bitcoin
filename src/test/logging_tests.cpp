@@ -116,7 +116,7 @@ BOOST_FIXTURE_TEST_CASE(logging_LogPrintStr, LogSetup)
     std::vector<std::string> expected;
     for (auto& [msg, category, level, prefix, loc] : cases) {
         expected.push_back(tfm::format("[%s:%s] [%s] %s%s", util::RemovePrefix(loc.file_name(), "./"), loc.line(), loc.function_name(), prefix, msg));
-        LogInstance().LogPrintStr(msg, std::move(loc), category, level, /*should_ratelimit=*/false);
+        LogInstance().LogPrintStr(msg, std::move(loc), category, level, /*should_ratelimit=*/false, "");
     }
     std::ifstream file{tmp_log_path};
     std::vector<std::string> log_lines;
@@ -240,7 +240,7 @@ BOOST_FIXTURE_TEST_CASE(logging_Conf, LogSetup)
         ResetLogger();
         ArgsManager args;
         args.AddArg("-loglevel", "...", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
-        const char* argv_test[] = {"bitcoind", "-loglevel=debug"};
+        const char* argv_test[] = {"bitgoldd", "-loglevel=debug"};
         std::string err;
         BOOST_REQUIRE(args.ParseParameters(2, argv_test, err));
 
@@ -254,7 +254,7 @@ BOOST_FIXTURE_TEST_CASE(logging_Conf, LogSetup)
         ResetLogger();
         ArgsManager args;
         args.AddArg("-loglevel", "...", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
-        const char* argv_test[] = {"bitcoind", "-loglevel=net:trace"};
+        const char* argv_test[] = {"bitgoldd", "-loglevel=net:trace"};
         std::string err;
         BOOST_REQUIRE(args.ParseParameters(2, argv_test, err));
 
@@ -273,7 +273,7 @@ BOOST_FIXTURE_TEST_CASE(logging_Conf, LogSetup)
         ResetLogger();
         ArgsManager args;
         args.AddArg("-loglevel", "...", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
-        const char* argv_test[] = {"bitcoind", "-loglevel=debug", "-loglevel=net:trace", "-loglevel=http:info"};
+        const char* argv_test[] = {"bitgoldd", "-loglevel=debug", "-loglevel=net:trace", "-loglevel=http:info"};
         std::string err;
         BOOST_REQUIRE(args.ParseParameters(4, argv_test, err));
 

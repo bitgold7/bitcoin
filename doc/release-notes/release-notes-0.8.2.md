@@ -13,7 +13,7 @@ How to Upgrade
 If you are running an older version, shut it down. Wait
 until it has completely shut down (which might take a few minutes for older
 versions), then run the installer (on Windows) or just copy over
-/Applications/Bitcoin-Qt (on Mac) or bitcoind/bitcoin-qt (on Linux).
+/Applications/Bitcoin-Qt (on Mac) or bitgoldd/bitcoin-qt (on Linux).
 
 If you are upgrading from version 0.7.2 or earlier, the first time you
 run 0.8.2 your blockchain files will be re-indexed, which will take
@@ -73,7 +73,6 @@ Command-line options
 
 JSON-RPC API changes
 
-* fixed a getblocktemplate bug that caused excessive CPU creating blocks.
 * listunspent now lists account and address information.
 * getinfo now also returns the time adjustment estimated from your peers.
 * getpeerinfo now returns bytessent, bytesrecv and syncnode.
@@ -97,7 +96,6 @@ Wallet compatibility/rescuing
 
 Known Bugs
 
-* Entering the 'getblocktemplate' or 'getwork' RPC commands into the Bitcoin-Qt debug
 console will cause Bitcoin-Qt to crash. Run Bitcoin-Qt with the -server command-line
 option to workaround.
 

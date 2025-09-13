@@ -8,6 +8,7 @@
 #include <key.h>
 #include <key_io.h>
 #include <script/script.h>
+#include <script/standard.h>
 #include <test/util/json.h>
 #include <test/util/setup_common.h>
 #include <univalue.h>
@@ -145,6 +146,26 @@ BOOST_AUTO_TEST_CASE(key_io_invalid)
             BOOST_CHECK_MESSAGE(!privkey.IsValid(), "IsValid privkey in mainnet:" + strTest);
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(bech32_hrp_networks)
+{
+    CKey key;
+    key.MakeNewKey(true);
+
+    SelectParams(ChainType::TESTNET);
+    auto dest = WitnessV0KeyHash(key.GetPubKey().GetID());
+    BOOST_CHECK(EncodeDestination(dest).starts_with("tbg1"));
+
+    SelectParams(ChainType::SIGNET);
+    dest = WitnessV0KeyHash(key.GetPubKey().GetID());
+    BOOST_CHECK(EncodeDestination(dest).starts_with("sbg1"));
+
+    SelectParams(ChainType::REGTEST);
+    dest = WitnessV0KeyHash(key.GetPubKey().GetID());
+    BOOST_CHECK(EncodeDestination(dest).starts_with("rbg1"));
+
+    SelectParams(ChainType::MAIN);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

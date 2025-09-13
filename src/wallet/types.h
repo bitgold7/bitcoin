@@ -69,10 +69,11 @@ struct StakingStats
     CAmount staked_balance{0};
     CAmount current_reward{0};
     int64_t next_reward_time{0};
+    double progress{0};
 
     SERIALIZE_METHODS(StakingStats, obj)
     {
-        READWRITE(obj.staked_balance, obj.current_reward, obj.next_reward_time);
+        READWRITE(obj.staked_balance, obj.current_reward, obj.next_reward_time, obj.progress);
     }
 };
 } // namespace wallet

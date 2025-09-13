@@ -5,13 +5,18 @@
 
 #include <wallet/wallet.h>
 #include <wallet/spend.h>
+#include <wallet/blinding.h>
 
+#include <dividend/dividend.h>
+#include <wallet/receive.h>
+#include <policy/policy.h>
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
+#include <util/secp256k1_context.h>
 #endif
 
 #include <addresstype.h>
-#include <bitcoin-build-config.h> // IWYU pragma: keep
+#include <bitgold-build-config.h> // IWYU pragma: keep
 #include <blockfilter.h>
 #include <chain.h>
 #include <coins.h>
@@ -28,10 +33,13 @@
 #include <interfaces/handler.h>
 #include <interfaces/wallet.h>
 #include <kernel/chain.h>
+#include <node/context.h>
 #include <kernel/mempool_removal_reason.h>
 #include <key.h>
 #include <key_io.h>
+#include <key/confidentialaddress.h>
 #include <logging.h>
+#include <validation.h>
 #include <random.h>
 #include <node/types.h>
 #include <outputtype.h>
@@ -1040,12 +1048,14 @@ CWalletTx* CWallet::AddToWallet(CTransactionRef tx, const TxState& state, const 
             assert(TxStateSerializedIndex(wtx.m_state) == TxStateSerializedIndex(state));
             assert(TxStateSerializedBlockHash(wtx.m_state) == TxStateSerializedBlockHash(state));
         }
-        // If we have a witness-stripped version of this transaction, and we
-        // see a new version with a witness, then we must be upgrading a pre-segwit
-        // wallet.  Store the new version of the transaction with the witness,
-        // as the stripped-version must be invalid.
-        // TODO: Store all versions of the transaction, instead of just one.
-        if (tx->HasWitness() && !wtx.tx->HasWitness()) {
+        if (!wtx.m_variants.count(tx->GetWitnessHash())) {
+            if (tx->HasWitness() && !wtx.tx->HasWitness()) {
+                wtx.SetTx(tx);
+            } else {
+                wtx.m_variants.emplace(tx->GetWitnessHash(), tx);
+            }
+            fUpdated = true;
+        } else if (tx->HasWitness() && !wtx.tx->HasWitness()) {
             wtx.SetTx(tx);
             fUpdated = true;
         }
@@ -2009,6 +2019,16 @@ void CWallet::ResubmitWalletTransactions(bool relay, bool force)
     // Don't attempt to resubmit if the wallet is configured to not broadcast,
     // even if forcing.
     if (!fBroadcastTransactions) return;
+    // Determine feerate threshold for rebroadcasting
+    CFeeRate threshold;
+    bool have_threshold = false;
+    if (m_resend_feerate_filter) {
+        threshold = *m_resend_feerate_filter;
+        have_threshold = threshold.GetFeePerK() > 0;
+    } else if (m_chain) {
+        threshold = m_chain->estimateSmartFee(/*num_blocks=*/1, /*conservative=*/false);
+        have_threshold = threshold.GetFeePerK() > 0;
+    }
 
     int submitted_tx_count = 0;
 
@@ -2025,6 +2045,13 @@ void CWallet::ResubmitWalletTransactions(bool relay, bool force)
             // Attempt to rebroadcast all txes more than 5 minutes older than
             // the last block, or all txs if forcing.
             if (!force && wtx.nTimeReceived > m_best_block_time - 5 * 60) continue;
+
+            if (have_threshold) {
+                CAmount debit = CachedTxGetDebit(*this, wtx, ISMINE_ALL);
+                if (debit <= 0) continue; // Don't rebroadcast if fee can't be determined
+                CAmount fee = debit - wtx.tx->GetValueOut();
+                if (fee <= 0 || CFeeRate(fee, GetVirtualTransactionSize(*wtx.tx)) < threshold) continue;
+            }
             to_submit.insert(&wtx);
         }
         // Now try submitting the transactions to the memory pool and (optionally) relay them.
@@ -2476,6 +2503,23 @@ util::Result<CTxDestination> CWallet::GetNewChangeDestination(const OutputType t
     if (op_dest) reservedest.KeepDestination();
 
     return op_dest;
+}
+
+ConfidentialAddress CWallet::GetNewConfidentialAddress(const std::string& label)
+{
+    LOCK(cs_wallet);
+    auto op_dest = GetNewDestination(m_default_address_type, label);
+    if (!op_dest) {
+        throw std::runtime_error(util::ErrorString(op_dest).original);
+    }
+    std::string blind = GetRandHash().ToString();
+    return ConfidentialAddress{EncodeDestination(*op_dest), blind};
+}
+
+bool CWallet::ValidateConfidentialAddress(const std::string& input, ConfidentialAddress& out) const
+{
+    out = ConfidentialAddress::FromString(input);
+    return out.IsValid();
 }
 
 void CWallet::MarkDestinationsDirty(const std::set<CTxDestination>& destinations)
@@ -3012,6 +3056,15 @@ std::shared_ptr<CWallet> CWallet::Create(WalletContext& context, const std::stri
         }
     }
 
+    if (const auto arg{args.GetArg("-walletrebroadcastfeerate")}) {
+        if (std::optional<CAmount> resend_feerate = ParseMoney(*arg)) {
+            walletInstance->m_resend_feerate_filter = CFeeRate(*resend_feerate);
+        } else {
+            error = AmountErrMsg("walletrebroadcastfeerate", *arg);
+            return nullptr;
+        }
+    }
+
     if (chain && chain->relayMinFee().GetFeePerK() > HIGH_TX_FEE_PER_KB) {
         warnings.push_back(AmountHighWarn("-minrelaytxfee") + Untranslated(" ") +
                            _("The wallet will avoid paying less than the minimum relay fee."));
@@ -3065,7 +3118,7 @@ bool CWallet::AttachChain(const std::shared_ptr<CWallet>& walletInstance, interf
             // Wallet is assumed to be from another chain, if genesis block in the active
             // chain differs from the genesis block known to the wallet.
             if (chain.getBlockHash(0) != locator.vHave.back()) {
-                error = Untranslated("Wallet files should not be reused across chains. Restart bitcoind with -walletcrosschain to override.");
+                error = Untranslated("Wallet files should not be reused across chains. Restart bitgoldd with -walletcrosschain to override.");
                 return false;
             }
         }
@@ -3221,6 +3274,24 @@ void CWallet::postInitProcess()
     // Update wallet transactions with current mempool transactions.
     WITH_LOCK(cs_wallet, chain().requestMempoolTransactions(*this));
 
+    if (gArgs.IsArgSet("-reservebalance")) {
+        CAmount amount{0};
+        if (ParseMoney(gArgs.GetArg("-reservebalance", "0"), amount)) {
+            SetReserveBalance(amount);
+        } else {
+            LogPrintf("Invalid -reservebalance amount, ignoring\n");
+        }
+    }
+
+    if (gArgs.IsArgSet("-stakesplitthreshold")) {
+        CAmount amount{0};
+        if (ParseMoney(gArgs.GetArg("-stakesplitthreshold", "0"), amount)) {
+            SetStakeSplitThreshold(amount);
+        } else {
+            LogPrintf("Invalid -stakesplitthreshold amount, ignoring\n");
+        }
+    }
+
     // Start staking thread if enabled
     if (gArgs.GetBoolArg("-staker", false) || gArgs.GetBoolArg("-staking", false)) {
         StartStakeMiner();
@@ -3287,6 +3358,81 @@ void CWallet::SetStakingStats(const StakingStats& stats)
     batch.WriteStakingStats(m_staking_stats);
 }
 
+void CWallet::AddStakingReward(CAmount reward)
+{
+    LOCK(cs_wallet);
+    m_cumulative_staking_rewards += reward;
+    m_staking_stats.current_reward = reward;
+}
+
+CAmount CWallet::GetStakingRewards() const
+{
+    LOCK(cs_wallet);
+    return m_cumulative_staking_rewards;
+}
+
+CAmount CWallet::GetDividendBalance() const
+{
+    interfaces::Chain* chain = m_chain;
+    if (!chain) return 0;
+    node::NodeContext* context = chain->context();
+    if (context && context->chainman) {
+        LOCK(::cs_main);
+        return context->chainman->ActiveChainstate().GetDividendPool();
+    }
+    return 0;
+}
+
+void CWallet::UpdateDividendHistory(const Chainstate& chainstate)
+{
+    AssertLockHeld(::cs_main);
+    std::set<std::string> addrs;
+    auto balances = GetAddressBalances(*this);
+    for (const auto& [dest, bal] : balances) {
+        addrs.insert(EncodeDestination(dest));
+    }
+    std::map<int, std::map<std::string, CAmount>> hist_filtered;
+    const auto& hist = chainstate.GetDividendHistory();
+    for (const auto& [height, payouts] : hist) {
+        std::map<std::string, CAmount> inner;
+        for (const auto& [addr, amt] : payouts) {
+            if (addrs.count(addr)) inner.emplace(addr, amt);
+        }
+        if (!inner.empty()) hist_filtered.emplace(height, std::move(inner));
+    }
+    LOCK(cs_wallet);
+    m_dividend_history = std::move(hist_filtered);
+}
+
+std::map<int, std::map<std::string, CAmount>> CWallet::GetDividendHistory() const
+{
+    LOCK(cs_wallet);
+    return m_dividend_history;
+}
+
+std::pair<int, std::map<std::string, CAmount>> CWallet::GetNextDividend() const
+{
+    interfaces::Chain* chain = m_chain;
+    if (!chain) return {0, {}};
+    node::NodeContext* context = chain->context();
+    if (context && context->chainman) {
+        LOCK(::cs_main);
+        Chainstate& chainstate = context->chainman->ActiveChainstate();
+        int height = context->chainman->ActiveChain().Height();
+        int next_height = ((height / dividend::QUARTER_BLOCKS) + 1) * dividend::QUARTER_BLOCKS;
+        dividend::Payouts payouts = dividend::CalculatePayouts(chainstate.GetStakeInfo(), next_height, chainstate.GetDividendPool());
+        auto balances = GetAddressBalances(*this);
+        std::map<std::string, CAmount> ret;
+        for (const auto& [dest, bal] : balances) {
+            std::string addr = EncodeDestination(dest);
+            auto it = payouts.find(addr);
+            if (it != payouts.end()) ret.emplace(addr, it->second);
+        }
+        return {next_height, ret};
+    }
+    return {0, {}};
+}
+
 void CWallet::SetReserveBalance(CAmount amount)
 {
     LOCK(cs_wallet);
@@ -3299,11 +3445,32 @@ CAmount CWallet::GetReserveBalance() const
     return m_reserve_balance;
 }
 
+void CWallet::SetStakeSplitThreshold(CAmount amount)
+{
+    LOCK(cs_wallet);
+    m_stake_split_threshold = amount;
+}
+
+CAmount CWallet::GetStakeSplitThreshold() const
+{
+    LOCK(cs_wallet);
+    return m_stake_split_threshold;
+}
+
 std::string CWallet::GetNewShieldedAddress()
 {
     LOCK(cs_wallet);
-    // Placeholder shielded address generation using random hash with "sb" prefix
-    return std::string("sb") + GetRandHash().ToString();
+    // Generate a new key pair for blinding purposes and return a pseudo shielded address
+    CKey key;
+    key.MakeNewKey(true);
+    m_blinding_key_manager.GetOrCreateBlindingKey(key.GetPubKey());
+    return std::string("sbg") + GetRandHash().ToString();
+}
+
+CAmount CWallet::GetShieldedBalance() const
+{
+    LOCK(cs_wallet);
+    return m_shielded_balance;
 }
 
 void CWallet::SetStakingOnly(bool staking_only)
@@ -3316,6 +3483,34 @@ bool CWallet::IsUnlockedForStakingOnly() const
 {
     LOCK(cs_wallet);
     return m_staking_only;
+}
+
+CKey CWallet::GetBlindingKey(const CPubKey& pubkey)
+{
+    LOCK(cs_wallet);
+    return m_blinding_key_manager.GetOrCreateBlindingKey(pubkey);
+}
+
+bool CWallet::CreateShieldedTransaction(const CTxDestination& dest, CAmount amount, std::string& txid, std::string& error)
+{
+    LOCK(cs_wallet);
+    CMutableTransaction mtx;
+    CScript script = GetScriptForDestination(dest);
+    mtx.vout.emplace_back(amount, script);
+#ifdef ENABLE_BULLETPROOFS
+    std::vector<CBulletproof> proofs;
+    if (!CreateBulletproofProof(*this, mtx, proofs)) {
+        error = "Failed to create bulletproof";
+        return false;
+    }
+    if (!VerifyBulletproofProof(CTransaction(mtx), proofs)) {
+        error = "Bulletproof verification failed";
+        return false;
+    }
+#endif
+    txid = mtx.GetHash().GetHex();
+    m_shielded_balance += amount;
+    return true;
 }
 
 bool CWallet::BackupWallet(const std::string& strDest) const
@@ -4558,18 +4753,73 @@ std::optional<WalletTXO> CWallet::GetTXO(const COutPoint& outpoint) const
     return it->second;
 }
 #ifdef ENABLE_BULLETPROOFS
-bool CreateBulletproofProof(CWallet& wallet, const CTransaction& tx, CBulletproof& proof)
+void CWallet::AddConfidentialOutput(const COutPoint& outpoint, const unsigned char blind[32], CAmount value)
 {
-    (void)wallet;
-    (void)tx;
-    proof.proof.clear();
+    LOCK(cs_wallet);
+    std::array<unsigned char,32> b{};
+    std::copy(blind, blind + 32, b.begin());
+    m_confidential_outputs[outpoint] = std::make_pair(b, value);
+}
+
+std::optional<CAmount> CWallet::GetConfidentialValue(const COutPoint& outpoint) const
+{
+    LOCK(cs_wallet);
+    auto it = m_confidential_outputs.find(outpoint);
+    if (it == m_confidential_outputs.end()) return std::nullopt;
+    return it->second.second;
+}
+#endif
+#ifdef ENABLE_BULLETPROOFS
+bool CreateBulletproofProof(CWallet& wallet, CMutableTransaction& tx, std::vector<CBulletproof>& proofs)
+{
+    static const secp256k1_context_holder ctx(SECP256K1_CONTEXT_SIGN);
+
+    proofs.clear();
+    proofs.reserve(tx.vout.size());
+
+    for (size_t i = 0; i < tx.vout.size(); ++i) {
+        auto& txout = tx.vout[i];
+        CBulletproof bp;
+
+        unsigned char blind[32];
+        GetRandBytes({blind, 32});
+
+        if (secp256k1_pedersen_commit(ctx.get(), &bp.commitment, blind, txout.nValue, &secp256k1_generator_h) != 1) {
+            return false;
+        }
+
+        bp.proof.resize(SECP256K1_RANGE_PROOF_MAX_LENGTH);
+        size_t proof_len = bp.proof.size();
+        if (secp256k1_rangeproof_sign(ctx.get(), bp.proof.data(), &proof_len, 0, &bp.commitment, blind,
+                                      nullptr, 0, 0, txout.nValue, &secp256k1_generator_h) != 1) {
+            return false;
+        }
+        bp.proof.resize(proof_len);
+        bp.extra.assign(blind, blind + 32);
+
+        // Store blinding factor and hide value inside the commitment
+        wallet.AddConfidentialOutput(COutPoint{tx.GetHash(), (uint32_t)i}, blind, txout.nValue);
+        txout.nValue = 0;
+
+        CScript bp_script = txout.scriptPubKey;
+        bp_script << OP_BULLETPROOF
+                  << std::vector<unsigned char>(bp.commitment.data,
+                                                bp.commitment.data + sizeof(bp.commitment.data))
+                  << bp.proof;
+        txout.scriptPubKey = bp_script;
+
+        proofs.push_back(bp);
+    }
     return true;
 }
 
-bool VerifyBulletproofProof(const CTransaction& tx, const CBulletproof& proof)
+bool VerifyBulletproofProof(const CTransaction& tx, const std::vector<CBulletproof>& proofs)
 {
-    (void)tx;
-    return VerifyBulletproof(proof);
+    if (proofs.size() != tx.vout.size()) return false;
+    for (const auto& proof : proofs) {
+        if (!VerifyBulletproof(proof)) return false;
+    }
+    return true;
 }
 #endif
 } // namespace wallet

@@ -12,8 +12,8 @@ THRESHOLD_SECONDS = 8 * 60  # eight minutes
 
 
 def rpc(*args: str) -> bytes:
-    """Invoke bitcoin-cli and return stdout."""
-    return subprocess.check_output(["bitcoin-cli", *args])
+    """Invoke bitgold-cli and return stdout."""
+    return subprocess.check_output(["bitgold-cli", *args])
 
 
 def get_block_time(height: int) -> int:

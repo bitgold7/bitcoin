@@ -19,7 +19,7 @@ How to Upgrade
 If you are running an older version, shut it down. Wait until it has
 completely shut down (which might take a few minutes for older
 versions), then run the installer (on Windows) or just copy over
-`/Applications/Bitcoin-Qt` (on Mac) or `bitcoind`/`bitcoin-qt` (on
+`/Applications/Bitcoin-Qt` (on Mac) or `bitgoldd`/`bitcoin-qt` (on
 Linux).
 
 The first time you run version 0.15.0 or newer, your chainstate database
@@ -52,11 +52,11 @@ pre-compiled distribution also provides binaries for the RISC-V
 platform.
 
 If you are using the `systemd` unit configuration file located at
-`contrib/init/bitcoind.service`, it has been changed to use
-`/var/lib/bitcoind` as the data directory instead of
+`contrib/init/bitgoldd.service`, it has been changed to use
+`/var/lib/bitgoldd` as the data directory instead of
 `~bitcoin/.bitcoin`. When switching over to the new configuration file,
-please make sure that the filesystem on which `/var/lib/bitcoind` will
-exist has enough space (check using `df -h /var/lib/bitcoind`), and
+please make sure that the filesystem on which `/var/lib/bitgoldd` will
+exist has enough space (check using `df -h /var/lib/bitgoldd`), and
 optionally copy over your existing data directory. See the [systemd init
 file section](#systemd-init-file) for more details.
 
@@ -78,8 +78,6 @@ Notable changes
 Mining
 ------
 
-- Calls to `getblocktemplate` will fail if the segwit rule is not
-  specified.  Calling `getblocktemplate` without segwit specified is
   almost certainly a misconfiguration since doing so results in lower
   rewards for the miner.  Failed calls will produce an error message
   describing how to enable the segwit rule.
@@ -126,8 +124,8 @@ Configuration option changes
 systemd init file
 -----------------
 
-The systemd init file (`contrib/init/bitcoind.service`) has been changed
-to use `/var/lib/bitcoind` as the data directory instead of
+The systemd init file (`contrib/init/bitgoldd.service`) has been changed
+to use `/var/lib/bitgoldd` as the data directory instead of
 `~bitcoin/.bitcoin`. This change makes Bitcoin Core more consistent with
 other services, and makes the systemd init config more consistent with
 existing Upstart and OpenRC configs.
@@ -299,7 +297,6 @@ in the Low-level Changes section below.
   label besides the default when calling `importprivkey`, the new label
   will be applied to the address.
 
-- See the [Mining](#mining) section for changes to `getblocktemplate`.
 
 - `getmininginfo` now omits `currentblockweight` and `currentblocktx`
   when a block was never assembled via RPC on this node.
@@ -359,7 +356,7 @@ Deprecated or removed RPCs
   require or use the wallet component. Calling `generatetoaddress` with
   an address returned by the `getnewaddress` RPC gives the same
   functionality as the old `generate` RPC.  To continue using `generate`
-  in this version, restart bitcoind with the `-deprecatedrpc=generate`
+  in this version, restart bitgoldd with the `-deprecatedrpc=generate`
   configuration option.
 
 - Be reminded that parts of the `validateaddress` command have been
@@ -709,7 +706,7 @@ Changes for particular platforms
 - #13248 Make proxy icon from statusbar clickable (mess110)
 - #12818 TransactionView: highlight replacement tx after fee bump (Sjors)
 - #13529 Use new Qt5 connect syntax (promag)
-- #14162 Also log and print messages or questions like bitcoind (MarcoFalke)
+- #14162 Also log and print messages or questions like bitgoldd (MarcoFalke)
 - #14385 Avoid system harfbuzz and bz2 (theuni)
 - #14450 Fix QCompleter popup regression (hebasto)
 - #14177 Set C locale for amountWidget (hebasto)
@@ -980,7 +977,7 @@ Changes for particular platforms
 - #14097 validation: Log FormatStateMessage on ConnectBlock error in ConnectTip (MarcoFalke)
 - #13724 contrib: Support ARM and RISC-V symbol check (ken2812221)
 - #13159 Don't close old debug log file handle prematurely when trying to re-open (on SIGHUP) (practicalswift)
-- #14186 bitcoin-cli: don't translate command line options (HashUnlimited)
+- #14186 bitgold-cli: don't translate command line options (HashUnlimited)
 - #14057 logging: Only log `using config file path_to_bitcoin.conf` message on startup if conf file exists (leishman)
 - #14164 Update univalue subtree (MarcoFalke)
 - #14272 init: Remove deprecated args from hidden args (MarcoFalke)
@@ -1036,7 +1033,6 @@ Changes for particular platforms
 - #14393 Add missing apt-get install (poiuty)
 - #14428 Fix macOS files description in qt/README.md (hebasto)
 - #14390 release process: RPC documentation (karel-3d)
-- #14472 getblocktemplate: use SegWit in example (Sjors)
 - #14497 Add doc/bitcoin-conf.md (hebasto)
 - #14526 Document lint tests (fanquake)
 - #14511 Remove explicit storage requirement from README.md (merland)

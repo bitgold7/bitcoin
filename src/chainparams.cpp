@@ -23,6 +23,9 @@
 
 using util::SplitString;
 
+/** SLIP-44 coin type for BitGold (BGD). */
+const uint32_t BIP44_COIN_TYPE{3252};
+
 void ReadSigNetArgs(const ArgsManager& args, CChainParams::SigNetOptions& options)
 {
     if (!args.GetArgs("-signetseednode").empty()) {
@@ -126,8 +129,7 @@ std::unique_ptr<const CChainParams> CreateChainParams(const ArgsManager& args, c
         return CChainParams::TestNet();
 
     case ChainType::TESTNET4:
-        // TODO: Replace with dedicated TestNet4 parameters once available.
-        return CChainParams::TestNet();
+        return CChainParams::TestNet4();
 
     case ChainType::SIGNET: {
         auto opts = CChainParams::SigNetOptions{};

@@ -3,6 +3,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <dividend/dividend.h>
+#include <consensus/dividends/schedule.h>
 #include <node/miner.h>
 
 #include <chain.h>
@@ -20,15 +22,15 @@
 #include <node/kernel_notifications.h>
 #include <policy/feerate.h>
 #include <policy/policy.h>
+#include <consensus/pos/stake.h>
 #include <primitives/transaction.h>
-#include <pos/stake.h>
 #include <util/moneystr.h>
 #include <util/signalinterrupt.h>
 #include <util/time.h>
 #include <validation.h>
 #ifdef ENABLE_WALLET
-#include <wallet/wallet.h>
 #include <wallet/spend.h>
+#include <wallet/wallet.h>
 #endif
 
 #include <algorithm>
@@ -129,8 +131,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     pblocktemplate.reset(new CBlockTemplate());
     CBlock* const pblock = &pblocktemplate->block; // pointer for convenience
 
-    // Add dummy coinbase tx as first transaction. It is skipped by the
-    // getblocktemplate RPC and mining interface consumers must not use it.
+    // Add dummy coinbase tx as first transaction. Mining interface consumers must not use it.
     pblock->vtx.emplace_back();
 
     LOCK(::cs_main);
@@ -164,29 +165,43 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
     coinbaseTx.vin.resize(1);
     coinbaseTx.vin[0].prevout.SetNull();
     coinbaseTx.vin[0].nSequence = CTxIn::MAX_SEQUENCE_NONFINAL; // Make sure timelock is enforced.
-    coinbaseTx.vout.resize(1);
+    CAmount block_subsidy = GetBlockSubsidy(nHeight, chainparams.GetConsensus());
+    CAmount total_reward = block_subsidy + nFees;
+    CAmount validator_reward = total_reward * 9 / 10;
+    CAmount dividend_reward = total_reward - validator_reward;
+    CAmount pool = m_chainstate.GetDividendPool() + dividend_reward;
+    CMutableTransaction payoutTx;
+    const bool payouts_enabled = gArgs.GetBoolArg("-dividendpayouts", false);
+    if (payouts_enabled && consensus::dividends::IsSnapshotHeight(nHeight) && pool > 0) {
+        payoutTx = dividend::BuildPayoutTx(m_chainstate.GetStakeInfo(), nHeight, pool);
+    }
+    coinbaseTx.vout.resize(2);
     coinbaseTx.vout[0].scriptPubKey = m_options.coinbase_output_script;
-    CAmount validator_fee = nFees * 9 / 10;
-    CAmount dividend_fee = nFees - validator_fee;
-    m_chainstate.AddToDividendPool(dividend_fee, nHeight);
-    coinbaseTx.vout[0].nValue = validator_fee + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
-    // Dividend portion is currently unassigned; reserved for future distribution.
+    coinbaseTx.vout[0].nValue = validator_reward;
+    coinbaseTx.vout[1].scriptPubKey = dividend::GetDividendScript();
+    coinbaseTx.vout[1].nValue = dividend_reward;
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     Assert(nHeight > 0);
     coinbaseTx.nLockTime = static_cast<uint32_t>(nHeight - 1);
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
+    if (!payoutTx.vout.empty()) {
+        pblock->vtx.insert(pblock->vtx.begin() + 1, MakeTransactionRef(payoutTx));
+        pblocktemplate->vTxFees.insert(pblocktemplate->vTxFees.begin(), CAmount{0});
+        pblocktemplate->vTxSigOpsCost.insert(pblocktemplate->vTxSigOpsCost.begin(), 0);
+    }
     pblocktemplate->vchCoinbaseCommitment = m_chainstate.m_chainman.GenerateCoinbaseCommitment(*pblock, pindexPrev);
 
     LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);
 
     // Fill in header
-    pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
+    pblock->hashPrevBlock = pindexPrev->GetBlockHash();
     UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
-    pblock->nBits          = pindexPrev->nBits;
-    pblock->nNonce         = 0;
+    pblock->nBits = pindexPrev->nBits;
+    pblock->nNonce = 0;
+    pblock->vchBlockSig.clear();
 
     if (m_options.test_block_validity) {
-        if (BlockValidationState state{TestBlockValidity(m_chainstate, *pblock, /*check_pow=*/false, /*check_merkle_root=*/false)}; !state.IsValid()) {
+        if (BlockValidationState state{TestBlockValidity(m_chainstate, *pblock, /*check_merkle_root=*/false)}; !state.IsValid()) {
             throw std::runtime_error(strprintf("TestBlockValidity failed: %s", state.ToString()));
         }
     }
@@ -202,7 +217,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
 
 void BlockAssembler::onlyUnconfirmed(CTxMemPool::setEntries& testSet)
 {
-    for (CTxMemPool::setEntries::iterator iit = testSet.begin(); iit != testSet.end(); ) {
+    for (CTxMemPool::setEntries::iterator iit = testSet.begin(); iit != testSet.end();) {
         // Only test txs not already in the block
         if (inBlock.count((*iit)->GetSharedTx()->GetHash())) {
             testSet.erase(iit++);
@@ -310,8 +325,8 @@ void BlockAssembler::addPackageTxs(int& nPackagesSelected, int& nDescendantsUpda
     const auto& mempool{*Assert(m_mempool)};
     LOCK(mempool.cs);
 
-    // mapModifiedTx will store sorted packages after they are modified
-    // because some of their txs are already in the block
+    // mapModifiedTx will store packages sorted by priority and fee rate after
+    // they are modified because some of their txs are already in the block
     indexed_modified_transaction_set mapModifiedTx;
     // Keep track of entries that failed inclusion, to avoid duplicate work
     std::set<Txid> failedTx;
@@ -361,10 +376,16 @@ void BlockAssembler::addPackageTxs(int& nPackagesSelected, int& nDescendantsUpda
         } else {
             // Try to compare the mapTx entry to the mapModifiedTx entry
             iter = mempool.mapTx.project<0>(mi);
-            if (modit != mapModifiedTx.get<ancestor_score>().end() &&
-                    CompareTxMemPoolEntryByAncestorFee()(*modit, CTxMemPoolModifiedEntry(iter))) {
-                // The best entry in mapModifiedTx has higher score
-                // than the one from mapTx.
+            bool use_modified = false;
+            if (modit != mapModifiedTx.get<ancestor_score>().end()) {
+                if (g_hybrid_mempool) {
+                    use_modified = CompareTxMemPoolEntryByHybridScore()(*modit, CTxMemPoolModifiedEntry(iter));
+                } else {
+                    use_modified = CompareTxMemPoolEntryByAncestorFee()(*modit, CTxMemPoolModifiedEntry(iter));
+                }
+            }
+            if (use_modified) {
+                // The best entry in mapModifiedTx has higher score than the one from mapTx.
                 // Switch which transaction (package) to consider
                 iter = modit->iter;
                 fUsingModified = true;
@@ -405,7 +426,7 @@ void BlockAssembler::addPackageTxs(int& nPackagesSelected, int& nDescendantsUpda
             ++nConsecutiveFailed;
 
             if (nConsecutiveFailed > MAX_CONSECUTIVE_FAILURES && nBlockWeight >
-                    m_options.nBlockMaxWeight - BLOCK_FULL_ENOUGH_WEIGHT_DELTA) {
+                                                                     m_options.nBlockMaxWeight - BLOCK_FULL_ENOUGH_WEIGHT_DELTA) {
                 // Give up if we're close to full and haven't succeeded in a while
                 break;
             }
@@ -616,15 +637,39 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     }
     if (!stake_out) return false;
 
+    // Gather transactions from the mempool
+    CTxMemPool* mempool = node_context->mempool.get();
+    BlockAssembler::Options options;
+    ApplyArgsManOptions(gArgs, options);
+    BlockAssembler assembler{chainstate, mempool, options};
+    std::unique_ptr<CBlockTemplate> pblocktemplate = assembler.CreateNewBlock();
+    CAmount fees{0};
+    for (const CAmount& fee : pblocktemplate->vTxFees) {
+        fees += fee;
+    }
+
     // Construct coinstake transaction
     CMutableTransaction coinstake;
     coinstake.nLockTime = height;
     coinstake.vin.emplace_back(stake_out->outpoint);
     coinstake.vin[0].nSequence = CTxIn::SEQUENCE_FINAL;
-    coinstake.vout.resize(2);
+    int64_t coin_age_weight = consensus.nStakeMinAge; // Placeholder until wallet provides age
+    CAmount subsidy = GetProofOfStakeReward(height, /*fees=*/0, coin_age_weight, consensus);
+    CAmount total_reward = subsidy + fees;
+    CAmount validator_reward = total_reward * 9 / 10;
+    CAmount dividend_reward = total_reward - validator_reward;
+    CAmount pool = chainstate.GetDividendPool() + dividend_reward;
+    CMutableTransaction payoutTx;
+    const bool payouts_enabled = gArgs.GetBoolArg("-dividendpayouts", false);
+    if (payouts_enabled && consensus::dividends::IsSnapshotHeight(height) && pool > 0) {
+        payoutTx = dividend::BuildPayoutTx(chainstate.GetStakeInfo(), height, pool);
+    }
+    coinstake.vout.resize(3);
     coinstake.vout[0].SetNull();
-    coinstake.vout[1].nValue = stake_out->txout.nValue + GetBlockSubsidy(height, consensus);
+    coinstake.vout[1].nValue = stake_out->txout.nValue + validator_reward;
     coinstake.vout[1].scriptPubKey = stake_out->txout.scriptPubKey;
+    coinstake.vout[2].scriptPubKey = dividend::GetDividendScript();
+    coinstake.vout[2].nValue = dividend_reward;
     {
         LOCK(wallet.cs_wallet);
         if (!wallet.SignTransaction(coinstake)) return false;
@@ -643,13 +688,19 @@ bool CreatePosBlock(wallet::CWallet& wallet)
     CBlock block;
     block.vtx.emplace_back(MakeTransactionRef(std::move(coinbase)));
     block.vtx.emplace_back(MakeTransactionRef(std::move(coinstake)));
+    if (!payoutTx.vout.empty()) {
+        block.vtx.emplace_back(MakeTransactionRef(payoutTx));
+    }
+    for (size_t i = 1; i < pblocktemplate->block.vtx.size(); ++i) {
+        block.vtx.emplace_back(pblocktemplate->block.vtx[i]);
+    }
 
     block.hashPrevBlock = pindexPrev->GetBlockHash();
     block.nVersion = chainman.m_versionbitscache.ComputeBlockVersion(pindexPrev, consensus);
     unsigned int nTime = std::max<int64_t>(
         GetMinimumTime(pindexPrev, consensus.DifficultyAdjustmentInterval()),
         TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()));
-    nTime &= ~STAKE_TIMESTAMP_MASK;
+    nTime &= ~consensus.nStakeTimestampMask;
     block.nTime = nTime;
     block.nBits = pindexPrev->nBits;
     block.nNonce = 0;
@@ -662,7 +713,7 @@ bool CreatePosBlock(wallet::CWallet& wallet)
 
     bool new_block{false};
     return chainman.ProcessNewBlock(std::make_shared<const CBlock>(std::move(block)),
-                                    /*force_processing=*/true, /*min_pow_checked=*/true,
+                                    /*force_processing=*/true,
                                     &new_block);
 }
 #endif // ENABLE_WALLET

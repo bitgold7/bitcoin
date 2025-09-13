@@ -21,6 +21,19 @@ See [further](#run-without-sanitizers-for-increased-throughput) for more informa
 There is also a runner script to execute all fuzz targets. Refer to
 `./build_fuzz/test/fuzz/test_runner.py --help` for more details.
 
+## Running with sanitizers
+
+The continuous integration job builds the fuzz targets with sanitizers enabled
+and aborts on any findings. To reproduce this setup locally:
+
+```sh
+$ ./configure -B build --enable-sanitizers=fuzzer,address,undefined,float-divide-by-zero,integer -DBUILD_FOR_FUZZING=ON
+$ cmake --build build
+$ test/fuzz/test_runner.py --empty_min_time=60 path/to/corpus
+```
+
+Any sanitizer report will cause the process to exit with a non-zero status.
+
 ## Overview of Bitcoin Core fuzzing
 
 [Google](https://github.com/google/fuzzing/) has a good overview of fuzzing in general, with contributions from key architects of some of the most-used fuzzers. [This paper](https://agroce.github.io/bitcoin_report.pdf) includes an external overview of the status of Bitcoin Core fuzzing, as of summer 2021.  [John Regehr](https://blog.regehr.org/archives/1687) provides good advice on writing code that assists fuzzers in finding bugs, which is useful for developers to keep in mind.
@@ -73,7 +86,7 @@ block^@M-^?M-^?M-^?M-^?M-^?nM-^?M-^?
 
 In this case the fuzzer managed to create a `block` message which when passed to `ProcessMessage(...)` increased coverage.
 
-It is possible to specify `bitcoind` arguments to the `fuzz` executable.
+It is possible to specify `bitgoldd` arguments to the `fuzz` executable.
 Depending on the test, they may be ignored or consumed and alter the behavior
 of the test. Just make sure to use double-dash to distinguish them from the
 fuzzer's own arguments:

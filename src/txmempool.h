@@ -15,6 +15,7 @@
 #include <kernel/mempool_options.h>        // IWYU pragma: export
 #include <kernel/mempool_removal_reason.h> // IWYU pragma: export
 #include <policy/feerate.h>
+#include <policy/policy.h>
 #include <policy/packages.h>
 #include <primitives/transaction.h>
 #include <sync.h>
@@ -40,6 +41,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <cstdint>
 
 class CChain;
 class ValidationSignals;
@@ -84,16 +86,48 @@ struct mempoolentry_wtxid
     }
 };
 
+struct HybridScore {
+    uint8_t fee_band;
+    uint8_t stake_weight;
+    uint8_t time_in_mempool;
+    uint8_t congestion;
+};
+
+class CompareTxMemPoolEntryByHybridScore
+{
+public:
+    template <typename T>
+    bool operator()(const T& a, const T& b) const
+    {
+        const CTxMemPoolEntry& x = a;
+        const CTxMemPoolEntry& y = b;
+        HybridScore h1 = x.GetHybridScore();
+        HybridScore h2 = y.GetHybridScore();
+        if (h1.fee_band != h2.fee_band) return h1.fee_band > h2.fee_band;
+        if (h1.stake_weight != h2.stake_weight) return h1.stake_weight > h2.stake_weight;
+        if (h1.time_in_mempool != h2.time_in_mempool) return h1.time_in_mempool > h2.time_in_mempool;
+        return h1.congestion > h2.congestion;
+    }
+};
+
 
 /** \class CompareTxMemPoolEntryByDescendantScore
  *
- *  Sort an entry by max(score/size of entry's tx, score/size with all descendants).
+ *  Sort an entry first by priority (ascending) and then by
+ *  max(score/size of entry's tx, score/size with all descendants).
  */
 class CompareTxMemPoolEntryByDescendantScore
 {
 public:
     bool operator()(const CTxMemPoolEntry& a, const CTxMemPoolEntry& b) const
     {
+        if (g_hybrid_mempool) {
+            return CompareTxMemPoolEntryByHybridScore()(a, b);
+        }
+        if (a.GetPriority() != b.GetPriority()) {
+            return a.GetPriority() < b.GetPriority();
+        }
+
         FeeFrac f1 = GetModFeeAndSize(a);
         FeeFrac f2 = GetModFeeAndSize(b);
 
@@ -127,6 +161,9 @@ class CompareTxMemPoolEntryByScore
 public:
     bool operator()(const CTxMemPoolEntry& a, const CTxMemPoolEntry& b) const
     {
+        if (g_hybrid_mempool) {
+            return CompareTxMemPoolEntryByHybridScore()(a, b);
+        }
         FeeFrac f1(a.GetFee(), a.GetTxSize());
         FeeFrac f2(b.GetFee(), b.GetTxSize());
         if (FeeRateCompare(f1, f2) == 0) {
@@ -147,7 +184,8 @@ public:
 
 /** \class CompareTxMemPoolEntryByAncestorScore
  *
- *  Sort an entry by min(score/size of entry's tx, score/size with all ancestors).
+ *  Sort an entry first by priority (descending) and then by
+ *  min(score/size of entry's tx, score/size with all ancestors).
  */
 class CompareTxMemPoolEntryByAncestorFee
 {
@@ -155,6 +193,13 @@ public:
     template<typename T>
     bool operator()(const T& a, const T& b) const
     {
+        if (g_hybrid_mempool) {
+            return CompareTxMemPoolEntryByHybridScore()(a, b);
+        }
+        if (a.GetPriority() != b.GetPriority()) {
+            return a.GetPriority() > b.GetPriority();
+        }
+
         FeeFrac f1 = GetModFeeAndSize(a);
         FeeFrac f2 = GetModFeeAndSize(b);
 
@@ -283,7 +328,7 @@ struct TxMempoolInfo
 class CTxMemPool
 {
 protected:
-    std::atomic<unsigned int> nTransactionsUpdated{0}; //!< Used by getblocktemplate to trigger CreateNewBlock() invocation
+    std::atomic<unsigned int> nTransactionsUpdated{0}; //!< Used to trigger CreateNewBlock() invocation
 
     uint64_t totalTxSize GUARDED_BY(cs){0};      //!< sum of all mempool tx's virtual sizes. Differs from serialized tx size since witness data is discounted. Defined in BIP 141.
     CAmount m_total_fee GUARDED_BY(cs){0};       //!< sum of all mempool tx's fees (NOT modified fee)
@@ -318,7 +363,7 @@ public:
                 mempoolentry_wtxid,
                 SaltedTxidHasher
             >,
-            // sorted by fee rate
+            // sorted by priority then fee rate
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<descendant_score>,
                 boost::multi_index::identity<CTxMemPoolEntry>,
@@ -330,7 +375,7 @@ public:
                 boost::multi_index::identity<CTxMemPoolEntry>,
                 CompareTxMemPoolEntryByEntryTime
             >,
-            // sorted by fee rate with ancestors
+            // sorted by priority then fee rate with ancestors
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<ancestor_score>,
                 boost::multi_index::identity<CTxMemPoolEntry>,

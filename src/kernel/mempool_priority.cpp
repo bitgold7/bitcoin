@@ -1,4 +1,5 @@
 #include <kernel/mempool_priority.h>
+#include <algorithm>
 
 int64_t CalculateStakePriority(CAmount nStakeAmount)
 {
@@ -26,5 +27,22 @@ int64_t CalculateStakeDurationPriority(int64_t nStakeDuration)
         return STAKE_DURATION_7_DAYS_POINTS;
     }
     return 0;
+}
+
+int64_t CalculateRbfCfpPriority(bool signals_rbf, bool has_ancestors)
+{
+    int64_t priority = 0;
+    if (signals_rbf) {
+        priority += RBF_PRIORITY_PENALTY;
+    }
+    if (has_ancestors) {
+        priority += CPFP_PRIORITY_BONUS;
+    }
+    return priority;
+}
+
+int64_t ApplyPriorityDoSLimit(int64_t priority, int64_t max_priority)
+{
+    return std::clamp<int64_t>(priority, -max_priority, max_priority);
 }
 

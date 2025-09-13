@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <bitcoin-build-config.h> // IWYU pragma: keep
+#include <bitgold-build-config.h> // IWYU pragma: keep
 
 #include <qt/utilitydialog.h>
 
@@ -57,7 +57,7 @@ HelpMessageDialog::HelpMessageDialog(QWidget *parent, bool about) :
     } else {
         setWindowTitle(tr("Command-line options"));
         QString header = "The bitcoin-qt application provides a graphical interface for interacting with " CLIENT_NAME ".\n\n"
-                         "It combines the core functionalities of bitcoind with a user-friendly interface for wallet management, transaction history, and network statistics.\n\n"
+                         "It combines the core functionalities of bitgoldd with a user-friendly interface for wallet management, transaction history, and network statistics.\n\n"
                          "It is suitable for users who prefer a graphical over a command-line interface.\n\n"
                          "You can optionally specify a payment [URI], in e.g. the BIP21 URI format.\n\n"
                          "Usage: bitcoin-qt [options] [URI]\n\n";

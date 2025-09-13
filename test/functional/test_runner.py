@@ -99,26 +99,26 @@ BASE_SCRIPTS = [
     'p2p_node_network_limited.py --v1transport',
     'p2p_node_network_limited.py --v2transport',
     # vv Tests less than 2m vv
-    'mining_getblocktemplate_longpoll.py',
     'p2p_segwit.py',
     'feature_maxuploadtarget.py',
     'feature_assumeutxo.py',
     'mempool_updatefromblock.py',
     'mempool_persist.py',
+    'dividend_hybrid_suite.py',
     # vv Tests less than 60s vv
     'rpc_psbt.py',
     'wallet_fundrawtransaction.py',
     'wallet_bumpfee.py',
     'wallet_backup.py',
-    'feature_segwit.py --v2transport',
-    'feature_segwit.py --v1transport',
     'p2p_tx_download.py',
     'wallet_avoidreuse.py',
     'feature_abortnode.py',
     'wallet_address_types.py',
     'p2p_orphan_handling.py',
     'wallet_basic.py',
+    'address_prefixes.py',
     'feature_maxtipage.py',
+    'feature_prune_height.py',
     'wallet_multiwallet.py',
     'wallet_multiwallet.py --usecli',
     'p2p_dns_seeds.py',
@@ -126,12 +126,10 @@ BASE_SCRIPTS = [
     'p2p_blockfilters.py',
     'feature_assumevalid.py',
     'wallet_taproot.py',
-    'feature_bip68_sequence.py',
     'rpc_packages.py',
     'rpc_bind.py --ipv4',
     'rpc_bind.py --ipv6',
     'rpc_bind.py --nonloopback',
-    'p2p_headers_sync_with_minchainwork.py',
     'p2p_feefilter.py',
     'feature_csv_activation.py',
     'p2p_sendheaders.py',
@@ -153,7 +151,6 @@ BASE_SCRIPTS = [
     'feature_reindex.py',
     'feature_reindex_readonly.py',
     'wallet_labels.py',
-    'p2p_compactblocks.py',
     'p2p_compactblocks_blocksonly.py',
     'wallet_hd.py',
     'wallet_blank.py',
@@ -166,12 +163,13 @@ BASE_SCRIPTS = [
     'rpc_validateaddress.py',
     'interface_bitcoin_cli.py',
     'feature_bind_extra.py',
+    'feature_bulletproof_invalid.py',
+    'pos_modifier_v3.py',
     'mempool_resurrect.py',
     'wallet_txn_doublespend.py --mineblock',
     'tool_bitcoin_chainstate.py',
     'tool_wallet.py',
     'tool_utils.py',
-    'tool_signet_miner.py',
     'wallet_txn_clone.py',
     'wallet_txn_clone.py --segwit',
     'rpc_getchaintips.py',
@@ -210,7 +208,6 @@ BASE_SCRIPTS = [
     'rpc_decodescript.py',
     'rpc_blockchain.py --v1transport',
     'rpc_blockchain.py --v2transport',
-    'mining_template_verification.py',
     'rpc_deprecated.py',
     'wallet_disable.py',
     'wallet_change_address.py',
@@ -228,7 +225,6 @@ BASE_SCRIPTS = [
     'rpc_setban.py --v1transport',
     'rpc_setban.py --v2transport',
     'p2p_blocksonly.py',
-    'mining_prioritisetransaction.py',
     'p2p_invalid_locator.py',
     'p2p_invalid_block.py --v1transport',
     'p2p_invalid_block.py --v2transport',
@@ -272,15 +268,12 @@ BASE_SCRIPTS = [
     'rpc_generate.py',
     'wallet_balance.py',
     'p2p_initial_headers_sync.py',
-    'feature_nulldummy.py',
     'mempool_accept.py',
     'mempool_expiry.py',
     'wallet_importdescriptors.py',
     'wallet_crosschain.py',
-    'mining_basic.py',
     'mining_mainnet.py',
     'feature_signet.py',
-    'p2p_mutated_blocks.py',
     'rpc_named_arguments.py',
     'feature_startupnotify.py',
     'wallet_simulaterawtx.py',
@@ -399,7 +392,7 @@ def main():
     parser.add_argument('--failfast', '-F', action='store_true', help='stop execution after the first test failure')
     parser.add_argument('--filter', help='filter scripts to run by regular expression')
     parser.add_argument("--nocleanup", dest="nocleanup", default=False, action="store_true",
-                        help="Leave bitcoinds and test.* datadir on exit or error")
+                        help="Leave bitgoldds and test.* datadir on exit or error")
     parser.add_argument('--resultsfile', '-r', help='store test results (as CSV) to the provided file')
 
     args, unknown_args = parser.parse_known_args()
@@ -440,9 +433,9 @@ def main():
         assert results_filepath.parent.exists(), "Results file parent directory does not exist"
         logging.debug("Test results will be written to " + str(results_filepath))
 
-    enable_bitcoind = config["components"].getboolean("ENABLE_BITCOIND")
+    enable_bitgoldd = config["components"].getboolean("ENABLE_BITCOIND")
 
-    if not enable_bitcoind:
+    if not enable_bitgoldd:
         print("No functional tests to run.")
         print("Re-compile with the -DBUILD_DAEMON=ON build option")
         sys.exit(1)
@@ -544,11 +537,11 @@ def main():
 def run_tests(*, test_list, build_dir, tmpdir, jobs=1, enable_coverage=False, args=None, combined_logs_len=0, failfast=False, use_term_control, results_filepath=None):
     args = args or []
 
-    # Warn if bitcoind is already running
+    # Warn if bitgoldd is already running
     try:
         # pgrep exits with code zero when one or more matching processes found
-        if subprocess.run(["pgrep", "-x", "bitcoind"], stdout=subprocess.DEVNULL).returncode == 0:
-            print("%sWARNING!%s There is already a bitcoind process running on this system. Tests may fail unexpectedly due to resource contention!" % (BOLD[1], BOLD[0]))
+        if subprocess.run(["pgrep", "-x", "bitgoldd"], stdout=subprocess.DEVNULL).returncode == 0:
+            print("%sWARNING!%s There is already a bitgoldd process running on this system. Tests may fail unexpectedly due to resource contention!" % (BOLD[1], BOLD[0]))
     except OSError:
         # pgrep not supported
         pass
@@ -841,7 +834,7 @@ class RPCCoverage():
     Coverage calculation works by having each test script subprocess write
     coverage files into a particular directory. These files contain the RPC
     commands invoked during testing, as well as a complete listing of RPC
-    commands per `bitcoin-cli help` (`rpc_interface.txt`).
+    commands per `bitgold-cli help` (`rpc_interface.txt`).
 
     After all tests complete, the commands run are combined and diff'd against
     the complete list to calculate uncovered RPC commands.

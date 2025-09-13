@@ -6,6 +6,7 @@
 #include <blockencodings.h>
 #include <net.h>
 #include <net_processing.h>
+#include <node/stake_modifier_manager.h>
 #include <netmessagemaker.h>
 #include <node/peerman_args.h>
 #include <test/fuzz/FuzzedDataProvider.h>
@@ -42,6 +43,7 @@ public:
         peerman_opts.ignore_incoming_txs = true;
         m_node.peerman = PeerManager::make(*m_node.connman, *m_node.addrman,
                                            m_node.banman.get(), *m_node.chainman,
+                                           *m_node.stake_modman,
                                            *m_node.mempool, *m_node.warnings, peerman_opts);
 
         CConnman::Options options;

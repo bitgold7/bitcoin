@@ -22,7 +22,7 @@ How to Upgrade
 If you are running an older version, shut it down. Wait until it has completely
 shut down (which might take a few minutes in some cases), then run the
 installer (on Windows) or just copy over `/Applications/Bitcoin-Qt` (on macOS)
-or `bitcoind`/`bitcoin-qt` (on Linux).
+or `bitgoldd`/`bitcoin-qt` (on Linux).
 
 Upgrading directly from a version of Bitcoin Core that has reached its EOL is
 possible, but it might take some time if the data directory needs to be migrated. Old
@@ -97,7 +97,7 @@ New RPCs
   Meanwhile, the original chainstate will complete the initial block download process in
   the background, eventually validating up to the block that the snapshot is based upon.
 
-  The result is a usable bitcoind instance that is current with the network tip in a
+  The result is a usable bitgoldd instance that is current with the network tip in a
   matter of minutes rather than hours. UTXO snapshot are typically obtained via
   third-party sources (HTTP, torrent, etc.) which is reasonable since their contents
   are always checked by hash.
@@ -141,7 +141,7 @@ mempool minimum feerate (but not minimum relay feerate). (#27609)
 Updated settings
 ----------------
 
-- `bitcoind` and `bitcoin-qt` will now raise an error on startup
+- `bitgoldd` and `bitcoin-qt` will now raise an error on startup
  if a datadir that is being used contains a bitcoin.conf file that
  will be ignored, which can happen when a datadir= line is used in
  a bitcoin.conf file. The error message is just a diagnostic intended
@@ -212,13 +212,13 @@ Wallet
 This means it is possible make calls like:
 
 ```sh
-src/bitcoin-cli -named bumpfee txid fee_rate=100
+src/bitgold-cli -named bumpfee txid fee_rate=100
 ```
 
 instead of
 
 ```sh
-src/bitcoin-cli -named bumpfee txid options='{"fee_rate": 100}'
+src/bitgold-cli -named bumpfee txid options='{"fee_rate": 100}'
 ```
 
 - The `deprecatedrpc=walletwarningfield` configuration option has been removed.

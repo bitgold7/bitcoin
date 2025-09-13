@@ -8,6 +8,7 @@
 #include <common/args.h>
 #include <key_io.h>
 #include <logging.h>
+#include <tinyformat.h>
 
 namespace wallet {
 fs::path GetWalletDir()
@@ -81,12 +82,9 @@ WalletDescriptor GenerateWalletDescriptor(const CExtPubKey& master_key, const Ou
     } // no default case, so the compiler can warn about missing cases
     assert(!desc_prefix.empty());
 
-    // Mainnet derives at 0', testnet and regtest derive at 1'
-    if (Params().IsTestChain()) {
-        desc_prefix += "/1h";
-    } else {
-        desc_prefix += "/0h";
-    }
+    // Mainnet derives at BIP44_COIN_TYPE', test chains use coin type 1'
+    const uint32_t coin_type = Params().IsTestChain() ? 1 : BIP44_COIN_TYPE;
+    desc_prefix += strprintf("/%uh", coin_type);
 
     std::string internal_path = internal ? "/1" : "/0";
     std::string desc_str = desc_prefix + "/0h" + internal_path + desc_suffix;

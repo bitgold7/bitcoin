@@ -7,11 +7,11 @@ getcoins.py
 
 A script to call a faucet to get Signet coins.
 
-Syntax: `getcoins.py [-h|--help] [-c|--cmd=<bitcoin-cli path>] [-f|--faucet=<faucet URL>] [-a|--addr=<signet bech32 address>] [-p|--password=<faucet password>] [--] [<bitcoin-cli args>]`
+Syntax: `getcoins.py [-h|--help] [-c|--cmd=<bitgold-cli path>] [-f|--faucet=<faucet URL>] [-a|--addr=<signet bech32 address>] [-p|--password=<faucet password>] [--] [<bitgold-cli args>]`
 
-* `--cmd` lets you customize the bitcoin-cli path. By default it will look for it in the PATH
+* `--cmd` lets you customize the bitgold-cli path. By default it will look for it in the PATH
 * `--faucet` lets you specify which faucet to use; the faucet is assumed to be compatible with https://github.com/kallewoof/bitcoin-faucet
-* `--addr` lets you specify a Signet address; by default, the address must be a bech32 address. This and `--cmd` above complement each other (i.e. you do not need `bitcoin-cli` if you use `--addr`)
+* `--addr` lets you specify a Signet address; by default, the address must be a bech32 address. This and `--cmd` above complement each other (i.e. you do not need `bitgold-cli` if you use `--addr`)
 * `--password` lets you specify a faucet password; this is handy if you are in a classroom and set up your own faucet for your students; (above faucet does not limit by IP when password is enabled)
 
 If using the default network, invoking the script with no arguments should be sufficient under normal
@@ -32,7 +32,7 @@ It defaults to estimating an nbits value resulting in 25s average time to find a
 
 To mine the first block in your custom chain, you can run:
 
-    CLI="./build/bin/bitcoin-cli -conf=mysignet.conf"
+    CLI="./build/bin/bitgold-cli -conf=mysignet.conf"
     ADDR=$($CLI -signet getnewaddress)
     NBITS=1e00f403
     $MINER --cli="$CLI" generate --grind-cmd="$GRIND" --address="$ADDR" --nbits=$NBITS
@@ -64,20 +64,3 @@ When --multiminer is used, if a miner is down and does not mine a block within f
 
 The --standby-delay parameter can be used to make a backup miner that only mines if a block doesn't arrive on time. This can be combined with --multiminer if desired. Setting --standby-delay also prevents the first block from being mined immediately.
 
-Advanced usage
---------------
-
-The process generate follows internally is to get a block template, convert that into a PSBT, sign the PSBT, move the signature from the signed PSBT into the block template's coinbase, grind proof of work for the block, and then submit the block to the network.
-
-These steps can instead be done explicitly:
-
-    $CLI -signet getblocktemplate '{"rules": ["signet","segwit"]}' |
-      $MINER --cli="$CLI" genpsbt --address="$ADDR" |
-      $CLI -signet -stdin walletprocesspsbt |
-      jq -r .psbt |
-      $MINER --cli="$CLI" solvepsbt --grind-cmd="$GRIND" |
-      $CLI -signet -stdin submitblock
-
-This is intended to allow you to replace part of the pipeline for further experimentation (eg, to sign the block with a hardware wallet).
-
-For custom signets with a trivial challenge such as `OP_TRUE` and `OP_2` the walletprocesspsbt step can be skipped.

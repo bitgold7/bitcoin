@@ -68,7 +68,7 @@ When rebuilding during development, note that running `cmake --build build`, wit
 Obviously, it is important to build and run the tests at appropriate times -- but when you just want a quick compile to check your work, consider picking one or a set of build targets relevant to what you're working on, e.g.:
 
 ```sh
-cmake --build build --target bitcoind bitcoin-cli
+cmake --build build --target bitgoldd bitgold-cli
 cmake --build build --target bitcoin-qt
 cmake --build build --target bench_bitcoin
 ```
@@ -201,7 +201,7 @@ git fetch upstream pull/<number>/head:pr-<number> && git switch pr-<number>
 
 > [!NOTE]
 > The remote named "upstream" here must be the one that the pull request was opened against.
-> e.g. github.com/bitcoin/bitcoin.git or for the GUI github.com/bitcoin-core/gui
+> e.g. github.com/bitgold/bitgold.git
 
 Make these easier to use by adding aliases to your git config:
 

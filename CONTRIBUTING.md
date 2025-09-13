@@ -1,7 +1,7 @@
 Contributing to BitGold
 =======================
 
-The BitGold project operates an open contributor model where anyone is
+The BitGold project created by vanitycoke operates an open contributor model where anyone is
 welcome to contribute towards development in the form of peer review, testing
 and patches. This document explains the practical process and guidelines for
 contributing.
@@ -89,25 +89,14 @@ To contribute a patch, the workflow is as follows:
   1. Create topic branch
   1. Commit patches
 
-For GUI-related issues or pull requests, the https://github.com/bitcoin-core/gui repository should be used.
-For all other issues and pull requests, the https://github.com/bitcoin/bitcoin node repository should be used.
+All issues and pull requests should be filed against the https://github.com/bitgold/bitgold repository.
 
-The master branch for all monotree repositories is identical.
-
-As a rule of thumb, everything that only modifies `src/qt` is a GUI-only pull
+As a rule of thumb, everything that only modifies `src/qt` is a GUI-related pull
 request. However:
 
-* For global refactoring or other transversal changes the node repository
-  should be used.
-* For GUI-related build system changes, the node repository should be used
-  because the change needs review by the build systems reviewers.
-* Changes in `src/interfaces` need to go to the node repository because they
-  might affect other components like the wallet.
-
-For large GUI changes that include build system and interface changes, it is
-recommended to first open a pull request against the GUI repository. When there
-is agreement to proceed with the changes, a pull request with the build system
-and interfaces changes can be submitted to the node repository.
+* For global refactoring or other transversal changes, ensure appropriate reviewers are involved.
+* For GUI-related build system changes, include build system reviewers.
+* Changes in `src/interfaces` might affect other components like the wallet.
 
 The project coding conventions in the [developer notes](doc/developer-notes.md)
 must be followed.

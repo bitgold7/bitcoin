@@ -2,12 +2,13 @@
 
 namespace pos {
 
-bool SlashingTracker::DetectDoubleSign(const std::string& validator_id)
+bool SlashingTracker::DetectDoubleSign(int height, const std::string& validator_id)
 {
-    if (m_seen.count(validator_id)) {
+    auto key = std::make_pair(height, validator_id);
+    if (m_seen.count(key)) {
         return true;
     }
-    m_seen.insert(validator_id);
+    m_seen.insert(key);
     return false;
 }
 
