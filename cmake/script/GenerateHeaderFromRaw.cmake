@@ -1,7 +1,3 @@
-# Copyright (c) 2023-present The Bitcoin Core developers
-# Distributed under the MIT software license, see the accompanying
-# file COPYING or https://opensource.org/license/mit/.
-
 cmake_path(GET RAW_SOURCE_PATH STEM raw_source_basename)
 
 file(READ ${RAW_SOURCE_PATH} hex_content HEX)

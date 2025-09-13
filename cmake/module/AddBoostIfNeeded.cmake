@@ -1,7 +1,3 @@
-# Copyright (c) 2023-present The Bitcoin Core developers
-# Distributed under the MIT software license, see the accompanying
-# file COPYING or https://opensource.org/license/mit/.
-
 function(add_boost_if_needed)
   #[=[
   TODO: Not all targets, which will be added in the future, require
