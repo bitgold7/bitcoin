@@ -1,7 +1,3 @@
-# Copyright (c) 2023-present The Bitcoin Core developers
-# Distributed under the MIT software license, see the accompanying
-# file COPYING or https://opensource.org/license/mit/.
-
 add_library(test_fuzz STATIC EXCLUDE_FROM_ALL
   check_globals.cpp
   descriptor.cpp

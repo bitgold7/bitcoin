@@ -1,7 +1,3 @@
-# Copyright (c) 2023-present The Bitcoin Core developers
-# Distributed under the MIT software license, see the accompanying
-# file COPYING or https://opensource.org/license/mit/.
-
 macro(set_add_custom_command_options)
   set(DEPENDS_EXPLICIT_OPT "")
   if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.27)

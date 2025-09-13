@@ -1,7 +1,3 @@
-# Copyright (c) 2023-present The Bitcoin Core developers
-# Distributed under the MIT software license, see the accompanying
-# file COPYING or https://opensource.org/license/mit/.
-
 function(generate_setup_nsi)
   set(abs_top_srcdir ${PROJECT_SOURCE_DIR})
   set(abs_top_builddir ${PROJECT_BINARY_DIR})
