@@ -4,7 +4,6 @@
 #include <arith_uint256.h>
 #include <hash.h>
 #include <primitives/transaction.h>
-#include <script/standard.h>
 #include <util/overflow.h>
 #include <logging.h>
 
