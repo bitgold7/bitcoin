@@ -154,7 +154,6 @@ be compiled in disable-wallet mode with:
 
 In this case there is no dependency on SQLite.
 
-Mining is also possible in disable-wallet mode using the `getblocktemplate` RPC call.
 
 Additional Configure Flags
 --------------------------
@@ -173,6 +172,6 @@ This example lists the steps necessary to setup and build a command line only di
     cmake -B build
     cmake --build build
     ctest --test-dir build
-    ./build/bin/bitcoind
+    ./build/bin/bitgoldd
     ./build/bin/bitcoin help
 

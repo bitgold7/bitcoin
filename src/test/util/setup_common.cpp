@@ -26,6 +26,7 @@
 #include <node/mempool_args.h>
 #include <node/miner.h>
 #include <node/peerman_args.h>
+#include <node/stake_modifier_manager.h>
 #include <node/warnings.h>
 #include <noui.h>
 #include <policy/fees.h>
@@ -273,6 +274,8 @@ ChainTestingSetup::ChainTestingSetup(const ChainType chainType, TestOpts opts)
             },
         };
         m_node.chainman = std::make_unique<ChainstateManager>(*Assert(m_node.shutdown_signal), chainman_opts, blockman_opts);
+        m_node.stake_modman = std::make_unique<node::StakeModifierManager>();
+        Assert(m_node.validation_signals)->RegisterValidationInterface(m_node.stake_modman.get());
     };
     m_make_chainman();
 }
@@ -281,6 +284,9 @@ ChainTestingSetup::~ChainTestingSetup()
 {
     if (m_node.scheduler) m_node.scheduler->stop();
     if (m_node.validation_signals) m_node.validation_signals->FlushBackgroundCallbacks();
+    if (m_node.stake_modman && m_node.validation_signals) {
+        m_node.validation_signals->UnregisterValidationInterface(m_node.stake_modman.get());
+    }
     m_node.connman.reset();
     m_node.banman.reset();
     m_node.addrman.reset();
@@ -289,6 +295,7 @@ ChainTestingSetup::~ChainTestingSetup()
     m_node.mempool.reset();
     Assert(!m_node.fee_estimator); // Each test must create a local object, if they wish to use the fee_estimator
     m_node.chainman.reset();
+    m_node.stake_modman.reset();
     m_node.validation_signals.reset();
     m_node.scheduler.reset();
 }
@@ -342,6 +349,7 @@ TestingSetup::TestingSetup(
     peerman_opts.deterministic_rng = true;
     m_node.peerman = PeerManager::make(*m_node.connman, *m_node.addrman,
                                        m_node.banman.get(), *m_node.chainman,
+                                       *m_node.stake_modman,
                                        *m_node.mempool, *m_node.warnings,
                                        peerman_opts);
 
@@ -400,6 +408,7 @@ CBlock TestChain100Setup::CreateBlock(
     RegenerateCommitments(block, *Assert(m_node.chainman));
 
     block.nNonce = 0;
+    block.vchBlockSig.clear();
 
     return block;
 }
@@ -415,7 +424,7 @@ CBlock TestChain100Setup::CreateAndProcessBlock(
 
     CBlock block = this->CreateBlock(txns, scriptPubKey, *chainstate);
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
-    Assert(m_node.chainman)->ProcessNewBlock(shared_pblock, true, true, nullptr);
+    Assert(m_node.chainman)->ProcessNewBlock(shared_pblock, true, nullptr);
 
     return block;
 }

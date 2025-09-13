@@ -9,6 +9,7 @@
 #include <interfaces/chain.h>
 #include <interfaces/handler.h>
 #include <node/types.h>
+#include <node/context.h>
 #include <policy/fees.h>
 #include <primitives/transaction.h>
 #include <rpc/server.h>
@@ -293,6 +294,19 @@ public:
     }
     bool transactionCanBeAbandoned(const Txid& txid) override { return m_wallet->TransactionCanBeAbandoned(txid); }
     wallet::StakingStats getStakingStats() override { return m_wallet->GetStakingStats(); }
+    CAmount getDividendBalance() override { return m_wallet->GetDividendBalance(); }
+    std::pair<int, std::map<std::string, CAmount>> getNextDividend() override { return m_wallet->GetNextDividend(); }
+    std::map<int, std::map<std::string, CAmount>> getDividendHistory() override {
+        interfaces::Chain* chain = &m_wallet->chain();
+        if (chain) {
+            node::NodeContext* context = chain->context();
+            if (context && context->chainman) {
+                LOCK(::cs_main);
+                m_wallet->UpdateDividendHistory(context->chainman->ActiveChainstate());
+            }
+        }
+        return m_wallet->GetDividendHistory();
+    }
     bool abandonTransaction(const Txid& txid) override
     {
         LOCK(m_wallet->cs_wallet);

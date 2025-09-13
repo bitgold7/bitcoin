@@ -18,6 +18,7 @@ add_executable(test_bitcoin
   bech32_tests.cpp
   bip32_tests.cpp
   bip324_tests.cpp
+  bitgold_regressions_tests.cpp
   blockchain_tests.cpp
   blockencodings_tests.cpp
   blockfilter_index_tests.cpp
@@ -25,6 +26,7 @@ add_executable(test_bitcoin
   blockmanager_tests.cpp
   bloom_tests.cpp
   bswap_tests.cpp
+  bulletproof_tests.cpp
   chainstate_write_tests.cpp
   checkqueue_tests.cpp
   cluster_linearize_tests.cpp
@@ -40,6 +42,7 @@ add_executable(test_bitcoin
   denialofservice_tests.cpp
   descriptor_tests.cpp
   disconnected_transactions.cpp
+  dividend_tests.cpp
   feefrac_tests.cpp
   flatfile_tests.cpp
   fs_tests.cpp
@@ -51,11 +54,10 @@ add_executable(test_bitcoin
   key_io_tests.cpp
   key_tests.cpp
   logging_tests.cpp
+  txmempool_tests.cpp
   mempool_tests.cpp
   merkle_tests.cpp
   merkleblock_tests.cpp
-  miner_tests.cpp
-  miniminer_tests.cpp
   miniscript_tests.cpp
   minisketch_tests.cpp
   multisig_tests.cpp
@@ -71,6 +73,9 @@ add_executable(test_bitcoin
   policy_fee_tests.cpp
   policyestimator_tests.cpp
   pool_tests.cpp
+  pos_difficulty_tests.cpp
+  coinstake_rewards_tests.cpp
+  priority_tests.cpp
   stake_tests.cpp
   prevector_tests.cpp
   raii_event_tests.cpp
@@ -97,9 +102,9 @@ add_executable(test_bitcoin
   sock_tests.cpp
   span_tests.cpp
   streams_tests.cpp
+  subsidy_tests.cpp
   sync_tests.cpp
   system_tests.cpp
-  testnet4_miner_tests.cpp
   timeoffsets_tests.cpp
   torcontrol_tests.cpp
   transaction_tests.cpp
@@ -130,6 +135,7 @@ include(TargetDataSources)
 target_json_data_sources(test_bitcoin
   data/base58_encode_decode.json
   data/bip341_wallet_vectors.json
+  data/bitgold_regressions.json
   data/blockfilters.json
   data/key_io_invalid.json
   data/key_io_valid.json

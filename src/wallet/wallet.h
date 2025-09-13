@@ -36,7 +36,10 @@
 #include <wallet/types.h>
 #include <wallet/coinselection.h>
 #include <wallet/walletutil.h>
+#include <wallet/blinding.h>
+#include <key/confidentialaddress.h>
 
+class Chainstate;
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
 #endif
@@ -56,6 +59,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <array>
 
 #include <boost/signals2/signal.hpp>
 
@@ -90,7 +94,6 @@ struct bilingual_str;
 
 namespace wallet {
 struct WalletContext;
-class BitGoldStaker;
 
 //! Explicitly delete the wallet.
 //! Blocks the current thread until the wallet is destructed.
@@ -513,10 +516,29 @@ public:
     /** Update staking statistics and persist to disk. */
     void SetStakingStats(const StakingStats& stats);
 
+    /** Record a new staking reward. */
+    void AddStakingReward(CAmount reward);
+    /** Return cumulative staking rewards. */
+    CAmount GetStakingRewards() const;
+
+    /** Return current dividend pool balance. */
+    CAmount GetDividendBalance() const;
+    /** Update indexed dividend history from chainstate. */
+    void UpdateDividendHistory(const Chainstate& chainstate) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+    /** Return indexed dividend history. */
+    std::map<int, std::map<std::string, CAmount>> GetDividendHistory() const;
+    /** Return estimated next dividend payouts for wallet addresses. */
+    std::pair<int, std::map<std::string, CAmount>> GetNextDividend() const;
+
     /** Set the balance to keep reserved from staking. */
     void SetReserveBalance(CAmount amount);
     /** Get the currently reserved balance. */
     CAmount GetReserveBalance() const;
+
+    /** Set the stake split threshold. */
+    void SetStakeSplitThreshold(CAmount amount);
+    /** Get the stake split threshold. */
+    CAmount GetStakeSplitThreshold() const;
 
     /** Generate a new shielded address for confidential payments. */
     std::string GetNewShieldedAddress();
@@ -543,6 +565,8 @@ public:
      * that hasn't confirmed yet. We wouldn't consider the Coin spent already,
      * but also shouldn't try to use it again. */
     std::set<COutPoint> setLockedCoins GUARDED_BY(cs_wallet);
+    //! Dividend history filtered for wallet addresses.
+    std::map<int, std::map<std::string, CAmount>> m_dividend_history GUARDED_BY(cs_wallet);
 
     /** Registered interfaces::Chain::Notifications handler. */
     std::unique_ptr<interfaces::Handler> m_chain_notifications_handler;
@@ -550,11 +574,25 @@ public:
     /** Proof-of-stake staker thread. */
     std::unique_ptr<BitGoldStaker> m_staker;
 
+#ifdef ENABLE_BULLETPROOFS
+    /** Mapping of confidential outputs to their blinding factors and values. */
+    std::map<COutPoint, std::pair<std::array<unsigned char,32>, CAmount>> m_confidential_outputs GUARDED_BY(cs_wallet);
+#endif
+
+    /** Manager for blinding keys used by confidential transactions. */
+    BlindingKeyManager m_blinding_key_manager;
+
     /** Cached staking statistics. */
     StakingStats m_staking_stats GUARDED_BY(cs_wallet);
 
+    /** Cumulative amount earned from staking. */
+    CAmount m_cumulative_staking_rewards GUARDED_BY(cs_wallet){0};
+
     /** Amount of balance reserved from staking. */
     CAmount m_reserve_balance GUARDED_BY(cs_wallet){0};
+
+    /** Threshold for splitting stake outputs. */
+    CAmount m_stake_split_threshold GUARDED_BY(cs_wallet){0};
 
     /** True if wallet is unlocked only for staking, not for spending. */
     bool m_staking_only GUARDED_BY(cs_wallet){false};
@@ -794,6 +832,13 @@ public:
      */
     CFeeRate m_consolidate_feerate{DEFAULT_CONSOLIDATE_FEERATE};
 
+    /**
+     * Minimum transaction feerate required for ResubmitWalletTransactions to
+     * rebroadcast an unconfirmed transaction. If unset, a feerate estimate for
+     * the next block will be used. A value of 0 disables filtering.
+     */
+    std::optional<CFeeRate> m_resend_feerate_filter{};
+
     /** The maximum fee amount we're willing to pay to prioritize partial spend avoidance. */
     CAmount m_max_aps_fee{DEFAULT_MAX_AVOIDPARTIALSPEND_FEE}; //!< note: this is absolute fee, not fee rate
     OutputType m_default_address_type{DEFAULT_ADDRESS_TYPE};
@@ -849,6 +894,9 @@ public:
 
     util::Result<CTxDestination> GetNewDestination(const OutputType type, const std::string label);
     util::Result<CTxDestination> GetNewChangeDestination(const OutputType type);
+
+    ConfidentialAddress GetNewConfidentialAddress(const std::string& label);
+    bool ValidateConfidentialAddress(const std::string& input, ConfidentialAddress& out) const;
 
     isminetype IsMine(const CTxDestination& dest) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     isminetype IsMine(const CScript& script) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
@@ -1135,6 +1183,20 @@ public:
     //! Find the private key for the given key id from the wallet's descriptors, if available
     //! Returns nullopt when no descriptor has the key or if the wallet is locked.
     std::optional<CKey> GetKey(const CKeyID& keyid) const;
+
+#ifdef ENABLE_BULLETPROOFS
+    /** Record the blinding factor and value for a confidential output. */
+    void AddConfidentialOutput(const COutPoint& outpoint, const unsigned char blind[32], CAmount value);
+
+    /** Retrieve the wallet's known value for a confidential output. */
+    std::optional<CAmount> GetConfidentialValue(const COutPoint& outpoint) const;
+#endif
+
+    /** Retrieve or create a blinding key for a given public key. */
+    CKey GetBlindingKey(const CPubKey& pubkey);
+
+    /** Create a simple shielded transaction placeholder. */
+    bool CreateShieldedTransaction(const CTxDestination& dest, CAmount amount, std::string& txid, std::string& error);
 };
 
 /**
@@ -1207,8 +1269,18 @@ struct MigrationResult {
 [[nodiscard]] util::Result<MigrationResult> MigrateLegacyToDescriptor(std::shared_ptr<CWallet> local_wallet, const SecureString& passphrase, WalletContext& context);
 
 #ifdef ENABLE_BULLETPROOFS
-bool CreateBulletproofProof(CWallet& wallet, const CTransaction& tx, CBulletproof& proof);
-bool VerifyBulletproofProof(const CTransaction& tx, const CBulletproof& proof);
+/**
+ * Generate Bulletproof commitments and range proofs for each transaction output.
+ *
+ * @param wallet Reference to wallet used for randomness (currently unused).
+ * @param tx     Transaction whose outputs will be modified to include Bulletproof data.
+ * @param proofs Vector receiving the generated commitments and proofs.
+ * @returns      true on success, false if commitment or proof generation fails.
+ */
+bool CreateBulletproofProof(CWallet& wallet, CMutableTransaction& tx, std::vector<CBulletproof>& proofs);
+
+/** Verify a collection of Bulletproofs against a transaction's outputs. */
+bool VerifyBulletproofProof(const CTransaction& tx, const std::vector<CBulletproof>& proofs);
 #endif
 } // namespace wallet
 

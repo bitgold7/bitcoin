@@ -1,6 +1,6 @@
 # BitGold Staking
 
-Bitcoin Core includes an experimental proof-of-stake staker that can create
+BitGold Core includes an experimental proof-of-stake staker that can create
 blocks from mature wallet coins. The current implementation follows the
 PoSV3 (Proof-of-Stake Version 3) rules.
 
@@ -19,7 +19,7 @@ These rules are enforced automatically when staking is enabled.
 
 ## Enabling
 
-Start the node with `-staking=1` (or add `staking=1` to `bitcoin.conf`) to run
+Start the node with `-staking=1` (or add `staking=1` to `bitgold.conf`) to run
 the staking thread. The legacy `-staker` flag is also accepted. No additional
 configuration is required for PoSV3, but `-debug=staking` may be useful for
 troubleshooting.
@@ -29,7 +29,7 @@ troubleshooting.
 Use the `stakerstatus` RPC to check if staking is enabled and running:
 
 ```
-$ bitcoin-cli stakerstatus
+$ bitgold-cli stakerstatus
 {
   "enabled": true,
   "staking": true

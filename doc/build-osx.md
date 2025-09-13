@@ -2,7 +2,7 @@
 
 **Updated for MacOS [15](https://www.apple.com/macos/macos-sequoia/)**
 
-This guide describes how to build bitcoind, command-line utilities, and GUI on macOS.
+This guide describes how to build bitgoldd, command-line utilities, and GUI on macOS.
 
 ## Preparation
 
@@ -65,7 +65,7 @@ git clone https://github.com/bitcoin/bitcoin.git
 
 #### Wallet Dependencies
 
-It is not necessary to build wallet functionality to run `bitcoind` or  `bitcoin-qt`.
+It is not necessary to build wallet functionality to run `bitgoldd` or  `bitcoin-qt`.
 
 ###### Descriptor Wallet Support
 
@@ -196,14 +196,14 @@ cmake --build build --target deploy
 
 ## Running BitGold
 
-BitGold should now be available at `./build/bin/bitcoind`.
+BitGold should now be available at `./build/bin/bitgoldd`.
 If you compiled support for the GUI, it should be available at `./build/bin/bitcoin-qt`.
 
 There is also a multifunction command line interface at `./build/bin/bitcoin`
 supporting subcommands like `bitcoin node`, `bitcoin gui`, `bitcoin rpc`, and
 others that can be listed with `bitcoin help`.
 
-The first time you run `bitcoind` or `bitcoin-qt`, it will start downloading the blockchain.
+The first time you run `bitgoldd` or `bitcoin-qt`, it will start downloading the blockchain.
 This process could take many hours, or even days on slower than average systems.
 
 By default, blockchain and wallet data files will be stored in:
@@ -231,8 +231,8 @@ tail -f $HOME/Library/Application\ Support/Bitcoin/debug.log
 ## Other commands:
 
 ```shell
-./build/bin/bitcoind -daemon      # Starts the bitcoin daemon.
-./build/bin/bitcoin-cli --help    # Outputs a list of command-line options.
-./build/bin/bitcoin-cli help      # Outputs a list of RPC commands when the daemon is running.
-./build/bin/bitcoin-qt -server # Starts the bitcoin-qt server mode, allows bitcoin-cli control
+./build/bin/bitgoldd -daemon      # Starts the bitcoin daemon.
+./build/bin/bitgold-cli --help    # Outputs a list of command-line options.
+./build/bin/bitgold-cli help      # Outputs a list of RPC commands when the daemon is running.
+./build/bin/bitcoin-qt -server # Starts the bitcoin-qt server mode, allows bitgold-cli control
 ```

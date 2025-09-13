@@ -34,6 +34,7 @@
 #include <util/time.h>
 #include <util/translation.h>
 #include <versionbits.h>
+#include <consensus/dividends/dividend.h>
 
 #include <atomic>
 #include <cstdint>
@@ -78,6 +79,12 @@ static constexpr int DEFAULT_CHECKLEVEL{3};
 // one 128MB block file + added 15% undo data = 147MB greater for a total of 545MB
 // Setting the target to >= 550 MiB will make it likely we can respect the target.
 static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
+
+// Recommended default prune targets per network (in bytes)
+static const uint64_t DEFAULT_PRUNE_TARGET_MAINNET = 2ULL * 1024 * 1024 * 1024;
+static const uint64_t DEFAULT_PRUNE_TARGET_TESTNET = 1ULL * 1024 * 1024 * 1024;
+static const uint64_t DEFAULT_PRUNE_TARGET_SIGNET = MIN_DISK_SPACE_FOR_BLOCK_FILES;
+static const uint64_t DEFAULT_PRUNE_TARGET_REGTEST = MIN_DISK_SPACE_FOR_BLOCK_FILES;
 
 /** Maximum number of dedicated script-checking threads allowed */
 static constexpr int MAX_SCRIPTCHECK_THREADS{15};
@@ -387,7 +394,12 @@ public:
 /** Functions for validating blocks and updating the block tree */
 
 /** Context-independent validity checks */
-bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
+bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& consensusParams, bool fCheckMerkleRoot = true);
+
+#ifdef ENABLE_BULLETPROOFS
+/** Validate Bulletproof commitments and proofs in a transaction. */
+bool CheckBulletproofs(const CTransaction& tx, TxValidationState& state);
+#endif
 
 /**
  * Verify a block, including transactions.
@@ -395,8 +407,6 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
  * @param[in]   block       The block we want to process. Must connect to the
  *                          current tip.
  * @param[in]   chainstate  The chainstate to connect to.
- * @param[in]   check_pow   perform proof-of-work check, nBits in the header
- *                          is always checked
  * @param[in]   check_merkle_root check the merkle root
  *
  * @return Valid or Invalid state. This doesn't currently return an Error state,
@@ -404,21 +414,19 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
  *         chainstate. (This is different from functions like AcceptBlock which
  *         can fail trying to save new data.)
  *
- * For signets the challenge verification is skipped when check_pow is false.
  */
 BlockValidationState TestBlockValidity(
     Chainstate& chainstate,
     const CBlock& block,
-    bool check_pow,
     bool check_merkle_root) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
-/** Check with the proof of work on each blockheader matches the value in nBits */
-bool HasValidProofOfWork(const std::vector<CBlockHeader>& headers, const CChainParams& chainparams, int prev_height);
+/** Check that the work on each blockheader matches the value in nBits */
+bool HasValidWork(const std::vector<CBlockHeader>& headers, const CChainParams& chainparams, int prev_height);
 
 /** Check if a block has been mutated (with respect to its merkle root and witness commitments). */
 bool IsBlockMutated(const CBlock& block, bool check_witness_root);
 
-/** Return the sum of the claimed work on a given set of headers. No verification of PoW is done. */
+/** Return the sum of the claimed work on a given set of headers. No verification of work is done. */
 arith_uint256 CalculateClaimedHeadersWork(std::span<const CBlockHeader> headers);
 
 enum class VerifyDBResult {
@@ -615,6 +623,15 @@ public:
     //! Accumulated dividend fees awaiting distribution.
     CAmount m_dividend_pool GUARDED_BY(::cs_main){0};
 
+    //! Stake tracking per address.
+    std::map<std::string, StakeInfo> m_stake_info GUARDED_BY(::cs_main);
+    //! Pending dividends ready to be claimed by address.
+    std::map<std::string, CAmount> m_pending_dividends GUARDED_BY(::cs_main);
+    //! Historical snapshots of stakes taken each quarter.
+    std::map<int, std::map<std::string, CAmount>> m_stake_snapshots GUARDED_BY(::cs_main);
+    //! Historical dividend payouts keyed by height.
+    std::map<int, dividend::Payouts> m_dividend_history GUARDED_BY(::cs_main);
+
     /**
      * The base of the snapshot this chainstate was created from.
      *
@@ -649,6 +666,12 @@ public:
     void LoadDividendPool() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
     void AddToDividendPool(CAmount amount, int height) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
     CAmount GetDividendPool() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_dividend_pool; }
+    const std::map<std::string, StakeInfo>& GetStakeInfo() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_stake_info; }
+    const std::map<std::string, CAmount>& GetPendingDividends() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_pending_dividends; }
+    const std::map<int, std::map<std::string, CAmount>>& GetStakeSnapshots() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_stake_snapshots; }
+    const std::map<int, dividend::Payouts>& GetDividendHistory() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_dividend_history; }
+    void UpdateStakeWeight(const std::string& addr, CAmount weight) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+    CAmount ClaimDividend(const std::string& addr) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     //! @returns A pointer to the mempool.
     CTxMemPool* GetMempool()
@@ -948,15 +971,13 @@ private:
     /**
      * If a block header hasn't already been seen, call CheckBlockHeader on it, ensure
      * that it doesn't descend from an invalid block, and then add it to m_block_index.
-     * Caller must set min_pow_checked=true in order to add a new header to the
-     * block index (permanent memory storage), indicating that the header is
-     * known to be part of a sufficiently high-work chain (anti-dos check).
+     * Headers are added to the block index if they are part of a
+     * sufficiently high-stake chain (anti-dos check).
      */
     bool AcceptBlockHeader(
         const CBlockHeader& block,
         BlockValidationState& state,
-        CBlockIndex** ppindex,
-        bool min_pow_checked) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+        CBlockIndex** ppindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
     friend Chainstate;
 
     /** Most recent headers presync progress update, for rate-limiting. */
@@ -1205,15 +1226,10 @@ public:
      *
      * @param[in]   block The block we want to process.
      * @param[in]   force_processing Process this block even if unrequested; used for non-network block sources.
-     * @param[in]   min_pow_checked  True if proof-of-work anti-DoS checks have
-     *                               been done by caller for headers chain
-     *                               (note: only affects headers acceptance; if
-     *                               block header is already present in block
-     *                               index then this parameter has no effect)
      * @param[out]  new_block A boolean which is set to indicate if the block was first received via this call
      * @returns     If the block was processed, independently of block validity
      */
-    bool ProcessNewBlock(const std::shared_ptr<const CBlock>& block, bool force_processing, bool min_pow_checked, bool* new_block) LOCKS_EXCLUDED(cs_main);
+    bool ProcessNewBlock(const std::shared_ptr<const CBlock>& block, bool force_processing, bool* new_block) LOCKS_EXCLUDED(cs_main);
 
     /**
      * Process incoming block headers.
@@ -1222,12 +1238,11 @@ public:
      * validationinterface callback.
      *
      * @param[in]  headers The block headers themselves
-     * @param[in]  min_pow_checked  True if proof-of-work anti-DoS checks have been done by caller for headers chain
      * @param[out] state This may be set to an Error state if any error occurred processing them
      * @param[out] ppindex If set, the pointer will be set to point to the last new block index object for the given headers
      * @returns false if AcceptBlockHeader fails on any of the headers, true otherwise (including if headers were already known)
      */
-    bool ProcessNewBlockHeaders(std::span<const CBlockHeader> headers, bool min_pow_checked, BlockValidationState& state, const CBlockIndex** ppindex = nullptr) LOCKS_EXCLUDED(cs_main);
+    bool ProcessNewBlockHeaders(std::span<const CBlockHeader> headers, BlockValidationState& state, const CBlockIndex** ppindex = nullptr) LOCKS_EXCLUDED(cs_main);
 
     /**
      * Sufficiently validate a block for disk storage (and store on disk).
@@ -1237,9 +1252,6 @@ public:
      *                              peer.
      * @param[in]   dbp             The location on disk, if we are importing
      *                              this block from prior storage.
-     * @param[in]   min_pow_checked True if proof-of-work anti-DoS checks have
-     *                              been done by caller for headers chain
-     *
      * @param[out]  state       The state of the block validation.
      * @param[out]  ppindex     Optional return parameter to get the
      *                          CBlockIndex pointer for this block.
@@ -1248,7 +1260,7 @@ public:
      *
      * @returns   False if the block or header is invalid, or if saving to disk fails (likely a fatal error); true otherwise.
      */
-    bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, BlockValidationState& state, CBlockIndex** ppindex, bool fRequested, const FlatFilePos* dbp, bool* fNewBlock, bool min_pow_checked) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, BlockValidationState& state, CBlockIndex** ppindex, bool fRequested, const FlatFilePos* dbp, bool* fNewBlock) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     void ReceivedBlockTransactions(const CBlock& block, CBlockIndex* pindexNew, const FlatFilePos& pos) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 

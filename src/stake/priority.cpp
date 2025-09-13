@@ -2,6 +2,18 @@
 #include <kernel/mempool_priority.h>
 #include <algorithm>
 
+bool g_priority_engine_enabled = true;
+
+bool IsPriorityEngineEnabled()
+{
+    return g_priority_engine_enabled;
+}
+
+void SetPriorityEngineEnabled(bool enable)
+{
+    g_priority_engine_enabled = enable;
+}
+
 long CalculateStakePriority(long nStakeAmount)
 {
     long priority;

@@ -1,0 +1,52 @@
+BIP: TBD
+Title: Bulletproof Transaction Commitments
+Author: Community Contributors
+Status: Draft
+Type: Standards Track
+Created: 2024-05-15
+License: BSD-3-Clause
+
+==Abstract==
+This proposal adds confidential transaction support to Bitcoin by integrating
+Bulletproof range proofs. A new transaction version flag signals the presence
+of Bulletproof commitments. Activation is coordinated through BIP9 version bits
+using bit 3.
+
+==Motivation==
+Bulletproofs provide short non-interactive range proofs allowing transaction
+amounts to remain confidential while preserving supply integrity. Introducing
+Bulletproofs as an optional feature improves privacy without compromising
+existing workflows.
+
+==Specification==
+===Transaction format===
+Transactions that include Bulletproof commitments MUST set the
+``BULLETPROOF_VERSION`` bit (``1<<28``) in ``nVersion``. Inputs and outputs
+retain existing encodings with the addition of a commitment and range proof for
+each output.
+
+===Commitment structure===
+Each Bulletproof output commits to a value and blinding factor. The commitment
+and corresponding range proof are serialized after the ``scriptPubKey`` field.
+Nodes validating a Bulletproof transaction MUST verify every included
+range proof.
+
+===Activation===
+Deployment uses the BIP9 mechanism. The ``DEPLOYMENT_BULLETPROOF`` deployment
+relies on bit 3. Nodes reject Bulletproof transactions until the deployment is
+locked in and active.
+
+==Backward compatibility==
+Nodes that have not upgraded will reject Bulletproof-bearing transactions due
+to the unknown version flag. Wallets without Bulletproof support are expected
+to warn users when attempting to spend such outputs.
+
+==Reference implementation==
+The Bitcoin Core implementation defines ``BULLETPROOF_VERSION`` and enforces
+version-gated acceptance of Bulletproof transactions. Chain parameters include a
+``DEPLOYMENT_BULLETPROOF`` entry defaulting to ``NEVER_ACTIVE`` on production
+networks.
+
+==Acknowledgements==
+This document is a conceptual demonstration and does not constitute a complete
+specification. Further work is required for production readiness.

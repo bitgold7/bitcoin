@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+# Simple configure wrapper for CMake.
+set -e
+ARGS=""
+for arg in "$@"; do
+  case "$arg" in
+    --enable-sanitizers=*)
+      arg="-DSANITIZERS=${arg#*=}"
+      ;;
+  esac
+  ARGS="$ARGS $arg"
+done
+cmake $ARGS

@@ -18,7 +18,7 @@ How to Upgrade
 If you are running an older version, shut it down. Wait until it has completely
 shut down (which might take a few minutes for older versions), then run the
 installer (on Windows) or just copy over /Applications/Bitcoin-Qt (on Mac) or
-bitcoind/bitcoin-qt (on Linux).
+bitgoldd/bitcoin-qt (on Linux).
 
 Downgrading warning
 ---------------------
@@ -255,8 +255,8 @@ most miners include them in blocks they mined.
 bitcoin-tx
 ----------
 
-It has been observed that many of the RPC functions offered by bitcoind are
-"pure functions", and operate independently of the bitcoind wallet. This
+It has been observed that many of the RPC functions offered by bitgoldd are
+"pure functions", and operate independently of the bitgoldd wallet. This
 included many of the RPC "raw transaction" API functions, such as
 createrawtransaction.
 
@@ -280,12 +280,10 @@ Mining and relay policy enhancements
 ------------------------------------
 
 Bitcoin Core's block templates are now for version 3 blocks only, and any mining
-software relying on its `getblocktemplate` must be updated in parallel to use
 libblkmaker either version 0.4.2 or any version from 0.5.1 onward.
 If you are solo mining, this will affect you the moment you upgrade Bitcoin
 Core, which must be done prior to BIP66 achieving its 951/1001 status.
 If you are mining with the stratum mining protocol: this does not affect you.
-If you are mining with the getblocktemplate protocol to a pool: this will affect
 you at the pool operator's discretion, which must be no later than BIP66
 achieving its 951/1001 status.
 
@@ -296,7 +294,6 @@ Bitcoin Core now supports BIP 22 long polling, so mining software can be
 notified immediately of new templates rather than having to poll periodically.
 
 Support for BIP 23 block proposals is now available in Bitcoin Core's
-`getblocktemplate` method. This enables miners to check the basic validity of
 their next block before expending work on it, reducing risks of accidental
 hardforks or mining invalid blocks.
 
@@ -337,10 +334,10 @@ Detailed release notes follow. This overview includes changes that affect extern
 behavior, not code moves, refactors or string updates.
 
 RPC:
-- `f923c07` Support IPv6 lookup in bitcoin-cli even when IPv6 only bound on localhost
+- `f923c07` Support IPv6 lookup in bitgold-cli even when IPv6 only bound on localhost
 - `b641c9c` Fix addnode "onetry": Connect with OpenNetworkConnection
 - `171ca77` estimatefee / estimatepriority RPC methods
-- `b750cf1` Remove cli functionality from bitcoind
+- `b750cf1` Remove cli functionality from bitgoldd
 - `f6984e8` Add "chain" to getmininginfo, improve help in getblockchaininfo
 - `99ddc6c` Add nLocalServices info to RPC getinfo
 - `cf0c47b` Remove getwork() RPC call
@@ -354,7 +351,6 @@ RPC:
 - `f87ba3d` added includeWatchonly argument to 'gettransaction' because it affects balance calculation
 - `0fa2f88` added includedWatchonly argument to listreceivedbyaddress/...account
 - `6c37f7f` `getrawchangeaddress`: fail when keypool exhausted and wallet locked
-- `ff6a7af` getblocktemplate: longpolling support
 - `c4a321f` Add peerid to getpeerinfo to allow correlation with the logs
 - `1b4568c` Add vout to ListTransactions output
 - `b33bd7a` Implement "getchaintips" RPC command to monitor blockchain forks
@@ -492,7 +488,7 @@ Build system:
 - `9ce0774` build: Fix windows configure when using --with-qt-libdir
 - `ea96475` build: Add mention of --disable-wallet to bdb48 error messages
 - `1dec09b` depends: add shared dependency builder
-- `c101c76` build: Add --with-utils (bitcoin-cli and bitcoin-tx, default=yes). Help string consistency tweaks. Target sanity check fix
+- `c101c76` build: Add --with-utils (bitgold-cli and bitcoin-tx, default=yes). Help string consistency tweaks. Target sanity check fix
 - `e432a5f` build: add option for reducing exports (v2)
 - `6134b43` Fixing condition 'sabotaging' MSVC build
 - `af0bd5e` osx: fix signing to make Gatekeeper happy (again)
@@ -577,7 +573,6 @@ Tests:
 - `a90689f` Remove timing-based signature cache unit test
 - `236982c` Add skiplist unit tests
 - `f4b00be` Add CChain::GetLocator() unit test
-- `b45a6e8` Add test for getblocktemplate longpolling
 - `cdf305e` Set -discover=0 in regtest framework
 - `ed02282` additional test for OP_SIZE in script_valid.json
 - `0072d98` script tests: BOOLAND, BOOLOR decode to integer
@@ -598,7 +593,7 @@ Tests:
 - `2b62e17` Clearly separate PUSHDATA and numeric argument MINIMALDATA tests
 - `16d78bd` Add valid invert of invalid every numeric opcode tests
 - `f635269` tests: enable alertnotify test for Windows
-- `7a41614` tests: allow rpc-tests to get filenames for bitcoind and bitcoin-cli from the environment
+- `7a41614` tests: allow rpc-tests to get filenames for bitgoldd and bitgold-cli from the environment
 - `5122ea7` tests: fix forknotify.py on windows
 - `fa7f8cd` tests: remove old pull-tester scripts
 - `7667850` tests: replace the old (unused since Travis) tests with new rpc test scripts
@@ -635,7 +630,7 @@ Miscellaneous:
 - `cd01a5e` Enable paranoid corruption checks in LevelDB >= 1.16
 - `9365937` Add comment about never updating nTimeOffset past 199 samples
 - `403c1bf` contrib: remove getwork-based pyminer (as getwork API call has been removed)
-- `0c3e101` contrib: Added systemd .service file in order to help distributions integrate bitcoind
+- `0c3e101` contrib: Added systemd .service file in order to help distributions integrate bitgoldd
 - `0a0878d` doc: Add new DNSseed policy
 - `2887bff` Update coding style and add .clang-format
 - `5cbda4f` Changed LevelDB cursors to use scoped pointers to ensure destruction when going out of scope

@@ -9,6 +9,7 @@
 #include <coins.h>
 #include <dbwrapper.h>
 #include <consensus/amount.h>
+#include <consensus/dividends/dividend.h>
 #include <kernel/cs_main.h>
 #include <sync.h>
 #include <util/fs.h>
@@ -64,6 +65,16 @@ public:
     //! Read or update the dividend pool balance.
     CAmount GetDividendPool() const;
     bool WriteDividendPool(CAmount amount);
+
+    //! Persistence helpers for dividend data.
+    std::map<std::string, StakeInfo> GetStakeInfo() const;
+    bool WriteStakeInfo(const std::map<std::string, StakeInfo>& info);
+    std::map<std::string, CAmount> GetPendingDividends() const;
+    bool WritePendingDividends(const std::map<std::string, CAmount>& divs);
+    std::map<int, std::map<std::string, CAmount>> GetStakeSnapshots() const;
+    bool WriteStakeSnapshots(const std::map<int, std::map<std::string, CAmount>>& snaps);
+    std::map<int, dividend::Payouts> GetDividendHistory() const;
+    bool WriteDividendHistory(const std::map<int, dividend::Payouts>& hist);
 };
 
 #endif // BITCOIN_TXDB_H

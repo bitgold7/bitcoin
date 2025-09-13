@@ -3,10 +3,13 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <bitcoin-build-config.h> // IWYU pragma: keep
+#include <bitgold-build-config.h> // IWYU pragma: keep
 
-#include <pos/stake.h>
-#include <pos/difficulty.h>
+#include <common/args.h>
+#include <consensus/pos/stake.h>
+#include <pos/slashing.h>
+#include <consensus/dividends/dividend.h>
+#include <pow.h>
 #include <validation.h>
 
 #include <arith_uint256.h>
@@ -37,6 +40,7 @@
 #include <node/utxo_snapshot.h>
 #include <policy/ephemeral_policy.h>
 #include <policy/policy.h>
+#include <policy/priority.h>
 #include <policy/rbf.h>
 #include <policy/settings.h>
 #include <policy/truc_policy.h>
@@ -46,7 +50,6 @@
 #include <script/script.h>
 #include <script/sigcache.h>
 #include <signet.h>
-#include <stake/priority.h>
 #include <tinyformat.h>
 #include <txdb.h>
 #include <txmempool.h>
@@ -66,10 +69,10 @@
 #include <util/trace.h>
 #include <util/translation.h>
 #include <validationinterface.h>
-#include <util/moneystr.h>
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
+#include <util/secp256k1_context.h>
 #endif
 
 #include <algorithm>
@@ -78,16 +81,20 @@
 #include <deque>
 #include <numeric>
 #include <optional>
-#include <set>
 #include <ranges>
+#include <set>
 #include <span>
 #include <string>
 #include <tuple>
 #include <utility>
 
 using kernel::CCoinsStats;
+using kernel::CheckBlockSignature;
+using kernel::CheckStakeTimestamp;
 using kernel::CoinStatsHashType;
 using kernel::ComputeUTXOStats;
+using kernel::ContextualCheckProofOfStake;
+using kernel::IsProofOfStake;
 using kernel::Notifications;
 
 using fsbridge::FopenFn;
@@ -96,6 +103,79 @@ using node::BlockMap;
 using node::CBlockIndexHeightOnlyComparator;
 using node::CBlockIndexWorkComparator;
 using node::SnapshotMetadata;
+
+static pos::SlashingTracker g_slashing;
+
+#ifdef ENABLE_BULLETPROOFS
+/** Extract a Bulletproof commitment and proof from a script.
+ *  Returns true if a Bulletproof was found and successfully extracted.
+ *  Sets @p malformed to true if OP_BULLETPROOF is found but data is missing. */
+static bool ExtractBulletproofFromScript(const CScript& script, CBulletproof& out, bool& malformed)
+{
+    CScript::const_iterator pc{script.begin()};
+    opcodetype opcode;
+    std::vector<unsigned char> data;
+    while (script.GetOp(pc, opcode, data)) {
+        if (opcode != OP_BULLETPROOF) continue;
+        if (!script.GetOp(pc, opcode, data) || data.size() != sizeof(out.commitment.data)) {
+            malformed = true;
+            return false;
+        }
+        std::copy(data.begin(), data.end(), out.commitment.data);
+        if (!script.GetOp(pc, opcode, out.proof)) {
+            malformed = true;
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+bool CheckBulletproofs(const CTransaction& tx, TxValidationState& state)
+{
+    bool has_bp{false};
+    std::vector<secp256k1_pedersen_commitment> input_comms;
+    std::vector<secp256k1_pedersen_commitment> output_comms;
+    auto check_script = [&](const CScript& script,
+                            std::vector<secp256k1_pedersen_commitment>& commits) -> bool {
+        CBulletproof bp;
+        bool malformed{false};
+        bool present = ExtractBulletproofFromScript(script, bp, malformed);
+        if (malformed) {
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
+        }
+        if (present) {
+            has_bp = true;
+            if (!VerifyBulletproof(bp)) {
+                return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
+            }
+            commits.push_back(bp.commitment);
+        }
+        return true;
+    };
+
+    for (const auto& txin : tx.vin) {
+        if (!check_script(txin.scriptSig, input_comms)) return false;
+    }
+    for (const auto& txout : tx.vout) {
+        if (!check_script(txout.scriptPubKey, output_comms)) return false;
+        if (tx.UsesBulletproofs() && txout.nValue != 0) {
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof-value");
+        }
+    }
+    if (tx.UsesBulletproofs() && !has_bp) {
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof-missing");
+    }
+    if (tx.UsesBulletproofs()) {
+        static const secp256k1_context_holder ctx(SECP256K1_CONTEXT_VERIFY);
+        if (secp256k1_pedersen_verify_tally(ctx.get(), input_comms.data(), input_comms.size(),
+                                            output_comms.data(), output_comms.size()) != 1) {
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof-balance");
+        }
+    }
+    return true;
+}
+#endif
 
 /** Size threshold for warning about slow UTXO set flush to disk. */
 static constexpr size_t WARN_FLUSH_COINS_SIZE = 1 << 30; // 1 GiB
@@ -114,6 +194,8 @@ const std::vector<std::string> CHECKLEVEL_DOC{
 };
 /** The number of blocks to keep below the deepest prune lock. */
 static constexpr int PRUNE_LOCK_BUFFER{10};
+/** Height threshold before block file pruning is permitted. */
+[[maybe_unused]] static constexpr int64_t N_PRUNE_AFTER_HEIGHT{100'000};
 
 TRACEPOINT_SEMAPHORE(validation, block_connected);
 TRACEPOINT_SEMAPHORE(utxocache, flush);
@@ -121,7 +203,89 @@ TRACEPOINT_SEMAPHORE(mempool, replaced);
 TRACEPOINT_SEMAPHORE(mempool, rejected);
 ChainstateManager* g_chainman{nullptr};
 
-bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& params, bool fCheckPOW, bool fCheckMerkleRoot)
+static bool CheckBlockTime(const CBlock& block, BlockValidationState& state, const Consensus::Params& params)
+{
+    const int64_t nTime{block.GetBlockTime()};
+    if (params.fEnablePoS && IsProofOfStake(block)) {
+        if (nTime > GetTime() + 15) {
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time-future", "stake timestamp too far in future");
+        }
+    } else if (nTime > GetTime() + MAX_FUTURE_BLOCK_TIME) {
+        return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "time-too-new", "block timestamp too far in the future");
+    }
+    return true;
+}
+
+static bool CheckCoinstakeRewards(const CBlock& block, const CBlockIndex* pindexPrev,
+                                  const CCoinsViewCache& view,
+                                  const Consensus::Params& params,
+                                  BlockValidationState& state)
+{
+    // Verify 90/10 fee split between validator and dividend pool
+    CAmount fees{0};
+    for (size_t i = 2; i < block.vtx.size(); ++i) {
+        const CTransaction& tx{*block.vtx[i]};
+        CAmount in_val{0};
+        for (const auto& in : tx.vin) {
+            const Coin& coin{view.AccessCoin(in.prevout)};
+            if (coin.IsSpent()) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
+                                     "bad-txns-inputs-missingorspent");
+            }
+            in_val += coin.out.nValue;
+        }
+        CAmount out_val{0};
+        for (const auto& o : tx.vout) out_val += o.nValue;
+        if (in_val < out_val) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
+                                 "bad-txns-in-belowout");
+        }
+        fees += in_val - out_val;
+    }
+
+    const int height{pindexPrev->nHeight + 1};
+    CAmount block_subsidy{GetBlockSubsidy(height, params)};
+    CAmount total_reward{fees + block_subsidy};
+    CAmount dividend_reward{total_reward / 10};
+    CAmount validator_reward{total_reward - dividend_reward};
+
+    const CTransaction& reward_tx{*block.vtx[1]};
+    CAmount stake_input_total{0};
+    for (const auto& in : reward_tx.vin) {
+        const Coin& coin{view.AccessCoin(in.prevout)};
+        if (coin.IsSpent()) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
+                                 "bad-txns-inputs-missingorspent");
+        }
+        stake_input_total += coin.out.nValue;
+    }
+
+    if (reward_tx.vout.size() < 2 ||
+        reward_tx.vout[1].nValue != stake_input_total + validator_reward) {
+        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
+                             "bad-validator-amount");
+    }
+    if (reward_tx.vout.size() < 3) {
+        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
+                             "bad-dividend-missing");
+    }
+    if (reward_tx.vout[2].nValue != dividend_reward) {
+        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
+                             "bad-dividend-amount");
+    }
+    if (reward_tx.vout[2].scriptPubKey != dividend::GetDividendScript()) {
+        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
+                             "bad-dividend-script");
+    }
+    if (reward_tx.vout.size() != 3) {
+        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
+                             "bad-dividend-extra");
+    }
+
+    return true;
+}
+
+bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& params, bool fCheckMerkleRoot)
 {
     // Check block weight
     if (GetBlockWeight(block) > MAX_BLOCK_WEIGHT) {
@@ -148,6 +312,10 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
         if (!unique_txids.insert(tx->GetHash()).second) {
             return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-duplicate", "duplicate transaction");
         }
+    }
+
+    if (!CheckBlockTime(block, state, params)) {
+        return false;
     }
 
     // Reject legacy coinstake format (null prevout)
@@ -182,33 +350,137 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
     // Proof checks
     const int next_height{pindexPrev->nHeight + 1};
     if (params.fEnablePoS && next_height >= params.posActivationHeight) {
+        // After activation only proof-of-stake blocks are allowed
         if (!IsProofOfStake(block)) {
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "expected proof-of-stake block");
         }
-        if (!CheckStakeTimestamp(block, params)) {
-            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time", "invalid proof-of-stake timestamp");
+        // Reject non-monotonic or misaligned timestamps before contextual PoS checks
+        if (block.nTime <= pindexPrev->GetBlockTime()) {
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time-order", "stake timestamp not increasing");
+        }
+        unsigned int step = params.nStakeTimestampMask + 1;
+        if ((block.nTime - pindexPrev->GetBlockTime()) % step != 0) {
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time-interval", "stake timestamp interval invalid");
+        }
+        // Timestamp must respect the network's stake mask, drift, and spacing limits
+        switch (CheckStakeTimestamp(block, pindexPrev->GetBlockTime(), params)) {
+        case kernel::StakeTimeValidationResult::OK:
+            break;
+        case kernel::StakeTimeValidationResult::MASK:
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time-mask", "stake timestamp not masked");
+        case kernel::StakeTimeValidationResult::FUTURE:
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time-future", "stake timestamp too far in future");
+        case kernel::StakeTimeValidationResult::SPACING:
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-time-spacing", "stake timestamp violates spacing");
         }
         {
             LOCK(cs_main);
-            CCoinsViewCache view(&g_chainman->ActiveChainstate().CoinsTip());
+            Chainstate& chainstate = g_chainman->ActiveChainstate();
+            CCoinsViewCache view(&chainstate.CoinsTip());
             const CChain& chain{g_chainman->ActiveChain()};
+            // ContextualCheckProofOfStake enforces coinstake format, minimum age and difficulty
             if (!ContextualCheckProofOfStake(block, pindexPrev, view, chain, params)) {
                 return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos", "proof of stake check failed");
             }
+
+            if (!CheckCoinstakeRewards(block, pindexPrev, view, params, state)) {
+                return false;
+            }
+
+            if (gArgs.GetBoolArg("-dividendpayouts", false) && next_height % dividend::QUARTER_BLOCKS == 0) {
+                CAmount pool = chainstate.GetDividendPool() + block.vtx[1]->vout[2].nValue;
+                const CTransactionRef payout_tx{block.vtx.size() > 2 ? block.vtx[2] : nullptr};
+                dividend::Payouts expected = dividend::CalculatePayouts(chainstate.GetStakeInfo(), next_height, pool);
+                if (expected.empty()) {
+                    if (payout_tx && !payout_tx->vout.empty()) {
+                        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-payout", "unexpected dividend payout");
+                    }
+                } else {
+                    if (!payout_tx) {
+                        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-payout-missing", "missing dividend payout");
+                    }
+                    std::vector<std::pair<std::string, CAmount>> exp_vec(expected.begin(), expected.end());
+                    CAmount paid{0};
+                    if (payout_tx->vout.size() < exp_vec.size()) {
+                        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-payout-size", "payout output count mismatch");
+                    }
+                    for (size_t i = 0; i < exp_vec.size(); ++i) {
+                        const CTxOut& out{payout_tx->vout[i]};
+                        if (out.scriptPubKey != dividend::GetDividendScript() || out.nValue != exp_vec[i].second) {
+                            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-payout-amt", "payout amount mismatch");
+                        }
+                        paid += exp_vec[i].second;
+                    }
+                    CAmount leftover = pool - paid;
+                    if (leftover > 0) {
+                        if (payout_tx->vout.size() != exp_vec.size() + 1 || payout_tx->vout.back().scriptPubKey != dividend::GetDividendScript() || payout_tx->vout.back().nValue != leftover) {
+                            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-payout-change", "payout change mismatch");
+                        }
+                    } else if (payout_tx->vout.size() != exp_vec.size()) {
+                        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-payout-extra", "unexpected payout output");
+                    }
+                }
+            }
+
+        }
+        // The block must be signed by the coinstake input
+        if (!CheckBlockSignature(block)) {
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-signature", "invalid proof of stake block signature");
+        }
+        // Penalize validators that sign multiple competing blocks at the same height.
+        std::string validator_id;
+        const CTransaction& stake_tx{*block.vtx[1]};
+        if (!stake_tx.vin.empty()) {
+            const CScript& scriptSig{stake_tx.vin[0].scriptSig};
+            CScript::const_iterator it = scriptSig.begin();
+            opcodetype op;
+            std::vector<unsigned char> vchSig;
+            std::vector<unsigned char> vchPub;
+            if (scriptSig.GetOp(it, op, vchSig) && scriptSig.GetOp(it, op, vchPub)) {
+                validator_id = HexStr(vchPub);
+            }
+        }
+        if (!validator_id.empty() && g_slashing.DetectDoubleSign(next_height, validator_id)) {
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-double-sign", "validator produced multiple blocks");
         }
     } else {
         if (IsProofOfStake(block)) {
+            {
+                LOCK(cs_main);
+                Chainstate& chainstate = g_chainman->ActiveChainstate();
+                CCoinsViewCache view(&chainstate.CoinsTip());
+                if (!CheckCoinstakeRewards(block, pindexPrev, view, params, state)) {
+                    return false;
+                }
+            }
             return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-pos-prev", "proof of stake before activation");
         }
-        if (fCheckPOW) {
-            arith_uint256 bnTarget;
-            bnTarget.SetCompact(block.nBits);
-            if (bnTarget <= 0 || bnTarget > UintToArith256(params.powLimit) ||
-                UintToArith256(block.GetHash()) > bnTarget) {
-                return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "high-hash", "proof of work failed");
+    }
+
+    // Enforce Bulletproof activation.
+#ifdef ENABLE_BULLETPROOFS
+    if (!DeploymentActiveAfter(pindexPrev, *g_chainman, Consensus::DEPLOYMENT_BULLETPROOF)) {
+        for (const auto& tx : block.vtx) {
+            if (tx->UsesBulletproofs()) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-bulletproof-premature", "Bulletproof not yet active");
+            }
+        }
+    } else {
+        for (const auto& tx : block.vtx) {
+            if (!CheckBulletproofs(*tx, state)) {
+                return false;
             }
         }
     }
+#else
+    if (!DeploymentActiveAfter(pindexPrev, *g_chainman, Consensus::DEPLOYMENT_BULLETPROOF)) {
+        for (const auto& tx : block.vtx) {
+            if (tx->UsesBulletproofs()) {
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-bulletproof-premature", "Bulletproof not yet active");
+            }
+        }
+    }
+#endif
 
     return true;
 }
@@ -231,6 +503,20 @@ const CBlockIndex* Chainstate::FindForkInGlobalIndex(const CBlockLocator& locato
         }
     }
     return m_chain.Genesis();
+}
+
+bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, CBlockIndex* pindex,
+                              CCoinsViewCache& view, bool fJustCheck)
+{
+    (void)state;
+    (void)view;
+    if (!fJustCheck && pindex != nullptr && block.vtx.size() > 1) {
+        const auto& stake_tx = *block.vtx[1];
+        if (stake_tx.vout.size() > 2 && stake_tx.vout[2].scriptPubKey == dividend::GetDividendScript()) {
+            AddToDividendPool(stake_tx.vout[2].nValue, pindex->nHeight);
+        }
+    }
+    return true;
 }
 
 bool CheckInputScripts(const CTransaction& tx, TxValidationState& state,
@@ -545,9 +831,14 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, TxValidationS
 
     // Call CheckInputScripts() to cache signature and script validity against current tip consensus rules.
 #ifdef ENABLE_BULLETPROOFS
-    // Placeholder: validate any Bulletproof data attached to the transaction
-    if (!VerifyBulletproof(CBulletproof{})) {
-        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
+    const CBlockIndex* tip_index{nullptr};
+    if (g_chainman) {
+        tip_index = g_chainman->m_blockman.LookupBlockIndex(coins_tip.GetBestBlock());
+    }
+    if (tip_index && DeploymentActiveAfter(tip_index, *g_chainman, Consensus::DEPLOYMENT_BULLETPROOF)) {
+        if (!CheckBulletproofs(tx, state)) {
+            return false;
+        }
     }
 #endif
     return CheckInputScripts(tx, state, view, flags, /* cacheSigStore= */ true, /* cacheFullScriptStore= */ true, txdata, validation_cache);
@@ -931,6 +1222,12 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     // be mined yet.
     if (!CheckFinalTxAtTip(*Assert(m_active_chainstate.m_chain.Tip()), tx)) {
         return state.Invalid(TxValidationResult::TX_PREMATURE_SPEND, "non-final");
+    }
+
+    // Bulletproof transactions are invalid until the deployment activates.
+    const CBlockIndex* tip{m_active_chainstate.m_chain.Tip()};
+    if (tx.UsesBulletproofs() && !DeploymentActiveAfter(tip, m_chainman, Consensus::DEPLOYMENT_BULLETPROOF)) {
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-bulletproof-premature");
     }
 
     if (m_pool.exists(tx.GetWitnessHash())) {
@@ -1580,25 +1877,13 @@ MempoolAcceptResult MemPoolAccept::AcceptSingleTransaction(const CTransactionRef
 
     if (!ConsensusScriptChecks(args, ws)) return MempoolAcceptResult::Failure(ws.m_state);
 
-    // Calculate priority
-    int64_t priority = 0;
-    priority += CalculateStakePriority(ws.m_ptx->GetValueOut());
-    priority += CalculateFeePriority(ws.m_base_fees);
-    int64_t stake_duration = 0;
-    for (const CTxIn& txin : ws.m_ptx->vin) {
-        const Coin& coin = m_view.AccessCoin(txin.prevout);
-        if (!coin.IsSpent()) {
-            int n_blocks = m_active_chainstate.m_chain.Height() - coin.nHeight;
-            if (n_blocks > 0) {
-                stake_duration = std::max<int64_t>(stake_duration, n_blocks * args.m_chainparams.GetConsensus().nPowTargetSpacing);
-            }
-        }
+    if (g_enable_priority) {
+        int64_t priority = GetBGDPriority(*ws.m_ptx, ws.m_base_fees, m_view, m_pool,
+                                          m_active_chainstate.m_chain.Height(),
+                                          args.m_chainparams.GetConsensus(),
+                                          SignalsOptInRBF(*ws.m_ptx), !ws.m_ancestors.empty());
+        const_cast<CTxMemPoolEntry&>(*ws.m_tx_handle).SetPriority(priority);
     }
-    priority += CalculateStakeDurationPriority(stake_duration);
-    if (m_pool.DynamicMemoryUsage() > m_pool.m_opts.max_size_bytes * 9 / 10) {
-        priority += CONGESTION_PENALTY;
-    }
-    const_cast<CTxMemPoolEntry&>(*ws.m_tx_handle).SetPriority(priority);
 
     const CFeeRate effective_feerate{ws.m_modified_fees, static_cast<uint32_t>(ws.m_vsize)};
     // Tx was accepted, but not added
@@ -2080,21 +2365,30 @@ PackageMempoolAcceptResult ProcessNewPackage(Chainstate& active_chainstate, CTxM
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
-    // Hard cap: 8M BGD total supply with 3M premine in genesis block.
-    // First 90k blocks reward 50, next 20k reward 25, then 0.
-    if (nHeight <= 0) return 0; // genesis handled separately
+    if (nHeight < 0) return 0;
+    if (nHeight == 0) return consensusParams.genesis_reward;
 
-    if (nHeight <= consensusParams.nSubsidyHalvingInterval) {
-        return 50 * COIN;
+    const CAmount max_subsidy{consensusParams.nMaximumSupply - consensusParams.genesis_reward};
+
+    int halvings = (nHeight - 1) / consensusParams.nSubsidyHalvingInterval;
+    if (halvings >= 64) return 0;
+    CAmount subsidy = 50 * COIN;
+    subsidy >>= halvings;
+
+    CAmount minted{0};
+    int height = nHeight - 1;
+    CAmount current_subsidy = 50 * COIN;
+    while (height > 0 && current_subsidy > 0) {
+        int blocks = std::min(height, consensusParams.nSubsidyHalvingInterval);
+        minted += current_subsidy * blocks;
+        height -= blocks;
+        current_subsidy >>= 1;
     }
 
-    // Allow only 20k blocks at the halved reward before hitting the cap
-    const int second_phase = consensusParams.nSubsidyHalvingInterval + 20000;
-    if (nHeight <= second_phase) {
-        return 25 * COIN;
+    if (minted >= max_subsidy) {
+        return 0;
     }
-
-    return 0;
+    return std::min(subsidy, max_subsidy - minted);
 }
 
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast,
@@ -2104,38 +2398,17 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast,
     assert(pindexLast);
 
     if (params.fEnablePoS && pindexLast->nHeight + 1 >= params.posActivationHeight) {
-        return GetPoSNextTargetRequired(pindexLast, pblock->GetBlockTime(), params);
+        return GetPoSNextWorkRequired(pindexLast, pblock->GetBlockTime(), params);
     }
 
-    arith_uint256 bnLimit = UintToArith256(params.powLimit);
-
-    if (params.fPowNoRetargeting) {
-        return pindexLast->nBits;
-    }
-
-    // Difficulty retargeting inspired by Bitcoin's Digishield implementation.
-    const int64_t target_spacing = params.nPowTargetSpacing;
-    const int64_t interval = params.DifficultyAdjustmentInterval();
-
-    int64_t actual_spacing = pblock->nTime - pindexLast->nTime;
-    if (actual_spacing < 0) actual_spacing = target_spacing;
-
-    arith_uint256 bnNew;
-    bnNew.SetCompact(pindexLast->nBits);
-    bnNew *= ((interval - 1) * target_spacing + 2 * actual_spacing);
-    bnNew /= ((interval + 1) * target_spacing);
-
-    if (bnNew <= 0 || bnNew > bnLimit) {
-        bnNew = bnLimit;
-    }
-
-    return bnNew.GetCompact();
+    // With proof-of-work removed, keep the previous difficulty for premine blocks.
+    return pindexLast->nBits;
 }
 
 /**
  * Iterate over the given headers and ensure each one satisfies the proof of
- * work or proof of stake target specified by its nBits field and matches any
- * defined checkpoints for its height.
+ * work target (proof-of-work or proof-of-stake) specified by its nBits field
+ * and matches any defined checkpoints for its height.
  *
  * @param headers       Sequence of consecutive block headers.
  * @param chainparams   Chain parameters providing consensus rules and
@@ -2143,11 +2416,13 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast,
  * @param prev_height   Height of the block preceding \p headers. The first
  *                      header is assumed to be at prev_height + 1.
  */
-bool HasValidProofOfWork(const std::vector<CBlockHeader>& headers,
-                         const CChainParams& chainparams,
-                         int prev_height)
+bool HasValidWork(const std::vector<CBlockHeader>& headers,
+                  const CChainParams& chainparams,
+                  int prev_height)
 {
     const auto& checkpoints{chainparams.Checkpoints().checkpoints};
+    const auto& consensus{chainparams.GetConsensus()};
+    const arith_uint256 work_limit{UintToArith256(consensus.posLimit)};
     for (const CBlockHeader& header : headers) {
         bool fNegative{false};
         bool fOverflow{false};
@@ -2155,7 +2430,7 @@ bool HasValidProofOfWork(const std::vector<CBlockHeader>& headers,
         bnTarget.SetCompact(header.nBits, &fNegative, &fOverflow);
 
         // Range checks
-        if (fNegative || fOverflow || bnTarget == 0 || bnTarget > UintToArith256(chainparams.GetConsensus().powLimit)) {
+        if (fNegative || fOverflow || bnTarget == 0 || bnTarget > work_limit) {
             return false;
         }
 
@@ -2242,19 +2517,56 @@ void Chainstate::InitCoinsDB(
 void Chainstate::LoadDividendPool()
 {
     m_dividend_pool = CoinsDB().GetDividendPool();
+    m_stake_info = CoinsDB().GetStakeInfo();
+    m_pending_dividends = CoinsDB().GetPendingDividends();
+    m_stake_snapshots = CoinsDB().GetStakeSnapshots();
+    m_dividend_history = CoinsDB().GetDividendHistory();
 }
 
 void Chainstate::AddToDividendPool(CAmount amount, int height)
 {
     m_dividend_pool += amount;
-    // Payout every ~quarter (16200 blocks at 8 min spacing)
-    static constexpr int QUARTER_BLOCKS{16200};
-    if (height > 0 && height % QUARTER_BLOCKS == 0 && m_dividend_pool > 0) {
-        // Placeholder: dividend distribution logic
-        LogInfo("Distributing %s from dividend pool\n", FormatMoney(m_dividend_pool));
-        m_dividend_pool = 0;
+    if (gArgs.GetBoolArg("-dividendpayouts", false) && height > 0 && height % dividend::QUARTER_BLOCKS == 0) {
+        std::map<std::string, CAmount> snap;
+        for (const auto& [addr, info] : m_stake_info) {
+            snap.emplace(addr, info.weight);
+        }
+        m_stake_snapshots.emplace(height, snap);
+        auto payouts = dividend::CalculatePayouts(m_stake_info, height, m_dividend_pool);
+        for (const auto& [addr, amt] : payouts) {
+            m_pending_dividends[addr] += amt;
+        }
+        m_dividend_history.emplace(height, payouts);
+        for (auto& [addr, info] : m_stake_info) {
+            info.last_payout_height = height;
+        }
+        CAmount paid{0};
+        for (const auto& [addr, amt] : payouts) {
+            (void)addr;
+            paid += amt;
+        }
+        m_dividend_pool -= paid;
     }
     CoinsDB().WriteDividendPool(m_dividend_pool);
+    CoinsDB().WriteStakeInfo(m_stake_info);
+    CoinsDB().WritePendingDividends(m_pending_dividends);
+    CoinsDB().WriteStakeSnapshots(m_stake_snapshots);
+    CoinsDB().WriteDividendHistory(m_dividend_history);
+}
+
+void Chainstate::UpdateStakeWeight(const std::string& addr, CAmount weight)
+{
+    m_stake_info[addr].weight = weight;
+}
+
+CAmount Chainstate::ClaimDividend(const std::string& addr)
+{
+    auto it = m_pending_dividends.find(addr);
+    if (it == m_pending_dividends.end()) return 0;
+    CAmount amount = it->second;
+    m_pending_dividends.erase(it);
+    CoinsDB().WritePendingDividends(m_pending_dividends);
+    return amount;
 }
 
 bool IsBlockMutated(const CBlock& block, bool check_witness_root)
@@ -2269,7 +2581,7 @@ bool IsBlockMutated(const CBlock& block, bool check_witness_root)
     }
 
     const bool has_witness_tx = std::any_of(block.vtx.begin(), block.vtx.end(),
-        [](const CTransactionRef& tx) { return tx->HasWitness(); });
+                                            [](const CTransactionRef& tx) { return tx->HasWitness(); });
 
     if (check_witness_root) {
         block.m_checked_witness_commitment = true;

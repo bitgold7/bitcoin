@@ -22,7 +22,7 @@ How to Upgrade
 If you are running an older version, shut it down. Wait until it has completely
 shut down (which might take a few minutes in some cases), then run the
 installer (on Windows) or just copy over `/Applications/Bitcoin-Qt` (on Mac)
-or `bitcoind`/`bitcoin-qt` (on Linux).
+or `bitgoldd`/`bitcoin-qt` (on Linux).
 
 Upgrading directly from a version of Bitcoin Core that has reached its EOL is
 possible, but it might take some time if the data directory needs to be migrated. Old
@@ -152,7 +152,7 @@ Updated settings
 
 Changes to Wallet or GUI related settings can be found in the GUI or Wallet section below.
 
-- Passing an invalid `-rpcauth` argument now cause bitcoind to fail to start.  (#20461)
+- Passing an invalid `-rpcauth` argument now cause bitgoldd to fail to start.  (#20461)
 
 Tools and Utilities
 -------------------
@@ -163,9 +163,9 @@ Tools and Utilities
   like `-onlynet=<network>` or to upgrade to this release of Bitcoin Core 22.0
   that supports Tor v3 only.  (#21595)
 
-- A new `-rpcwaittimeout` argument to `bitcoin-cli` sets the timeout
+- A new `-rpcwaittimeout` argument to `bitgold-cli` sets the timeout
   in seconds to use with `-rpcwait`. If the timeout expires,
-  `bitcoin-cli` will report a failure. (#21056)
+  `bitgold-cli` will report a failure. (#21056)
 
 Wallet
 ------
@@ -316,7 +316,7 @@ A detailed list of changes in this version follows. To keep the list to a manage
 - bitcoin/bitcoin#20965 net, rpc:  return `NET_UNROUTABLE` as `not_publicly_routable`, automate helps (jonatack)
 - bitcoin/bitcoin#20966 banman: save the banlist in a JSON format on disk (vasild)
 - bitcoin/bitcoin#21015 Make all of `net_processing` (and some of net) use std::chrono types (dhruv)
-- bitcoin/bitcoin#21029 bitcoin-cli: Correct docs (no "generatenewaddress" exists) (luke-jr)
+- bitcoin/bitcoin#21029 bitgold-cli: Correct docs (no "generatenewaddress" exists) (luke-jr)
 - bitcoin/bitcoin#21148 Split orphan handling from `net_processing` into txorphanage (ajtowns)
 - bitcoin/bitcoin#21162 Net Processing: Move RelayTransaction() into PeerManager (jnewbery)
 - bitcoin/bitcoin#21167 make `CNode::m_inbound_onion` public, initialize explicitly (jonatack)
@@ -411,7 +411,7 @@ A detailed list of changes in this version follows. To keep the list to a manage
 - bitcoin/bitcoin#22686 Use GetSelectionAmount in ApproximateBestSubset (achow101)
 
 ### RPC and other APIs
-- bitcoin/bitcoin#18335, bitcoin/bitcoin#21484 cli: Print useful error if bitcoind rpc work queue exceeded (LarryRuane)
+- bitcoin/bitcoin#18335, bitcoin/bitcoin#21484 cli: Print useful error if bitgoldd rpc work queue exceeded (LarryRuane)
 - bitcoin/bitcoin#18466 Fix invalid parameter error codes for `{sign,verify}message` RPCs (theStack)
 - bitcoin/bitcoin#18772 Calculate fees in `getblock` using BlockUndo data (robot-visions)
 - bitcoin/bitcoin#19033 http: Release work queue after event base finish (promag)
@@ -421,7 +421,6 @@ A detailed list of changes in this version follows. To keep the list to a manage
 - bitcoin/bitcoin#20286 Deprecate `addresses` and `reqSigs` from RPC outputs (mjdietzx)
 - bitcoin/bitcoin#20459 Fail to return undocumented return values (MarcoFalke)
 - bitcoin/bitcoin#20461 Validate `-rpcauth` arguments (promag)
-- bitcoin/bitcoin#20556 Properly document return values (`submitblock`, `gettxout`, `getblocktemplate`, `scantxoutset`) (MarcoFalke)
 - bitcoin/bitcoin#20755 Remove deprecated fields from `getpeerinfo` (amitiuttarwar)
 - bitcoin/bitcoin#20832 Better error messages for invalid addresses (eilx2)
 - bitcoin/bitcoin#20867 Support up to 20 keys for multisig under Segwit context (darosior)
@@ -455,76 +454,6 @@ A detailed list of changes in this version follows. To keep the list to a manage
 - bitcoin/bitcoin#21836 scripted-diff: Replace three dots with ellipsis in the ui strings (hebasto)
 - bitcoin/bitcoin#21935 Enable external signer support for GUI builds (Sjors)
 - bitcoin/bitcoin#22133 Make QWindowsVistaStylePlugin available again (regression) (hebasto)
-- bitcoin-core/gui#4 UI external signer support (e.g. hardware wallet) (Sjors)
-- bitcoin-core/gui#13 Hide peer detail view if multiple are selected (promag)
-- bitcoin-core/gui#18 Add peertablesortproxy module (hebasto)
-- bitcoin-core/gui#21 Improve pruning tooltip (fluffypony, BitcoinErrorLog)
-- bitcoin-core/gui#72 Log static plugins meta data and used style (hebasto)
-- bitcoin-core/gui#79 Embed monospaced font (hebasto)
-- bitcoin-core/gui#85 Remove unused "What's This" button in dialogs on Windows OS (hebasto)
-- bitcoin-core/gui#115 Replace "Hide tray icon" option with positive "Show tray icon" one (hebasto)
-- bitcoin-core/gui#118 Remove BDB version from the Information tab (hebasto)
-- bitcoin-core/gui#121 Early subscribe core signals in transaction table model (promag)
-- bitcoin-core/gui#123 Do not accept command while executing another one (hebasto)
-- bitcoin-core/gui#125 Enable changing the autoprune block space size in intro dialog (luke-jr)
-- bitcoin-core/gui#138 Unlock encrypted wallet "OK" button bugfix (mjdietzx)
-- bitcoin-core/gui#139 doc: Improve gui/src/qt README.md (jarolrod)
-- bitcoin-core/gui#154 Support macOS Dark mode (goums, Uplab)
-- bitcoin-core/gui#162 Add network to peers window and peer details (jonatack)
-- bitcoin-core/gui#163, bitcoin-core/gui#180 Peer details: replace Direction with Connection Type (jonatack)
-- bitcoin-core/gui#164 Handle peer addition/removal in a right way (hebasto)
-- bitcoin-core/gui#165 Save QSplitter state in QSettings (hebasto)
-- bitcoin-core/gui#173 Follow Qt docs when implementing rowCount and columnCount (hebasto)
-- bitcoin-core/gui#179 Add Type column to peers window, update peer details name/tooltip (jonatack)
-- bitcoin-core/gui#186 Add information to "Confirm fee bump" window (prayank23)
-- bitcoin-core/gui#189 Drop workaround for QTBUG-42503 which was fixed in Qt 5.5.0 (prusnak)
-- bitcoin-core/gui#194 Save/restore RPCConsole geometry only for window (hebasto)
-- bitcoin-core/gui#202 Fix right panel toggle in peers tab (RandyMcMillan)
-- bitcoin-core/gui#203 Display plain "Inbound" in peer details (jonatack)
-- bitcoin-core/gui#204 Drop buggy TableViewLastColumnResizingFixer class (hebasto)
-- bitcoin-core/gui#205, bitcoin-core/gui#229 Save/restore TransactionView and recentRequestsView tables column sizes (hebasto)
-- bitcoin-core/gui#206 Display fRelayTxes and `bip152_highbandwidth_{to, from}` in peer details (jonatack)
-- bitcoin-core/gui#213 Add Copy Address Action to Payment Requests (jarolrod)
-- bitcoin-core/gui#214 Disable requests context menu actions when appropriate (jarolrod)
-- bitcoin-core/gui#217 Make warning label look clickable (jarolrod)
-- bitcoin-core/gui#219 Prevent the main window popup menu (hebasto)
-- bitcoin-core/gui#220 Do not translate file extensions (hebasto)
-- bitcoin-core/gui#221 RPCConsole translatable string fixes and improvements (jonatack)
-- bitcoin-core/gui#226 Add "Last Block" and "Last Tx" rows to peer details area (jonatack)
-- bitcoin-core/gui#233 qt test: Don't bind to regtest port (achow101)
-- bitcoin-core/gui#243 Fix issue when disabling the auto-enabled blank wallet checkbox (jarolrod)
-- bitcoin-core/gui#246 Revert "qt: Use "fusion" style on macOS Big Sur with old Qt" (hebasto)
-- bitcoin-core/gui#248 For values of "Bytes transferred" and "Bytes/s" with 1000-based prefix names use 1000-based divisor instead of 1024-based (wodry)
-- bitcoin-core/gui#251 Improve URI/file handling message (hebasto)
-- bitcoin-core/gui#256 Save/restore column sizes of the tables in the Peers tab (hebasto)
-- bitcoin-core/gui#260 Handle exceptions isntead of crash (hebasto)
-- bitcoin-core/gui#263 Revamp context menus (hebasto)
-- bitcoin-core/gui#271 Don't clear console prompt when font resizing (jarolrod)
-- bitcoin-core/gui#275 Support runtime appearance adjustment on macOS (hebasto)
-- bitcoin-core/gui#276 Elide long strings in their middle in the Peers tab (hebasto)
-- bitcoin-core/gui#281 Set shortcuts for console's resize buttons (jarolrod)
-- bitcoin-core/gui#293 Enable wordWrap for Services (RandyMcMillan)
-- bitcoin-core/gui#296 Do not use QObject::tr plural syntax for numbers with a unit symbol (hebasto)
-- bitcoin-core/gui#297 Avoid unnecessary translations (hebasto)
-- bitcoin-core/gui#298 Peertableview alternating row colors (RandyMcMillan)
-- bitcoin-core/gui#300 Remove progress bar on modal overlay (brunoerg)
-- bitcoin-core/gui#309 Add access to the Peers tab from the network icon (hebasto)
-- bitcoin-core/gui#311 Peers Window rename 'Peer id' to 'Peer' (jarolrod)
-- bitcoin-core/gui#313 Optimize string concatenation by default (hebasto)
-- bitcoin-core/gui#325 Align numbers in the "Peer Id" column to the right (hebasto)
-- bitcoin-core/gui#329 Make console buttons look clickable (jarolrod)
-- bitcoin-core/gui#330 Allow prompt icon to be colorized (jarolrod)
-- bitcoin-core/gui#331 Make RPC console welcome message translation-friendly (hebasto)
-- bitcoin-core/gui#332 Replace disambiguation strings with translator comments (hebasto)
-- bitcoin-core/gui#335 test: Use QSignalSpy instead of QEventLoop (jarolrod)
-- bitcoin-core/gui#343 Improve the GUI responsiveness when progress dialogs are used (hebasto)
-- bitcoin-core/gui#361 Fix GUI segfault caused by bitcoin/bitcoin#22216 (ryanofsky)
-- bitcoin-core/gui#362 Add keyboard shortcuts to context menus (luke-jr)
-- bitcoin-core/gui#366 Dark Mode fixes/portability (luke-jr)
-- bitcoin-core/gui#375 Emit dataChanged signal to dynamically re-sort Peers table (hebasto)
-- bitcoin-core/gui#393 Fix regression in "Encrypt Wallet" menu item (hebasto)
-- bitcoin-core/gui#396 Ensure external signer option remains disabled without signers (achow101)
-- bitcoin-core/gui#406 Handle new added plurals in `bitcoin_en.ts` (hebasto)
 
 ### Build system
 - bitcoin/bitcoin#17227 Add Android packaging support (icota)
@@ -896,10 +825,10 @@ A detailed list of changes in this version follows. To keep the list to a manage
 - bitcoin/bitcoin#20715 util: Add argsmanager::getcommand() and use it in bitcoin-wallet (MarcoFalke)
 - bitcoin/bitcoin#20735 script: Remove outdated extract-osx-sdk.sh (hebasto)
 - bitcoin/bitcoin#20817 lint: Update list of spelling linter false positives, bump to codespell 2.0.0 (theStack)
-- bitcoin/bitcoin#20884 script: Improve robustness of bitcoind.service on startup (hebasto)
+- bitcoin/bitcoin#20884 script: Improve robustness of bitgoldd.service on startup (hebasto)
 - bitcoin/bitcoin#20906 contrib: Embed c++11 patch in `install_db4.sh` (gruve-p)
 - bitcoin/bitcoin#21004 contrib: Fix docker args conditional in gitian-build (setpill)
-- bitcoin/bitcoin#21007 bitcoind: Add -daemonwait option to wait for initialization (laanwj)
+- bitcoin/bitcoin#21007 bitgoldd: Add -daemonwait option to wait for initialization (laanwj)
 - bitcoin/bitcoin#21041 log: Move "Pre-allocating up to position 0x[…] in […].dat" log message to debug category (practicalswift)
 - bitcoin/bitcoin#21059 Drop boost/preprocessor dependencies (hebasto)
 - bitcoin/bitcoin#21087 guix: Passthrough `BASE_CACHE` into container (dongcarl)

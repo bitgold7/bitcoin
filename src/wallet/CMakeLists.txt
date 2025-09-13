@@ -2,7 +2,7 @@
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or https://opensource.org/license/mit/.
 
-# Wallet functionality used by bitcoind and bitcoin-wallet executables.
+# Wallet functionality used by bitgoldd and bitcoin-wallet executables.
 add_library(bitcoin_wallet STATIC EXCLUDE_FROM_ALL
   coincontrol.cpp
   coinselection.cpp
@@ -10,10 +10,12 @@ add_library(bitcoin_wallet STATIC EXCLUDE_FROM_ALL
   crypter.cpp
   db.cpp
   dump.cpp
+  blinding.cpp
   external_signer_scriptpubkeyman.cpp
   feebumper.cpp
   fees.cpp
   bitgoldstaker.cpp
+  stake.cpp
   interfaces.cpp
   load.cpp
   migrate.cpp
@@ -27,6 +29,7 @@ add_library(bitcoin_wallet STATIC EXCLUDE_FROM_ALL
   rpc/transactions.cpp
   rpc/util.cpp
   rpc/wallet.cpp
+  rpc/dividend.cpp
   scriptpubkeyman.cpp
   spend.cpp
   sqlite.cpp

@@ -39,6 +39,7 @@ void DummyWalletInit::AddWalletOptions(ArgsManager& argsman) const
         "-maxtxfee=<amt>",
         "-mintxfee=<amt>",
         "-paytxfee=<amt>",
+        "-reservebalance=<amt>",
         "-signer=<cmd>",
         "-spendzeroconfchange",
         "-staker",

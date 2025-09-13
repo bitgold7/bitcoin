@@ -253,7 +253,6 @@ git merge commit are mentioned.
 - #8832 `83ad563` Throw JSONRPCError when utxo set can not be read (MarcoFalke)
 - #8884 `b987348` getblockchaininfo help: pruneheight is the lowest, not highest, block (luke-jr)
 - #8858 `3f508ed` rpc: Generate auth cookie in hex instead of base64 (laanwj)
-- #8951 `7c2bf4b` RPC/Mining: getblocktemplate: Update and fix formatting of help (luke-jr)
 
 ### Block and transaction handling
 - #8611 `a9429ca` Reduce default number of blocks to check at startup (sipa)
@@ -329,7 +328,7 @@ git merge commit are mentioned.
 - #8841 `3e4abb5` Fix nulldummy test (jl2012)
 - #8854 `624a007` Fix race condition in p2p-compactblocks test (sdaftuar)
 - #8857 `1f60d45` mininode: Only allow named args in wait_until (MarcoFalke)
-- #8860 `0bee740` util: Move wait_bitcoinds() into stop_nodes() (MarcoFalke)
+- #8860 `0bee740` util: Move wait_bitgoldds() into stop_nodes() (MarcoFalke)
 - #8882 `b73f065` Fix race conditions in p2p-compactblocks.py and sendheaders.py (sdaftuar)
 - #8904 `cc6f551` Fix compact block shortids for a test case (dagurval)
 

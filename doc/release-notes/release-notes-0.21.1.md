@@ -22,7 +22,7 @@ How to Upgrade
 If you are running an older version, shut it down. Wait until it has completely
 shut down (which might take a few minutes in some cases), then run the
 installer (on Windows) or just copy over `/Applications/Bitcoin-Qt` (on Mac)
-or `bitcoind`/`bitcoin-qt` (on Linux).
+or `bitgoldd`/`bitcoin-qt` (on Linux).
 
 Upgrading directly from a version of Bitcoin Core that has reached its EOL is
 possible, but it might take some time if the data directory needs to be migrated. Old
@@ -90,7 +90,6 @@ block 709632 is highly recommended to help enforce taproot's new rules
 and to avoid the unlikely case of seeing falsely confirmed transactions.
 
 Miners who want to activate Taproot should preferably use this release
-to control their signaling.  The `getblocktemplate` RPC results will
 automatically be updated to signal once the appropriate start has been
 reached and continue signaling until the timeout occurs or taproot
 activates.  Alternatively, miners may manually start signaling on bit 2

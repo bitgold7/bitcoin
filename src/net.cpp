@@ -3,7 +3,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <bitcoin-build-config.h> // IWYU pragma: keep
+#include <bitgold-build-config.h> // IWYU pragma: keep
 
 #include <net.h>
 
@@ -747,7 +747,9 @@ int V1Transport::readHeader(std::span<const uint8_t> msg_bytes)
 
     // Check start string, network magic
     if (hdr.pchMessageStart != m_magic_bytes) {
-        LogDebug(BCLog::NET, "Header error: Wrong MessageStart %s received, peer=%d\n", HexStr(hdr.pchMessageStart), m_node_id);
+        LogPrintLevel(BCLog::NET, BCLog::Level::Warning,
+                      "Header error: Wrong MessageStart %s received, peer=%d\n",
+                      HexStr(hdr.pchMessageStart), m_node_id);
         return -1;
     }
 
@@ -3826,7 +3828,7 @@ void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)
 
     // PoS-specific inventory and relay policy: only relay PoS messages to peers
     // that have explicitly enabled PoS relay support.
-    if ((msg.m_type == NetMsgType::COINSTAKE || msg.m_type == NetMsgType::STAKEMODIFIER) && !pnode->m_pos_enabled) {
+    if (msg.m_type == NetMsgType::STAKEMODIFIER && !pnode->m_pos_enabled) {
         return;
     }
     if (gArgs.GetBoolArg("-capturemessages", false)) {

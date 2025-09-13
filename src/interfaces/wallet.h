@@ -17,6 +17,7 @@
 #include <util/transaction_identifier.h>
 #include <util/ui_change_type.h>
 #include <wallet/types.h>
+#include <map>
 
 #include <cstdint>
 #include <functional>
@@ -162,6 +163,12 @@ public:
 
     //! Retrieve staking statistics.
     virtual wallet::StakingStats getStakingStats() = 0;
+    //! Retrieve dividend pool balance.
+    virtual CAmount getDividendBalance() = 0;
+    //! Estimate next dividend payout.
+    virtual std::pair<int, std::map<std::string, CAmount>> getNextDividend() = 0;
+    //! Retrieve dividend history for wallet addresses.
+    virtual std::map<int, std::map<std::string, CAmount>> getDividendHistory() = 0;
 
     //! Abandon transaction.
     virtual bool abandonTransaction(const Txid& txid) = 0;

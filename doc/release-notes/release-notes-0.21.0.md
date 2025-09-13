@@ -22,7 +22,7 @@ How to Upgrade
 If you are running an older version, shut it down. Wait until it has completely
 shut down (which might take a few minutes in some cases), then run the
 installer (on Windows) or just copy over `/Applications/Bitcoin-Qt` (on Mac)
-or `bitcoind`/`bitcoin-qt` (on Linux).
+or `bitgoldd`/`bitcoin-qt` (on Linux).
 
 Upgrading directly from a version of Bitcoin Core that has reached its EOL is
 possible, but it might take some time if the data directory needs to be migrated. Old
@@ -231,21 +231,21 @@ Changes to Wallet or GUI related settings can be found in the GUI or Wallet sect
 Tools and Utilities
 -------------------
 
-- A new `bitcoin-cli -netinfo` command provides a network peer connections
+- A new `bitgold-cli -netinfo` command provides a network peer connections
   dashboard that displays data from the `getpeerinfo` and `getnetworkinfo` RPCs
   in a human-readable format. An optional integer argument from `0` to `4` may
   be passed to see increasing levels of detail. (#19643)
 
-- A new `bitcoin-cli -generate` command, equivalent to RPC `generatenewaddress`
+- A new `bitgold-cli -generate` command, equivalent to RPC `generatenewaddress`
   followed by `generatetoaddress`, can generate blocks for command line testing
   purposes. This is a client-side version of the former `generate` RPC. See the
   help for details. (#19133)
 
-- The `bitcoin-cli -getinfo` command now displays the wallet name and balance for
+- The `bitgold-cli -getinfo` command now displays the wallet name and balance for
   each of the loaded wallets when more than one is loaded (e.g. in multiwallet
   mode) and a wallet is not specified with `-rpcwallet`. (#18594)
 
-- The `connections` field of `bitcoin-cli -getinfo` is now expanded to return a JSON
+- The `connections` field of `bitgold-cli -getinfo` is now expanded to return a JSON
   object with `in`, `out` and `total` numbers of peer connections. It previously
   returned a single integer value for the total number of peer connections. (#19405)
 
@@ -333,7 +333,7 @@ Bitcoin Core will now just log warnings instead of creating new wallets with
 new keys and addresses like previous releases did.
 
 New wallets can be created through the GUI (which has a more prominent create
-wallet option), through the `bitcoin-cli createwallet` or `bitcoin-wallet
+wallet option), through the `bitgold-cli createwallet` or `bitcoin-wallet
 create` commands, or the `createwallet` RPC. (#15454, #20186)
 
 ### Experimental Descriptor Wallets
@@ -734,7 +734,7 @@ Tests
 - #19282 Rephrase generatetoaddress help, and use `PACKAGE_NAME` (luke-jr)
 - #16377 don't automatically append inputs in walletcreatefundedpsbt (Sjors)
 - #19200 Remove deprecated getaddressinfo fields (jonatack)
-- #19133 rpc, cli, test: add bitcoin-cli -generate command (jonatack)
+- #19133 rpc, cli, test: add bitgold-cli -generate command (jonatack)
 - #19469 Deprecate banscore field in getpeerinfo (jonatack)
 - #16525 Dump transaction version as an unsigned integer in RPC/TxToUniv (TheBlueMatt)
 - #19555 Deduplicate WriteHDKeypath() used in decodepsbt (theStack)
@@ -759,7 +759,7 @@ Tests
 - #19725 Add connection type to getpeerinfo, improve logs (amitiuttarwar)
 - #19969 Send RPC bug fix and touch-ups (Sjors)
 - #18309 zmq: Add support to listen on multiple interfaces (n-thumann)
-- #20055 Set HTTP Content-Type in bitcoin-cli (laanwj)
+- #20055 Set HTTP Content-Type in bitgold-cli (laanwj)
 - #19956 Improve invalid vout value rpc error message (n1rna)
 - #20101 Change no wallet loaded message to be clearer (achow101)
 - #19998 Add `via_tor` to `getpeerinfo` output (hebasto)
@@ -907,7 +907,7 @@ Tests
 - #18628 Add various low-level p2p tests (MarcoFalke)
 - #18615 Avoid accessing free'd memory in `validation_chainstatemanager_tests` (MarcoFalke)
 - #18571 fuzz: Disable debug log file (MarcoFalke)
-- #18653 add coverage for bitcoin-cli -rpcwait (jonatack)
+- #18653 add coverage for bitgold-cli -rpcwait (jonatack)
 - #18660 Verify findCommonAncestor always initializes outputs (ryanofsky)
 - #17669 Have coins simulation test also use CCoinsViewDB (jamesob)
 - #18662 Replace gArgs with local argsman in bench (MarcoFalke)
@@ -1043,7 +1043,6 @@ Tests
 - #20131 Remove unused nVersion=1 in p2p tests (MarcoFalke)
 - #20161 Minor Taproot follow-ups (sipa)
 - #19401 Use GBT to get block versions correct (luke-jr)
-- #20159 `mining_getblocktemplate_longpoll.py` improvements (use MiniWallet, add logging) (theStack)
 - #20039 Convert amounts from float to decimal (prayank23)
 - #20112 Speed up `wallet_resendwallettransactions` with mockscheduler RPC (MarcoFalke)
 - #20247 fuzz: Check for addrv1 compatibility before using addrv1 serializer. Fuzz addrv2 serialization (practicalswift)
@@ -1160,8 +1159,7 @@ Tests
 - #19605 Set `CC_FOR_BUILD` when building on OpenBSD (fanquake)
 - #19765 Fix getmempoolancestors RPC result doc (MarcoFalke)
 - #19786 Remove label from good first issue template (MarcoFalke)
-- #19646 Updated outdated help command for getblocktemplate (jakeleventhal)
-- #18817 Document differences in bitcoind and bitcoin-qt locale handling (practicalswift)
+- #18817 Document differences in bitgoldd and bitcoin-qt locale handling (practicalswift)
 - #19870 update PyZMQ install instructions, fix `zmq_sub.py` file permissions (jonatack)
 - #19903 Update build-openbsd.md with GUI support (grubles)
 - #19241 help: Generate checkpoint height from chainparams (luke-jr)

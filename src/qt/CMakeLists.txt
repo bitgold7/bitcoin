@@ -167,6 +167,8 @@ if(ENABLE_WALLET)
       openuridialog.h
       overviewpage.cpp
       overviewpage.h
+      dividendpage.cpp
+      dividendpage.h
       paymentserver.cpp
       paymentserver.h
       psbtoperationsdialog.cpp

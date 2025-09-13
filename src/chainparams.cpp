@@ -126,8 +126,7 @@ std::unique_ptr<const CChainParams> CreateChainParams(const ArgsManager& args, c
         return CChainParams::TestNet();
 
     case ChainType::TESTNET4:
-        // TODO: Replace with dedicated TestNet4 parameters once available.
-        return CChainParams::TestNet();
+        return CChainParams::TestNet4();
 
     case ChainType::SIGNET: {
         auto opts = CChainParams::SigNetOptions{};

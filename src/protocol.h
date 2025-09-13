@@ -116,10 +116,6 @@ inline constexpr const char* GETHEADERS{"getheaders"};
  */
 inline constexpr const char* TX{"tx"};
 /**
- * The coinstake message transmits a single coinstake transaction.
- */
-inline constexpr const char* COINSTAKE{"coinstake"};
-/**
  * The headers message sends one or more block headers to a node which
  * previously requested certain headers with a getheaders message.
  * @since protocol version 31800.
@@ -291,7 +287,6 @@ inline const std::array ALL_NET_MESSAGE_TYPES{std::to_array<std::string>({
     NetMsgType::GETBLOCKS,
     NetMsgType::GETHEADERS,
     NetMsgType::TX,
-    NetMsgType::COINSTAKE,
     NetMsgType::HEADERS,
     NetMsgType::BLOCK,
     NetMsgType::GETSTAKEMODIFIER,
@@ -496,8 +491,7 @@ enum GetDataMsg : uint32_t {
     MSG_TX = 1,
     MSG_BLOCK = 2,
     MSG_WTX = 5, //!< Defined in BIP 339
-    MSG_COINSTAKE = 6,
-    MSG_STAKE_MODIFIER = 7,
+    MSG_STAKE_MODIFIER = 6,
     // The following can only occur in getdata. Invs always use TX/WTX or BLOCK.
     MSG_FILTERED_BLOCK = 3,                           //!< Defined in BIP37
     MSG_CMPCT_BLOCK = 4,                              //!< Defined in BIP152
@@ -524,7 +518,6 @@ public:
 
     // Single-message helper methods
     bool IsMsgTx() const { return type == MSG_TX; }
-    bool IsMsgCoinStake() const { return type == MSG_COINSTAKE; }
     bool IsMsgBlk() const { return type == MSG_BLOCK; }
     bool IsMsgStakeModifier() const { return type == MSG_STAKE_MODIFIER; }
     bool IsMsgWtx() const { return type == MSG_WTX; }
@@ -535,7 +528,7 @@ public:
     // Combined-message helper methods
     bool IsGenTxMsg() const
     {
-        return type == MSG_TX || type == MSG_WTX || type == MSG_WITNESS_TX || type == MSG_COINSTAKE;
+        return type == MSG_TX || type == MSG_WTX || type == MSG_WITNESS_TX;
     }
     bool IsGenBlkMsg() const
     {

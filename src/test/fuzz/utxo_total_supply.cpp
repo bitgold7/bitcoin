@@ -39,6 +39,10 @@ FUZZ_TARGET(utxo_total_supply)
     auto& node{test_setup.m_node};
     auto& chainman{*Assert(test_setup.m_node.chainman)};
 
+    // Use a 50k block halving interval when calculating subsidies
+    Consensus::Params consensus = Params().GetConsensus();
+    consensus.nSubsidyHalvingInterval = 50'000;
+
     const auto ActiveHeight = [&]() {
         LOCK(chainman.GetMutex());
         return chainman.ActiveHeight();
@@ -121,7 +125,8 @@ FUZZ_TARGET(utxo_total_supply)
     }
     current_block->hashMerkleRoot = BlockMerkleRoot(*current_block);
     assert(!MineBlock(node, current_block).IsNull());
-    circulation += GetBlockSubsidy(ActiveHeight(), Params().GetConsensus());
+    circulation += GetBlockSubsidy(ActiveHeight(), consensus);
+    assert(circulation <= (8'000'000 * COIN - 3'000'000 * COIN));
 
     assert(ActiveHeight() == 1);
     UpdateUtxoStats();
@@ -160,7 +165,8 @@ FUZZ_TARGET(utxo_total_supply)
                         assert(current_block->vtx.at(0)->vin.at(0).scriptSig == duplicate_coinbase_script);
                     }
 
-                    circulation += GetBlockSubsidy(ActiveHeight(), Params().GetConsensus());
+                    circulation += GetBlockSubsidy(ActiveHeight(), consensus);
+                    assert(circulation <= (8'000'000 * COIN - 3'000'000 * COIN));
                 }
 
                 UpdateUtxoStats();
@@ -174,4 +180,13 @@ FUZZ_TARGET(utxo_total_supply)
                 StoreLastTxo();
             });
     }
+
+    // Verify that the eventual total supply equals exactly 8M BGD
+    CAmount total_supply{0};
+    for (int height = 1;; ++height) {
+        CAmount subsidy = GetBlockSubsidy(height, consensus);
+        if (subsidy == 0) break;
+        total_supply += subsidy;
+    }
+    assert(total_supply == 8'000'000 * COIN);
 }

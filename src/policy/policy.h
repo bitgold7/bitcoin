@@ -19,8 +19,15 @@ class CCoinsViewCache;
 class CFeeRate;
 class CScript;
 
-/** Default for -blockmaxweight, which controls the range of block weights the mining code will create **/
-static constexpr unsigned int DEFAULT_BLOCK_MAX_WEIGHT{20000000};
+// Global policy switches for mempool priority handling
+extern bool g_enable_priority;
+extern int64_t g_max_priority;
+// When true, use hybrid mempool scoring
+extern bool g_hybrid_mempool;
+
+/** Default for -blockmaxweight, which controls the range of block weights the mining code will create.
+ *  Set to the network's consensus limit of 20,000,000 weight units. */
+static constexpr unsigned int DEFAULT_BLOCK_MAX_WEIGHT{MAX_BLOCK_WEIGHT};
 /** Default for -blockreservedweight **/
 static constexpr unsigned int DEFAULT_BLOCK_RESERVED_WEIGHT{8000};
 /** This accounts for the block header, var_int encoding of the transaction count and a minimally viable

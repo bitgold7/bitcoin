@@ -1027,6 +1027,13 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
         txNew.version = coin_control.m_version.value();
     }
 
+    if (txNew.version & CTransaction::BULLETPROOF_VERSION) {
+#ifndef ENABLE_BULLETPROOFS
+        wallet.WalletLogPrintf("Attempt to create Bulletproof transaction without Bulletproof support\n");
+        return util::Error{"Wallet does not support Bulletproof transactions"};
+#endif
+    }
+
     CoinSelectionParams coin_selection_params{rng_fast}; // Parameters for coin selection, init with dummy
     coin_selection_params.m_avoid_partial_spends = coin_control.m_avoid_partial_spends;
     coin_selection_params.m_include_unsafe_inputs = coin_control.m_include_unsafe_inputs;

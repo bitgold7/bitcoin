@@ -4,24 +4,18 @@
 
 include(AddWindowsResources)
 
-configure_file(${PROJECT_SOURCE_DIR}/cmake/bitcoin-build-config.h.in bitcoin-build-config.h USE_SOURCE_PERMISSIONS @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/cmake/bitgold-build-config.h.in bitgold-build-config.h USE_SOURCE_PERMISSIONS @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
-option(ENABLE_BULLETPROOFS "Enable Bulletproofs support" OFF)
-if(ENABLE_BULLETPROOFS)
-  find_package(PkgConfig)
-  if(PkgConfig_FOUND)
-    pkg_check_modules(SECP256K1_ZKP libsecp256k1_zkp)
-    if(SECP256K1_ZKP_FOUND)
-      add_library(bulletproofs INTERFACE)
-      target_include_directories(bulletproofs INTERFACE ${SECP256K1_ZKP_INCLUDE_DIRS})
-      target_link_libraries(bulletproofs INTERFACE ${SECP256K1_ZKP_LIBRARIES})
-      add_compile_definitions(ENABLE_BULLETPROOFS)
-    else()
-      message(WARNING "libsecp256k1_zkp not found, Bulletproofs disabled")
-    endif()
-  endif()
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SECP256K1_ZKP libsecp256k1_zkp>=0.6.1)
+if(NOT SECP256K1_ZKP_FOUND)
+  message(FATAL_ERROR "libsecp256k1_zkp >= 0.6.1 not found.")
 endif()
+add_library(bulletproofs INTERFACE)
+target_include_directories(bulletproofs INTERFACE ${SECP256K1_ZKP_INCLUDE_DIRS})
+target_link_libraries(bulletproofs INTERFACE ${SECP256K1_ZKP_LIBRARIES})
+add_compile_definitions(ENABLE_BULLETPROOFS)
 
 #=============================
 # Subprojects
@@ -235,7 +229,7 @@ if(ENABLE_WALLET)
 endif()
 
 
-# P2P and RPC server functionality used by `bitcoind` and `bitcoin-qt` executables.
+# P2P and RPC server functionality used by `bitgoldd` and `bitcoin-qt` executables.
 add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   addrdb.cpp
   addrman.cpp
@@ -304,13 +298,15 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   policy/fees.cpp
   policy/fees_args.cpp
   policy/packages.cpp
+  policy/hybrid_comparator.cpp
   policy/rbf.cpp
   policy/settings.cpp
+  policy/priority.cpp
   policy/truc_policy.cpp
-  pos/stake.cpp
-  pos/stakemodifier.cpp
-  pos/stakemodifier_manager.cpp
-  pos/difficulty.cpp
+  pow.cpp
+  consensus/pos/stake.cpp
+  consensus/pos/stakemodifier.cpp
+  consensus/pos/difficulty.cpp
   rest.cpp
   rpc/blockchain.cpp
   rpc/external_signer.cpp
@@ -324,7 +320,11 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   rpc/server.cpp
   rpc/server_util.cpp
   rpc/signmessage.cpp
+  rpc/bulletproof.cpp
   rpc/txoutproof.cpp
+  rpc/dividend.cpp
+  consensus/dividends/dividend.cpp
+  $<$<TARGET_EXISTS:bitcoin_wallet>:rpc/staking.cpp>
   script/sigcache.cpp
   signet.cpp
   stake/priority.cpp
@@ -367,24 +367,24 @@ if(BUILD_BITCOIN_BIN)
   install_binary_component(bitcoin)
 endif()
 
-# Bitcoin Core bitcoind.
+# Bitcoin Core bitgoldd.
 if(BUILD_DAEMON)
-  add_executable(bitcoind
-    bitcoind.cpp
-    init/bitcoind.cpp
+  add_executable(bitgoldd
+    bitgoldd.cpp
+    init/bitgoldd.cpp
   )
-  add_windows_resources(bitcoind bitcoind-res.rc)
-  add_windows_application_manifest(bitcoind)
-  target_link_libraries(bitcoind
+  add_windows_resources(bitgoldd bitgoldd-res.rc)
+  add_windows_application_manifest(bitgoldd)
+  target_link_libraries(bitgoldd
     core_interface
     bitcoin_node
     $<TARGET_NAME_IF_EXISTS:bitcoin_wallet>
   )
-  install_binary_component(bitcoind HAS_MANPAGE)
+  install_binary_component(bitgoldd HAS_MANPAGE)
 endif()
 if(ENABLE_IPC AND BUILD_DAEMON)
   add_executable(bitcoin-node
-    bitcoind.cpp
+    bitgoldd.cpp
     init/bitcoin-node.cpp
   )
   target_link_libraries(bitcoin-node
@@ -426,10 +426,10 @@ target_link_libraries(bitcoin_cli
 
 # Bitcoin Core RPC client
 if(BUILD_CLI)
-  add_executable(bitcoin-cli bitcoin-cli.cpp)
-  add_windows_resources(bitcoin-cli bitcoin-cli-res.rc)
-  add_windows_application_manifest(bitcoin-cli)
-  target_link_libraries(bitcoin-cli
+  add_executable(bitgold-cli bitgold-cli.cpp)
+  add_windows_resources(bitgold-cli bitgold-cli-res.rc)
+  add_windows_application_manifest(bitgold-cli)
+  target_link_libraries(bitgold-cli
     core_interface
     bitcoin_cli
     bitcoin_common
@@ -437,7 +437,7 @@ if(BUILD_CLI)
     libevent::core
     libevent::extra
   )
-  install_binary_component(bitcoin-cli HAS_MANPAGE)
+  install_binary_component(bitgold-cli HAS_MANPAGE)
 endif()
 
 

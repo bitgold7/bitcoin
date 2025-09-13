@@ -24,6 +24,10 @@ static constexpr uint8_t DB_COIN{'C'};
 static constexpr uint8_t DB_BEST_BLOCK{'B'};
 static constexpr uint8_t DB_HEAD_BLOCKS{'H'};
 static constexpr uint8_t DB_DIVIDEND_POOL{'D'};
+static constexpr uint8_t DB_STAKE_INFO{'I'};
+static constexpr uint8_t DB_PENDING_DIVIDENDS{'P'};
+static constexpr uint8_t DB_STAKE_SNAPSHOTS{'S'};
+static constexpr uint8_t DB_DIVIDEND_HISTORY{'Y'};
 // Keys used in previous version that might still be found in the DB:
 static constexpr uint8_t DB_COINS{'c'};
 
@@ -104,6 +108,54 @@ bool CCoinsViewDB::WriteDividendPool(CAmount amount)
     return m_db->Write(DB_DIVIDEND_POOL, amount);
 }
 
+std::map<std::string, StakeInfo> CCoinsViewDB::GetStakeInfo() const
+{
+    std::map<std::string, StakeInfo> info;
+    m_db->Read(DB_STAKE_INFO, info);
+    return info;
+}
+
+bool CCoinsViewDB::WriteStakeInfo(const std::map<std::string, StakeInfo>& info)
+{
+    return m_db->Write(DB_STAKE_INFO, info);
+}
+
+std::map<std::string, CAmount> CCoinsViewDB::GetPendingDividends() const
+{
+    std::map<std::string, CAmount> divs;
+    m_db->Read(DB_PENDING_DIVIDENDS, divs);
+    return divs;
+}
+
+bool CCoinsViewDB::WritePendingDividends(const std::map<std::string, CAmount>& divs)
+{
+    return m_db->Write(DB_PENDING_DIVIDENDS, divs);
+}
+
+std::map<int, std::map<std::string, CAmount>> CCoinsViewDB::GetStakeSnapshots() const
+{
+    std::map<int, std::map<std::string, CAmount>> snaps;
+    m_db->Read(DB_STAKE_SNAPSHOTS, snaps);
+    return snaps;
+}
+
+bool CCoinsViewDB::WriteStakeSnapshots(const std::map<int, std::map<std::string, CAmount>>& snaps)
+{
+    return m_db->Write(DB_STAKE_SNAPSHOTS, snaps);
+}
+
+std::map<int, dividend::Payouts> CCoinsViewDB::GetDividendHistory() const
+{
+    std::map<int, dividend::Payouts> hist;
+    m_db->Read(DB_DIVIDEND_HISTORY, hist);
+    return hist;
+}
+
+bool CCoinsViewDB::WriteDividendHistory(const std::map<int, dividend::Payouts>& hist)
+{
+    return m_db->Write(DB_DIVIDEND_HISTORY, hist);
+}
+
 bool CCoinsViewDB::BatchWrite(CoinsViewCacheCursor& cursor, const uint256 &hashBlock) {
     CDBBatch batch(*m_db);
     size_t count = 0;
@@ -116,7 +168,7 @@ bool CCoinsViewDB::BatchWrite(CoinsViewCacheCursor& cursor, const uint256 &hashB
         std::vector<uint256> old_heads = GetHeadBlocks();
         if (old_heads.size() == 2) {
             if (old_heads[0] != hashBlock) {
-                LogPrintLevel(BCLog::COINDB, BCLog::Level::Error, "The coins database detected an inconsistent state, likely due to a previous crash or shutdown. You will need to restart bitcoind with the -reindex-chainstate or -reindex configuration option.\n");
+                LogPrintLevel(BCLog::COINDB, BCLog::Level::Error, "The coins database detected an inconsistent state, likely due to a previous crash or shutdown. You will need to restart bitgoldd with the -reindex-chainstate or -reindex configuration option.\n");
             }
             assert(old_heads[0] == hashBlock);
             old_tip = old_heads[1];

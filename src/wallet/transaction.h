@@ -14,6 +14,7 @@
 #include <util/overloaded.h>
 #include <util/strencodings.h>
 #include <util/string.h>
+#include <util/transaction_identifier.h>
 #include <wallet/types.h>
 
 #include <bitset>
@@ -234,6 +235,7 @@ public:
     CWalletTx(CTransactionRef tx, const TxState& state) : tx(std::move(tx)), m_state(state)
     {
         Init();
+        if (this->tx) m_variants.emplace(this->tx->GetWitnessHash(), this->tx);
     }
 
     void Init()
@@ -245,10 +247,12 @@ public:
         fChangeCached = false;
         nChangeCached = 0;
         nOrderPos = -1;
+        m_variants.clear();
     }
 
     CTransactionRef tx;
     TxState m_state;
+    std::map<Wtxid, CTransactionRef> m_variants;
 
     // Set of mempool transactions that conflict
     // directly with the transaction, or that conflict
@@ -278,6 +282,14 @@ public:
         uint256 serializedHash = TxStateSerializedBlockHash(m_state);
         int serializedIndex = TxStateSerializedIndex(m_state);
         s << TX_WITH_WITNESS(tx) << serializedHash << dummy_vector1 << serializedIndex << dummy_vector2 << mapValueCopy << vOrderForm << dummy_int << nTimeReceived << dummy_bool << dummy_bool;
+
+        unsigned int variants = m_variants.size();
+        if (m_variants.count(tx->GetWitnessHash())) variants--;
+        s << VARINT(variants);
+        for (const auto& [wtxid, vtx] : m_variants) {
+            if (wtxid == tx->GetWitnessHash()) continue;
+            s << TX_WITH_WITNESS(vtx);
+        }
     }
 
     template<typename Stream>
@@ -294,6 +306,7 @@ public:
         s >> TX_WITH_WITNESS(tx) >> serialized_block_hash >> dummy_vector1 >> serializedIndex >> dummy_vector2 >> mapValue >> vOrderForm >> dummy_int >> nTimeReceived >> dummy_bool >> dummy_bool;
 
         m_state = TxStateInterpretSerialized({serialized_block_hash, serializedIndex});
+        m_variants.emplace(tx->GetWitnessHash(), tx);
 
         const auto it_op = mapValue.find("n");
         nOrderPos = (it_op != mapValue.end()) ? LocaleIndependentAtoi<int64_t>(it_op->second) : -1;
@@ -304,10 +317,21 @@ public:
         mapValue.erase("spent");
         mapValue.erase("n");
         mapValue.erase("timesmart");
+
+        if (!s.empty()) {
+            unsigned int variants;
+            s >> VARINT(variants);
+            for (unsigned int i = 0; i < variants; ++i) {
+                CTransactionRef vtx;
+                s >> TX_WITH_WITNESS(vtx);
+                m_variants.emplace(vtx->GetWitnessHash(), vtx);
+            }
+        }
     }
 
     void SetTx(CTransactionRef arg)
     {
+        m_variants.emplace(arg->GetWitnessHash(), arg);
         tx = std::move(arg);
     }
 

@@ -10,6 +10,7 @@
 
 #include <array>
 #include <chrono>
+#include <consensus/amount.h>
 #include <limits>
 #include <map>
 #include <vector>
@@ -33,6 +34,7 @@ constexpr bool ValidDeployment(BuriedDeployment dep) { return dep <= DEPLOYMENT_
 enum DeploymentPos : uint16_t {
     DEPLOYMENT_TESTDUMMY,
     DEPLOYMENT_TAPROOT, // Deployment of Schnorr/Taproot (BIPs 340-342)
+    DEPLOYMENT_BULLETPROOF, // Deployment of Bulletproof commitments
     // NOTE: Also add new deployments to VersionBitsDeploymentInfo in deploymentinfo.cpp
     MAX_VERSION_BITS_DEPLOYMENTS
 };
@@ -107,8 +109,7 @@ struct Params {
      * This prevents us from warning about the CSV and segwit activations. */
     int MinBIP9WarningHeight;
     std::array<BIP9Deployment,MAX_VERSION_BITS_DEPLOYMENTS> vDeployments;
-    /** Proof of work parameters */
-    uint256 powLimit;
+    /** Proof-of-work parameters (unused in proof-of-stake). */
     bool fPowAllowMinDifficultyBlocks;
     /**
       * Enforce BIP94 timewarp attack mitigation. On testnet4 this also enforces
@@ -123,20 +124,38 @@ struct Params {
         return std::chrono::seconds{nPowTargetSpacing};
     }
     int64_t DifficultyAdjustmentInterval() const { return nPowTargetTimespan / nPowTargetSpacing; }
-    // Height at which proof-of-stake activates
+    // Block height at which proof-of-stake activates (blocks)
     int posActivationHeight{1};
     // Enable proof-of-stake validation when true
     bool fEnablePoS{false};
-    // Required timestamp mask for staked blocks
+    // Timestamp mask for staked blocks (seconds)
     uint32_t nStakeTimestampMask{0xF};
-    // Minimum coin age required for staking
-    int64_t nStakeMinAge{60 * 60};
-    // Seconds between stake modifier recalculations
+    // Enforce even stake intervals beyond the mask when true
+    bool fEnforceStakeTimeInterval{false};
+    // Minimum coin age required for staking (seconds)
+    int64_t nStakeMinAge{8 * 60 * 60};
+    // Interval between stake modifier recalculations (seconds)
     int64_t nStakeModifierInterval{60 * 60};
-    // Target limit for proof-of-stake difficulty
+    // Version of stake modifier algorithm (0=legacy, 1=interval-based, 3=dynamic refresh)
+    int nStakeModifierVersion{3};
+    // Minimum confirmations required for staking (blocks)
+    int nStakeMinConfirmations{80};
+    // Maximum coin-age weight for reward scaling (seconds)
+    int64_t nStakeMaxAgeWeight{60 * 60 * 24 * 30};
+    // Upper target limit for proof-of-stake difficulty
     uint256 posLimit;
-    // Target spacing between staked blocks
-    int64_t nStakeTargetSpacing{16};
+    // Lower target limit for proof-of-stake difficulty
+    uint256 posLimitLower;
+    // Target spacing between staked blocks (seconds)
+    int64_t nStakeTargetSpacing{8 * 60};
+    std::chrono::seconds StakeTargetSpacing() const
+    {
+        return std::chrono::seconds{nStakeTargetSpacing};
+    }
+    //! Total coin supply allowed by consensus (including genesis block)
+    CAmount nMaximumSupply{0};
+    //! Reward paid in the genesis block (satoshis)
+    CAmount genesis_reward{0};
     /** The best chain should have at least this much work */
     uint256 nMinimumChainWork;
     /** By default assume that the signatures in ancestors of this block are valid */
