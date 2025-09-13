@@ -2,7 +2,7 @@
 
 | Name                     | Description |
 |--------------------------|-------------|
-| *libbitcoin_cli*         | RPC client functionality used by *bitcoin-cli* executable |
+| *libbitcoin_cli*         | RPC client functionality used by *bitgold-cli* executable |
 | *libbitcoin_common*      | Home for common functionality shared by different executables and libraries. Similar to *libbitcoin_util*, but higher-level (see [Dependencies](#dependencies)). |
 | *libbitcoin_consensus*   | Consensus functionality used by *libbitcoin_node* and *libbitcoin_wallet*. |
 | *libbitcoin_crypto*      | Hardware-optimized functions for data encryption, hashing, message authentication, and key derivation. |
@@ -39,7 +39,7 @@
 
 graph TD;
 
-bitcoin-cli[bitcoin-cli]-->libbitcoin_cli;
+bitgold-cli[bitgold-cli]-->libbitcoin_cli;
 
 bitcoind[bitcoind]-->libbitcoin_node;
 bitcoind[bitcoind]-->libbitcoin_wallet;
@@ -83,7 +83,7 @@ libbitcoin_wallet_tool-->libbitcoin_wallet;
 libbitcoin_wallet_tool-->libbitcoin_util;
 
 classDef bold stroke-width:2px, font-weight:bold, font-size: smaller;
-class bitcoin-qt,bitcoind,bitcoin-cli,bitcoin-wallet bold
+class bitcoin-qt,bitcoind,bitgold-cli,bitcoin-wallet bold
 ```
 </td></tr><tr><td>
 

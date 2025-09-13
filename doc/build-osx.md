@@ -232,7 +232,7 @@ tail -f $HOME/Library/Application\ Support/Bitcoin/debug.log
 
 ```shell
 ./build/bin/bitcoind -daemon      # Starts the bitcoin daemon.
-./build/bin/bitcoin-cli --help    # Outputs a list of command-line options.
-./build/bin/bitcoin-cli help      # Outputs a list of RPC commands when the daemon is running.
-./build/bin/bitcoin-qt -server # Starts the bitcoin-qt server mode, allows bitcoin-cli control
+./build/bin/bitgold-cli --help    # Outputs a list of command-line options.
+./build/bin/bitgold-cli help      # Outputs a list of RPC commands when the daemon is running.
+./build/bin/bitcoin-qt -server # Starts the bitcoin-qt server mode, allows bitgold-cli control
 ```

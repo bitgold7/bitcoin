@@ -81,8 +81,8 @@ class Binaries:
         return self._argv("node", self.paths.bitcoind)
 
     def rpc_argv(self):
-        "Return argv array that should be used to invoke bitcoin-cli"
-        # Add -nonamed because "bitcoin rpc" enables -named by default, but bitcoin-cli doesn't
+        "Return argv array that should be used to invoke bitgold-cli"
+        # Add -nonamed because "bitcoin rpc" enables -named by default, but bitgold-cli doesn't
         return self._argv("rpc", self.paths.bitcoincli) + ["-nonamed"]
 
     def tx_argv(self):
@@ -251,7 +251,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
         parser.add_argument("--pdbonfailure", dest="pdbonfailure", default=False, action="store_true",
                             help="Attach a python debugger if test fails")
         parser.add_argument("--usecli", dest="usecli", default=False, action="store_true",
-                            help="use bitcoin-cli instead of RPC for all commands")
+                            help="use bitgold-cli instead of RPC for all commands")
         parser.add_argument("--perf", dest="perf", default=False, action="store_true",
                             help="profile running nodes with perf for the duration of the test")
         parser.add_argument("--valgrind", dest="valgrind", default=False, action="store_true",
@@ -291,7 +291,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
         paths = types.SimpleNamespace()
         binaries = {
             "bitcoind": "BITCOIND",
-            "bitcoin-cli": "BITCOINCLI",
+            "bitgold-cli": "BITCOINCLI",
             "bitcoin-util": "BITCOINUTIL",
             "bitcoin-tx": "BITCOINTX",
             "bitcoin-chainstate": "BITCOINCHAINSTATE",
@@ -1024,9 +1024,9 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
             raise SkipTest("bitcoin-chainstate has not been compiled")
 
     def skip_if_no_cli(self):
-        """Skip the running test if bitcoin-cli has not been compiled."""
+        """Skip the running test if bitgold-cli has not been compiled."""
         if not self.is_cli_compiled():
-            raise SkipTest("bitcoin-cli has not been compiled.")
+            raise SkipTest("bitgold-cli has not been compiled.")
 
     def skip_if_no_previous_releases(self):
         """Skip the running test if previous releases are not available."""
@@ -1052,7 +1052,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
             raise SkipTest("This test is not compatible with Valgrind.")
 
     def is_cli_compiled(self):
-        """Checks whether bitcoin-cli was compiled."""
+        """Checks whether bitgold-cli was compiled."""
         return self.config["components"].getboolean("ENABLE_CLI")
 
     def is_external_signer_compiled(self):

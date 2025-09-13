@@ -29,7 +29,7 @@ troubleshooting.
 Use the `stakerstatus` RPC to check if staking is enabled and running:
 
 ```
-$ bitcoin-cli stakerstatus
+$ bitgold-cli stakerstatus
 {
   "enabled": true,
   "staking": true

@@ -212,13 +212,13 @@ Wallet
 This means it is possible make calls like:
 
 ```sh
-src/bitcoin-cli -named bumpfee txid fee_rate=100
+src/bitgold-cli -named bumpfee txid fee_rate=100
 ```
 
 instead of
 
 ```sh
-src/bitcoin-cli -named bumpfee txid options='{"fee_rate": 100}'
+src/bitgold-cli -named bumpfee txid options='{"fee_rate": 100}'
 ```
 
 - The `deprecatedrpc=walletwarningfield` configuration option has been removed.
