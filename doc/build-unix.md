@@ -46,7 +46,7 @@ Build requirements:
 
     sudo apt-get install build-essential cmake pkgconf python3
 
-Now, you can either build from self-compiled [depends](#dependencies) or install the required dependencies:
+Now, you can either build from self-compiled [depends](#dependencies) or install the required dependencies (including Boost \>=1.73):
 
     sudo apt-get install libevent-dev libboost-dev
 
