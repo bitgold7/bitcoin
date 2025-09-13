@@ -57,6 +57,22 @@ project(BitGold
   LANGUAGES NONE
 )
 
+# ===== BITGOLD FIX: ensure headers under src/ and generated config headers are visible =====
+include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_BINARY_DIR}/config)
+
+foreach(tgt IN ITEMS bitgold_node bitgold_common bitgold_wallet bitgold_cli bitgoldd)
+  if (TARGET ${tgt})
+    target_include_directories(${tgt} PRIVATE
+      ${CMAKE_SOURCE_DIR}/src
+      ${CMAKE_BINARY_DIR}
+      ${CMAKE_BINARY_DIR}/config
+    )
+  endif()
+endforeach()
+# ===== END FIX =====
+
 set(CLIENT_VERSION_STRING ${PROJECT_VERSION})
 if(CLIENT_VERSION_RC GREATER 0)
   string(APPEND CLIENT_VERSION_STRING "rc${CLIENT_VERSION_RC}")
