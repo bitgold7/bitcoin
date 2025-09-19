@@ -70,6 +70,7 @@
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
+#include <bulletproofs_utils.h>
 #endif
 
 #include <algorithm>
@@ -545,9 +546,13 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, TxValidationS
 
     // Call CheckInputScripts() to cache signature and script validity against current tip consensus rules.
 #ifdef ENABLE_BULLETPROOFS
-    // Placeholder: validate any Bulletproof data attached to the transaction
-    if (!VerifyBulletproof(CBulletproof{})) {
-        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
+    if (tx.HasBulletproofs()) {
+        const auto commitments = ComputeBulletproofCommitments(tx);
+        for (const auto& bulletproof : tx.GetBulletproofs()) {
+            if (!VerifyBulletproof(bulletproof, commitments)) {
+                return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-bulletproof");
+            }
+        }
     }
 #endif
     return CheckInputScripts(tx, state, view, flags, /* cacheSigStore= */ true, /* cacheFullScriptStore= */ true, txdata, validation_cache);

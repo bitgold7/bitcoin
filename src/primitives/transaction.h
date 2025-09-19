@@ -8,6 +8,7 @@
 
 #include <attributes.h>
 #include <consensus/amount.h>
+#include <bulletproofs.h>
 #include <script/script.h>
 #include <serialize.h>
 #include <uint256.h>
@@ -212,6 +213,9 @@ static constexpr TransactionSerParams TX_NO_WITNESS{.allow_witness = false};
  *   - CScriptWitness scriptWitness; (deserialized into CTxIn)
  * - uint32_t nLockTime
  */
+static constexpr unsigned char TRANSACTION_FLAG_WITNESS = 1;
+static constexpr unsigned char TRANSACTION_FLAG_BULLETPROOF = 2;
+
 template<typename Stream, typename TxType>
 void UnserializeTransaction(TxType& tx, Stream& s, const TransactionSerParams& params)
 {
@@ -221,6 +225,7 @@ void UnserializeTransaction(TxType& tx, Stream& s, const TransactionSerParams& p
     unsigned char flags = 0;
     tx.vin.clear();
     tx.vout.clear();
+    tx.vbulletproofs.clear();
     /* Try to read the vin. In case the dummy is there, this will be read as an empty vector. */
     s >> tx.vin;
     if (tx.vin.size() == 0 && fAllowWitness) {
@@ -234,9 +239,9 @@ void UnserializeTransaction(TxType& tx, Stream& s, const TransactionSerParams& p
         /* We read a non-empty vin. Assume a normal vout follows. */
         s >> tx.vout;
     }
-    if ((flags & 1) && fAllowWitness) {
+    if ((flags & TRANSACTION_FLAG_WITNESS) && fAllowWitness) {
         /* The witness flag is present, and we support witnesses. */
-        flags ^= 1;
+        flags ^= TRANSACTION_FLAG_WITNESS;
         for (size_t i = 0; i < tx.vin.size(); i++) {
             s >> tx.vin[i].scriptWitness.stack;
         }
@@ -244,6 +249,10 @@ void UnserializeTransaction(TxType& tx, Stream& s, const TransactionSerParams& p
             /* It's illegal to encode witnesses when all witness stacks are empty. */
             throw std::ios_base::failure("Superfluous witness record");
         }
+    }
+    if (flags & TRANSACTION_FLAG_BULLETPROOF) {
+        s >> tx.vbulletproofs;
+        flags ^= TRANSACTION_FLAG_BULLETPROOF;
     }
     if (flags) {
         /* Unknown flag in the serialization */
@@ -263,8 +272,11 @@ void SerializeTransaction(const TxType& tx, Stream& s, const TransactionSerParam
     if (fAllowWitness) {
         /* Check whether witnesses need to be serialized. */
         if (tx.HasWitness()) {
-            flags |= 1;
+            flags |= TRANSACTION_FLAG_WITNESS;
         }
+    }
+    if (tx.HasBulletproofs()) {
+        flags |= TRANSACTION_FLAG_BULLETPROOF;
     }
     if (flags) {
         /* Use extended format in case witnesses are to be serialized. */
@@ -274,10 +286,13 @@ void SerializeTransaction(const TxType& tx, Stream& s, const TransactionSerParam
     }
     s << tx.vin;
     s << tx.vout;
-    if (flags & 1) {
+    if ((flags & TRANSACTION_FLAG_WITNESS) && fAllowWitness) {
         for (size_t i = 0; i < tx.vin.size(); i++) {
             s << tx.vin[i].scriptWitness.stack;
         }
+    }
+    if (flags & TRANSACTION_FLAG_BULLETPROOF) {
+        s << tx.vbulletproofs;
     }
     s << tx.nLockTime;
 }
@@ -305,6 +320,7 @@ public:
     // structure, including the hash.
     const std::vector<CTxIn> vin;
     const std::vector<CTxOut> vout;
+    const std::vector<CBulletproof> vbulletproofs;
     const uint32_t version;
     const uint32_t nLockTime;
 
@@ -342,6 +358,7 @@ public:
 
     const Txid& GetHash() const LIFETIMEBOUND { return hash; }
     const Wtxid& GetWitnessHash() const LIFETIMEBOUND { return m_witness_hash; };
+    const std::vector<CBulletproof>& GetBulletproofs() const LIFETIMEBOUND { return vbulletproofs; }
 
     // Return sum of txouts.
     CAmount GetValueOut() const;
@@ -371,6 +388,7 @@ public:
     std::string ToString() const;
 
     bool HasWitness() const { return m_has_witness; }
+    bool HasBulletproofs() const { return !vbulletproofs.empty(); }
 };
 
 /** A mutable version of CTransaction. */
@@ -378,6 +396,7 @@ struct CMutableTransaction
 {
     std::vector<CTxIn> vin;
     std::vector<CTxOut> vout;
+    std::vector<CBulletproof> vbulletproofs;
     uint32_t version;
     uint32_t nLockTime;
 
@@ -393,6 +412,8 @@ struct CMutableTransaction
     inline void Unserialize(Stream& s) {
         UnserializeTransaction(*this, s, s.template GetParams<TransactionSerParams>());
     }
+
+    bool HasBulletproofs() const { return !vbulletproofs.empty(); }
 
     template <typename Stream>
     CMutableTransaction(deserialize_type, const TransactionSerParams& params, Stream& s) {

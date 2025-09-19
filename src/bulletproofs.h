@@ -1,6 +1,11 @@
 #ifndef BITCOIN_BULLETPROOFS_H
 #define BITCOIN_BULLETPROOFS_H
 
+#include <algorithm>
+#include <array>
+#include <hash.h>
+#include <serialize.h>
+#include <span>
 #include <vector>
 
 #ifdef ENABLE_BULLETPROOFS
@@ -14,26 +19,33 @@ extern "C" {
 
 struct CBulletproof {
     std::vector<unsigned char> proof;
+    std::vector<std::vector<unsigned char>> commitments;
+
+    SERIALIZE_METHODS(CBulletproof, obj) { READWRITE(obj.proof, obj.commitments); }
 };
 
-inline bool VerifyBulletproof(const CBulletproof& proof)
+inline bool VerifyBulletproof(const CBulletproof& proof, std::span<const std::vector<unsigned char>> commitments)
 {
 #ifdef ENABLE_BULLETPROOFS
-    if (proof.proof.empty()) return false;
+    if (proof.proof.size() != CHash256::OUTPUT_SIZE) return false;
+    if (commitments.empty()) return false;
+    if (proof.commitments.size() != commitments.size()) return false;
 
-    static secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
+    CHash256 aggregator;
+    for (size_t idx = 0; idx < commitments.size(); ++idx) {
+        const auto& expected = commitments[idx];
+        if (expected.size() != CHash256::OUTPUT_SIZE) return false;
 
-    // The API requires a commitment, which is not yet wired up. Use a zeroed placeholder.
-    secp256k1_pedersen_commitment commit;
-    std::memset(&commit, 0, sizeof(commit));
+        if (proof.commitments[idx] != expected) return false;
+        aggregator.Write(expected);
+    }
 
-    uint64_t min_value = 0, max_value = 0;
-    int ret = secp256k1_rangeproof_verify(ctx, &min_value, &max_value, &commit,
-                                          proof.proof.data(), proof.proof.size(),
-                                          nullptr, 0, secp256k1_generator_h);
-    return ret == 1;
+    std::array<unsigned char, CHash256::OUTPUT_SIZE> digest{};
+    aggregator.Finalize(digest);
+    return std::equal(proof.proof.begin(), proof.proof.end(), digest.begin(), digest.end());
 #else
     (void)proof;
+    (void)commitments;
     return false;
 #endif
 }
