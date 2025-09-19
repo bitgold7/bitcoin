@@ -8,6 +8,7 @@
 
 #ifdef ENABLE_BULLETPROOFS
 #include <bulletproofs.h>
+#include <bulletproofs_utils.h>
 #endif
 
 #include <addresstype.h>
@@ -4561,15 +4562,13 @@ std::optional<WalletTXO> CWallet::GetTXO(const COutPoint& outpoint) const
 bool CreateBulletproofProof(CWallet& wallet, const CTransaction& tx, CBulletproof& proof)
 {
     (void)wallet;
-    (void)tx;
-    proof.proof.clear();
+    PopulateBulletproofProof(tx, proof);
     return true;
 }
 
 bool VerifyBulletproofProof(const CTransaction& tx, const CBulletproof& proof)
 {
-    (void)tx;
-    return VerifyBulletproof(proof);
+    return VerifyBulletproof(proof, ComputeBulletproofCommitments(tx));
 }
 #endif
 } // namespace wallet
