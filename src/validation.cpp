@@ -2080,21 +2080,48 @@ PackageMempoolAcceptResult ProcessNewPackage(Chainstate& active_chainstate, CTxM
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
-    // Hard cap: 8M BGD total supply with 3M premine in genesis block.
-    // First 90k blocks reward 50, next 20k reward 25, then 0.
+    // Hard cap: 8M BGD total supply with 3M premine in the genesis block and
+    // at most 5M BGD emitted via normal block subsidies.
     if (nHeight <= 0) return 0; // genesis handled separately
 
-    if (nHeight <= consensusParams.nSubsidyHalvingInterval) {
-        return 50 * COIN;
+    constexpr CAmount GENESIS_SUPPLY = 3'000'000 * COIN;
+    constexpr CAmount MAX_POST_GENESIS_SUPPLY = 8'000'000 * COIN - GENESIS_SUPPLY;
+
+    const int interval = consensusParams.nSubsidyHalvingInterval;
+    if (interval <= 0) return 0;
+
+    CAmount reward = 50 * COIN;
+    CAmount issued = 0;
+
+    // Determine how many complete halving intervals occurred before this block.
+    const int height_before = nHeight - 1;
+    const int halvings = height_before / interval;
+
+    // Sum supply issued in the completed intervals while applying the halvings.
+    for (int i = 0; i < halvings && reward > 0; ++i) {
+        if (issued >= MAX_POST_GENESIS_SUPPLY) return 0;
+
+        const CAmount interval_reward = reward * interval;
+        if (interval_reward >= MAX_POST_GENESIS_SUPPLY - issued) return 0;
+
+        issued += interval_reward;
+        reward >>= 1;
     }
 
-    // Allow only 20k blocks at the halved reward before hitting the cap
-    const int second_phase = consensusParams.nSubsidyHalvingInterval + 20000;
-    if (nHeight <= second_phase) {
-        return 25 * COIN;
+    if (reward <= 0 || issued >= MAX_POST_GENESIS_SUPPLY) {
+        return 0;
     }
 
-    return 0;
+    // Account for the blocks already mined in the current interval.
+    const int blocks_into_interval = height_before % interval;
+    const CAmount mined_this_interval = reward * blocks_into_interval;
+    if (mined_this_interval >= MAX_POST_GENESIS_SUPPLY - issued) {
+        return 0;
+    }
+
+    issued += mined_this_interval;
+    const CAmount remaining = MAX_POST_GENESIS_SUPPLY - issued;
+    return std::min(reward, remaining);
 }
 
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast,

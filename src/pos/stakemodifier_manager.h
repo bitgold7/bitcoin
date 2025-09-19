@@ -40,7 +40,7 @@ private:
     std::map<uint256, ModifierEntry> m_modifiers;
     uint256 m_current_modifier;
     uint256 m_current_block_hash;
-    std::mutex m_mutex;
+    mutable std::mutex m_mutex;
 };
 
 /** Access the global stake modifier manager instance. */
