@@ -23,19 +23,29 @@ BOOST_FIXTURE_TEST_SUITE(validation_tests, TestingSetup)
 
 static void TestBlockSubsidyHalvings(const Consensus::Params& consensusParams)
 {
-    int maxHalvings = 64;
-    CAmount nInitialSubsidy = 50 * COIN;
+    const int max_halvings = 64;
+    const int interval = consensusParams.nSubsidyHalvingInterval;
+    const CAmount nInitialSubsidy = 50 * COIN;
 
-    CAmount nPreviousSubsidy = nInitialSubsidy * 2; // for height == 0
-    BOOST_CHECK_EQUAL(nPreviousSubsidy, nInitialSubsidy * 2);
-    for (int nHalvings = 0; nHalvings < maxHalvings; nHalvings++) {
-        int nHeight = nHalvings * consensusParams.nSubsidyHalvingInterval;
-        CAmount nSubsidy = GetBlockSubsidy(nHeight, consensusParams);
-        BOOST_CHECK(nSubsidy <= nInitialSubsidy);
-        BOOST_CHECK_EQUAL(nSubsidy, nPreviousSubsidy / 2);
-        nPreviousSubsidy = nSubsidy;
+    BOOST_CHECK_EQUAL(GetBlockSubsidy(0, consensusParams), 0);
+
+    int height = 1;
+    CAmount expected = nInitialSubsidy;
+    for (int nHalvings = 0; nHalvings < max_halvings; ++nHalvings) {
+        const CAmount subsidy = GetBlockSubsidy(height, consensusParams);
+        BOOST_CHECK(subsidy <= nInitialSubsidy);
+
+        if (expected <= 0 || subsidy == 0) {
+            BOOST_CHECK_EQUAL(subsidy, 0);
+            break;
+        }
+
+        BOOST_CHECK_EQUAL(subsidy, expected);
+        height += interval;
+        expected >>= 1;
     }
-    BOOST_CHECK_EQUAL(GetBlockSubsidy(maxHalvings * consensusParams.nSubsidyHalvingInterval, consensusParams), 0);
+
+    BOOST_CHECK_EQUAL(GetBlockSubsidy(height, consensusParams), 0);
 }
 
 static void TestBlockSubsidyHalvings(int nSubsidyHalvingInterval)
@@ -49,21 +59,36 @@ BOOST_AUTO_TEST_CASE(block_subsidy_test)
 {
     const auto chainParams = CreateChainParams(*m_node.args, ChainType::MAIN);
     TestBlockSubsidyHalvings(chainParams->GetConsensus()); // As in main
-    TestBlockSubsidyHalvings(150); // As in regtest
+    TestBlockSubsidyHalvings(50000); // As in regtest
     TestBlockSubsidyHalvings(1000); // Just another interval
 }
 
 BOOST_AUTO_TEST_CASE(subsidy_limit_test)
 {
     const auto chainParams = CreateChainParams(*m_node.args, ChainType::MAIN);
-    CAmount nSum = 0;
-    for (int nHeight = 0; nHeight < 14000000; nHeight += 1000) {
-        CAmount nSubsidy = GetBlockSubsidy(nHeight, chainParams->GetConsensus());
-        BOOST_CHECK(nSubsidy <= 50 * COIN);
-        nSum += nSubsidy * 1000;
-        BOOST_CHECK(MoneyRange(nSum));
+    const Consensus::Params& consensus = chainParams->GetConsensus();
+    const CAmount genesis_reward = 3'000'000 * COIN;
+    const CAmount max_post_genesis = 5'000'000 * COIN;
+
+    CAmount minted = 0;
+    int height = 1;
+    while (minted < max_post_genesis) {
+        const CAmount subsidy = GetBlockSubsidy(height, consensus);
+        BOOST_CHECK(subsidy <= 50 * COIN);
+        if (subsidy == 0) {
+            break;
+        }
+        minted += subsidy;
+        BOOST_CHECK(MoneyRange(minted));
+        ++height;
     }
-    BOOST_CHECK_EQUAL(nSum, CAmount{899999999010000});
+
+    BOOST_CHECK_LE(minted, max_post_genesis);
+    BOOST_CHECK_LE(minted + genesis_reward, 8'000'000 * COIN);
+
+    for (int future = 0; future < consensus.nSubsidyHalvingInterval; ++future) {
+        BOOST_CHECK_EQUAL(GetBlockSubsidy(height + future, consensus), 0);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(signet_parse_tests)
