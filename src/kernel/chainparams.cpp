@@ -108,7 +108,7 @@ public:
         consensus.nStakeMinAge = 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.posLimit = consensus.powLimit;
-        consensus.nStakeTargetSpacing = 16;
+        consensus.nStakeTargetSpacing = 8 * 60;
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.enforce_BIP94 = false;
         consensus.fPowNoRetargeting = false;
@@ -230,7 +230,7 @@ public:
         consensus.nStakeMinAge = 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.posLimit = consensus.powLimit;
-        consensus.nStakeTargetSpacing = 16;
+        consensus.nStakeTargetSpacing = 8 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.enforce_BIP94 = false;
         consensus.fPowNoRetargeting = false;
@@ -375,7 +375,7 @@ public:
         consensus.MinBIP9WarningHeight = 0;
         consensus.powLimit = uint256{"00000377ae000000000000000000000000000000000000000000000000000000"};
         consensus.posLimit = consensus.powLimit;
-        consensus.nStakeTargetSpacing = 16;
+        consensus.nStakeTargetSpacing = 8 * 60;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = Consensus::BIP9Deployment::NEVER_ACTIVE;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
@@ -466,7 +466,7 @@ public:
         consensus.nStakeMinAge = 60 * 60;
         consensus.nStakeModifierInterval = 60 * 60;
         consensus.posLimit = consensus.powLimit;
-        consensus.nStakeTargetSpacing = 16;
+        consensus.nStakeTargetSpacing = 8 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.enforce_BIP94 = opts.enforce_bip94;
         consensus.fPowNoRetargeting = true;
