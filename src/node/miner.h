@@ -68,6 +68,7 @@ struct CTxMemPoolModifiedEntry {
     CAmount GetModFeesWithAncestors() const { return nModFeesWithAncestors; }
     size_t GetTxSize() const { return iter->GetTxSize(); }
     const CTransaction& GetTx() const { return iter->GetTx(); }
+    int64_t GetPriority() const { return iter->GetPriority(); }
 
     CTxMemPool::txiter iter;
     uint64_t nSizeWithAncestors;
@@ -120,6 +121,12 @@ struct CTxMemPoolModifiedEntry_Indices final : boost::multi_index::indexed_by<
         boost::multi_index::tag<ancestor_score>,
         boost::multi_index::identity<CTxMemPoolModifiedEntry>,
         CompareTxMemPoolEntryByAncestorFee
+    >,
+    // sorted by priority score
+    boost::multi_index::ordered_non_unique<
+        boost::multi_index::tag<priority_score>,
+        boost::multi_index::identity<CTxMemPoolModifiedEntry>,
+        CompareTxMemPoolEntryByPriority
     >
 >
 {};
@@ -131,6 +138,7 @@ typedef boost::multi_index_container<
 
 typedef indexed_modified_transaction_set::nth_index<0>::type::iterator modtxiter;
 typedef indexed_modified_transaction_set::index<ancestor_score>::type::iterator modtxscoreiter;
+typedef indexed_modified_transaction_set::index<priority_score>::type::iterator modtxpriorityiter;
 
 struct update_for_parent_inclusion
 {

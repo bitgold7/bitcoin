@@ -177,11 +177,38 @@ public:
     }
 };
 
+/** \class CompareTxMemPoolEntryByPriority
+ *
+ *  Sort an entry by priority score in descending order. If priorities are
+ *  equal, fall back to comparing the modified fee, and finally the txid to
+ *  achieve a deterministic ordering.
+ */
+class CompareTxMemPoolEntryByPriority
+{
+public:
+    template <typename T>
+    bool operator()(const T& a, const T& b) const
+    {
+        const int64_t priority_a = a.GetPriority();
+        const int64_t priority_b = b.GetPriority();
+        if (priority_a == priority_b) {
+            const CAmount fee_a = a.GetModifiedFee();
+            const CAmount fee_b = b.GetModifiedFee();
+            if (fee_a == fee_b) {
+                return a.GetTx().GetHash() < b.GetTx().GetHash();
+            }
+            return fee_a > fee_b;
+        }
+        return priority_a > priority_b;
+    }
+};
+
 // Multi_index tag names
 struct descendant_score {};
 struct entry_time {};
 struct ancestor_score {};
 struct index_by_wtxid {};
+struct priority_score {};
 
 /**
  * Information about a mempool transaction.
@@ -222,12 +249,13 @@ struct TxMempoolInfo
  *
  * CTxMemPool::mapTx, and CTxMemPoolEntry bookkeeping:
  *
- * mapTx is a boost::multi_index that sorts the mempool on 5 criteria:
+ * mapTx is a boost::multi_index that sorts the mempool on 6 criteria:
  * - transaction hash (txid)
  * - witness-transaction hash (wtxid)
  * - descendant feerate [we use max(feerate of tx, feerate of tx with all descendants)]
  * - time in mempool
  * - ancestor feerate [we use min(feerate of tx, feerate of tx with all unconfirmed ancestors)]
+ * - priority score
  *
  * Note: the term "descendant" refers to in-mempool transactions that depend on
  * this one, while "ancestor" refers to in-mempool transactions that a given
@@ -335,6 +363,12 @@ public:
                 boost::multi_index::tag<ancestor_score>,
                 boost::multi_index::identity<CTxMemPoolEntry>,
                 CompareTxMemPoolEntryByAncestorFee
+            >,
+            // sorted by priority score
+            boost::multi_index::ordered_non_unique<
+                boost::multi_index::tag<priority_score>,
+                boost::multi_index::identity<CTxMemPoolEntry>,
+                CompareTxMemPoolEntryByPriority
             >
         >
         {};
