@@ -6,6 +6,8 @@ from test_framework.messages import COIN, hash256, uint256_from_compact
 from test_framework.util import assert_equal
 
 STAKE_TIMESTAMP_MASK = 0xF
+TIMESTAMP_GRANULARITY = STAKE_TIMESTAMP_MASK + 1
+TARGET_SPACING = 8 * 60
 MIN_STAKE_AGE = 60 * 60
 
 
@@ -39,7 +41,8 @@ class StakeMinerLifecycleTest(BitcoinTestFramework):
         self.num_nodes = 1
 
     def find_ntime(self, prev_hash, prev_height, prev_time, nbits, stake_hash, stake_time, amount, prevout):
-        ntime = prev_time + 16
+        ntime = prev_time + TARGET_SPACING
+        ntime = (ntime + STAKE_TIMESTAMP_MASK) & ~STAKE_TIMESTAMP_MASK
         while not check_kernel(
             prev_hash,
             prev_height,
@@ -51,7 +54,7 @@ class StakeMinerLifecycleTest(BitcoinTestFramework):
             prevout,
             ntime,
         ):
-            ntime += 16
+            ntime += TIMESTAMP_GRANULARITY
         return ntime
 
     def run_test(self):

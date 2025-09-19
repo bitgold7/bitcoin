@@ -19,6 +19,8 @@ from test_framework.script import CScript
 from test_framework.util import assert_equal
 
 STAKE_TIMESTAMP_MASK = 0xF
+TIMESTAMP_GRANULARITY = STAKE_TIMESTAMP_MASK + 1
+TARGET_SPACING = 8 * 60
 MIN_STAKE_AGE = 60 * 60
 
 
@@ -69,9 +71,10 @@ class PosV3Test(BitcoinTestFramework):
         stake_block_hash = node.gettransaction(txid)['blockhash']
         stake_time = node.getblock(stake_block_hash)['time']
 
-        ntime = prev_time + 16
+        ntime = prev_time + TARGET_SPACING
+        ntime = (ntime + STAKE_TIMESTAMP_MASK) & ~STAKE_TIMESTAMP_MASK
         while not check_kernel(prev_hash, prev_height, prev_time, nbits, stake_block_hash, stake_time, amount, prevout, ntime):
-            ntime += 16
+            ntime += TIMESTAMP_GRANULARITY
 
         script = CScript(bytes.fromhex(unspent['scriptPubKey']))
 

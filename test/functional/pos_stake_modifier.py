@@ -6,6 +6,9 @@ from test_framework.messages import hash256
 from test_framework.util import assert_equal
 
 STAKE_MODIFIER_INTERVAL = 60 * 60
+STAKE_TIMESTAMP_MASK = 0xF
+TIMESTAMP_GRANULARITY = STAKE_TIMESTAMP_MASK + 1
+TARGET_SPACING = 8 * 60
 
 
 class StakeModifierManager:
@@ -44,7 +47,8 @@ class PosStakeModifierTest(BitcoinTestFramework):
         prev_hash1 = "11" * 32
         prev_height1 = 100
         prev_time1 = 1000000000
-        ntime1 = prev_time1 + 16
+        ntime1 = prev_time1 + TARGET_SPACING
+        ntime1 = (ntime1 + STAKE_TIMESTAMP_MASK) & ~STAKE_TIMESTAMP_MASK
         mod1 = mgr.get(prev_hash1, prev_height1, prev_time1, ntime1)
         exp1 = hash256(
             b"\x00" * 32
@@ -57,13 +61,13 @@ class PosStakeModifierTest(BitcoinTestFramework):
         # Within the interval, the modifier stays constant even as block data changes
         prev_hash2 = "22" * 32
         prev_height2 = 101
-        prev_time2 = prev_time1 + 16
-        ntime2 = ntime1 + 32
+        prev_time2 = prev_time1 + TARGET_SPACING
+        ntime2 = ntime1 + 2 * TIMESTAMP_GRANULARITY
         mod2 = mgr.get(prev_hash2, prev_height2, prev_time2, ntime2)
         assert_equal(mod2, mod1)
 
         # After the interval, a new modifier is computed incorporating previous value
-        ntime3 = ntime1 + STAKE_MODIFIER_INTERVAL + 1
+        ntime3 = ntime1 + STAKE_MODIFIER_INTERVAL + TIMESTAMP_GRANULARITY
         mod3 = mgr.get(prev_hash2, prev_height2, prev_time2, ntime3)
         exp3 = hash256(
             mod1
